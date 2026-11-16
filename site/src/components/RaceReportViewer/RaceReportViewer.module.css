@@ -1,0 +1,25 @@
+/* Alto quasi quanto la finestra: una pagina A4 si legge senza scorrere troppo. */
+.reportViewer {
+  display: block;
+  inline-size: 100%;
+  block-size: max(36rem, calc(100dvh - 10rem));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.fallback {
+  display: grid;
+  gap: var(--space-2);
+  place-content: center;
+  block-size: 100%;
+  padding: var(--space-5);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.fallback a {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  text-underline-offset: 0.2em;
+}

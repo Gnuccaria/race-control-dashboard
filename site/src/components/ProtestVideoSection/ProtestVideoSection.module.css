@@ -1,0 +1,54 @@
+.videoSection {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 40rem));
+  gap: var(--space-5);
+}
+
+.videoBlock {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.videoHeading {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.videoPlayer {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-group);
+  background: #000;
+}
+
+.videoStatus {
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-group);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.missingText {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.addBlock {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.addActions {
+  display: flex;
+  justify-content: flex-end;
+}

@@ -1,0 +1,27 @@
+.ticketForm {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Posizione, distacco e giro sulla stessa riga su schermi larghi. */
+.fieldRow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) minmax(12rem, 1fr) minmax(8rem, 14rem);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* Avviso sui dati personali: in evidenza ma non allarmante. */
+.privacyNotice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 3px solid var(--color-status-early);
+  background: var(--color-status-early-surface);
+  font-size: var(--font-size-small);
+}
+
+@media (width < 44rem) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}

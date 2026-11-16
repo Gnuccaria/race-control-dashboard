@@ -1,0 +1,11 @@
+.sessionSplash {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-4);
+  min-block-size: 100dvh;
+}
+
+.splashMessage {
+  color: var(--color-text-muted);
+}

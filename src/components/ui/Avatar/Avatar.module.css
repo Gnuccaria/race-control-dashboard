@@ -1,0 +1,21 @@
+.avatar {
+  --avatar-size: 2rem;
+
+  display: block;
+  flex: none;
+  inline-size: var(--avatar-size);
+  block-size: var(--avatar-size);
+  border-radius: 50%;
+  background: var(--color-surface-sunken);
+  object-fit: cover;
+}
+
+.mediumAvatar {
+  --avatar-size: 2.75rem;
+}
+
+.guestAvatar {
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted);
+}

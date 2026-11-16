@@ -1,0 +1,41 @@
+.selectFrame {
+  position: relative;
+  display: block;
+}
+
+.select {
+  inline-size: 100%;
+  block-size: var(--control-height);
+  padding-inline: var(--space-3) var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  appearance: none;
+  transition: border-color var(--duration-quick);
+}
+
+.select:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+/* Menu non modificabile: nessun clic e nessun effetto al passaggio. */
+.select:disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.select:focus-visible {
+  border-color: var(--color-text);
+  outline: none;
+}
+
+.selectChevron {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-muted);
+  translate: 0 -50%;
+  pointer-events: none;
+}

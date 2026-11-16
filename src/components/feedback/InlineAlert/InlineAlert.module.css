@@ -1,0 +1,17 @@
+.inlineAlert {
+  --alert-accent: var(--color-status-late);
+  --alert-surface: var(--color-status-late-surface);
+
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 3px solid var(--alert-accent);
+  border-radius: var(--radius-control);
+  background: var(--alert-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  text-align: start;
+}
+
+.inlineAlert[data-tone='success'] {
+  --alert-accent: var(--color-status-on-time);
+  --alert-surface: var(--color-status-on-time-surface);
+}

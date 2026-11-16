@@ -1,0 +1,10 @@
+.raceInfoFields {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.fieldPair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--space-5) var(--space-4);
+}

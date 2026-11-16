@@ -1,0 +1,30 @@
+.toolSectionList {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.toolSection {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+/* Le card restano centrate anche quando sono poche. */
+.toolCardList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toolCardItem {
+  flex: 0 1 20rem;
+}

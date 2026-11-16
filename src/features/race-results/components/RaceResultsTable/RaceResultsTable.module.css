@@ -1,0 +1,144 @@
+.raceResults {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.notice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.resultsTable {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.resultsTable th {
+  padding: var(--space-2) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+}
+
+.resultsTable td {
+  padding: var(--space-1) var(--space-2);
+  vertical-align: top;
+}
+
+.resultsTable tbody tr + tr {
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* Posizione fissa, in grande, come sul tabellone dei risultati. */
+.positionColumn {
+  inline-size: 6rem;
+}
+
+.resultsTable .positionCell {
+  padding-block-start: var(--space-3);
+  font-size: var(--font-size-large);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.repeatedMessage {
+  margin-block: var(--space-1) var(--space-1);
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}
+
+/* Giri completati: stretta, cifre allineate a destra come in una tabella dei tempi. */
+.resultsTable .lapsColumn {
+  inline-size: 8.5rem;
+  text-align: end;
+}
+
+.resultsTable .gapColumn {
+  inline-size: 9.5rem;
+  text-align: end;
+}
+
+/* Colonna stretta per la X che svuota la riga (solo in modifica). */
+.resultsTable .clearColumn {
+  inline-size: 3rem;
+}
+
+.clearCell {
+  text-align: end;
+}
+
+.clearButton {
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.clearButton:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+/* Riga già vuota: la X non serve, resta solo uno spazio. */
+.clearButton:disabled {
+  visibility: hidden;
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.lapsCell input {
+  /* Stessa altezza del menu dell'equipaggio accanto. */
+  block-size: 2.5rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Senza equipaggio il campo non si compila: resta appena accennato. */
+.lapsCell input:disabled {
+  border-style: dashed;
+  background: transparent;
+  opacity: 0.5;
+}
+
+/* Auto della riga: testo semplice, non modificabile da qui. */
+.resultsTable .carColumn {
+  inline-size: 18rem;
+}
+
+.resultsTable .carCell {
+  /* Stessa altezza visiva del nome dell'equipaggio accanto (la cella dei menu ha il riquadro). */
+  padding-block-start: calc(var(--space-1) + (var(--control-height) - 1.25rem) / 2);
+  font-size: var(--font-size-small);
+  line-height: 1.25rem;
+  /* A capo tra le parole, mai a metà parola. */
+  overflow-wrap: break-word;
+}
+
+.emptyCar {
+  color: var(--color-text-muted);
+}
+
+.missingCar {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Auto usata in quella gara ma non più quella dell'equipaggio: sottolineatura tratteggiata, dettaglio al passaggio del mouse. */
+.historicCar {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.errorNotice {
+  color: var(--color-danger);
+  font-size: var(--font-size-small);
+}

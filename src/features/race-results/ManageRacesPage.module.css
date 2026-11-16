@@ -1,0 +1,13 @@
+.manageRacesPage {
+  display: grid;
+  gap: var(--space-6);
+  max-inline-size: var(--layout-width-wide);
+  margin-inline: auto;
+}
+
+/* "Crea gara" sopra filtri e tabella, allineato a destra come le azioni principali. */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: calc(var(--space-2) * -1);
+}

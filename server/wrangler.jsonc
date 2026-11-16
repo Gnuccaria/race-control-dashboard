@@ -1,0 +1,64 @@
+{
+	// Configurazione del server su Cloudflare Workers.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "race-control-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-01",
+	"observability": {
+		"enabled": true
+	},
+	// Sito pubblico dei risultati (cartella site, compilata con `npm run site:build` nella cartella principale):
+	// lo serve questo stesso server, quindi sito e API hanno lo stesso indirizzo. Le pagine del sito
+	// (/ e /gare/…) arrivano dai file; le API sotto elencate passano sempre dal codice del server.
+	"assets": {
+		"directory": "../site/dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/public/*",
+			"/crews*",
+			"/races*",
+			"/tracks*",
+			"/cars*",
+			"/disconnection-tickets*",
+			"/protests*",
+			"/health"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "CREWS_DB",
+			"database_name": "race-control",
+			// ID del database creato con `npx wrangler d1 create race-control`.
+			"database_id": "bd8997c3-71cd-43a3-919d-5a42be5e58d2",
+			"migrations_dir": "migrations"
+		}
+	],
+	// Video delle proteste caricati dal sito: bucket R2 creato con `npx wrangler r2 bucket create race-control-protest-videos`.
+	"r2_buckets": [
+		{
+			"binding": "PROTEST_VIDEOS",
+			"bucket_name": "race-control-protest-videos"
+		},
+		{
+			"bucket_name": "race-control-protest-videos",
+			"binding": "race_control_protest_videos",
+			"remote": true
+		}
+	],
+	// Workers AI: traduce in inglese violazione e motivazione delle penalità (quota gratuita giornaliera).
+	"ai": {
+		"binding": "AI"
+	},
+	"vars": {
+		// Stessi valori di src/config/discordConfig.ts nell'app: il server ricontrolla il ruolo (app) o la sola
+		// appartenenza al server (accesso al sito).
+		"DISCORD_APPLICATION_ID": "1570595596836937748",
+		"DISCORD_GUILD_ID": "1569698028938600458",
+		// Ruolo Organizzazione: Gestisci campionato nell'app (equipaggi, gare, penalità).
+		"DISCORD_ORGANIZATION_ROLE_ID": "1569700040602292346",
+		// Ruolo Direttore Gara: strumenti della Direzione Gara (ticket di disconnessione).
+		"DISCORD_REQUIRED_ROLE_ID": "1569716852886605844",
+		// Ruolo Commissari Sportivi: strumenti dei Commissari nell'app (proteste, cambi pilota).
+		"DISCORD_STEWARDS_ROLE_ID": "1569718968183296130"
+	}
+}

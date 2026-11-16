@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permessi della finestra principale: base, tema della finestra, pallino delle notifiche sull'icona e chiamate HTTP solo verso l'API di Discord e il server degli equipaggi su Cloudflare Workers.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-theme",
+    "core:window:allow-set-overlay-icon",
+    "core:window:allow-set-badge-count",
+    "opener:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://discord.com/api/*"
+        },
+        {
+          "url": "https://*.workers.dev/*"
+        }
+      ]
+    }
+  ]
+}

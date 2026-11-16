@@ -1,0 +1,60 @@
+.loginPage {
+  display: grid;
+  place-items: center;
+  min-block-size: 100dvh;
+  padding: var(--space-5) var(--space-4);
+}
+
+.loginCard {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  inline-size: min(26rem, 100%);
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-board);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.loginHeader {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.loginTitle {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.loginDescription {
+  color: var(--color-text-muted);
+  text-wrap: pretty;
+}
+
+.signInActions {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+
+.signInProgress {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.privacyNote {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  text-wrap: pretty;
+}
+
+/* Unico pulsante del riquadro centrato: anche lui al centro. */
+.signInActions .signInButton {
+  justify-self: center;
+}

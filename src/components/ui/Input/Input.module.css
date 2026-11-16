@@ -1,0 +1,68 @@
+.input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  block-size: var(--control-height);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  transition: border-color var(--duration-quick);
+  appearance: textfield;
+}
+
+.input:hover:not(:read-only) {
+  border-color: var(--color-border-strong);
+}
+
+/*
+ * Campi non scrivibili (sola lettura o disattivati): nessun clic, nessun cursore di testo, nessuna selezione,
+ * nessun effetto al passaggio. In modifica (senza readonly) l'input torna normale.
+ */
+.input:read-only,
+.input:disabled {
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  caret-color: transparent;
+}
+
+.input:read-only:focus,
+.input:read-only:focus-visible {
+  border-color: var(--color-border);
+  outline: none;
+}
+
+.input:read-only::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.input:focus-visible {
+  border-color: var(--color-text);
+  outline: none;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--color-text-error);
+}
+
+.input::-webkit-inner-spin-button,
+.input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.input::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+.bareInput,
+.bareInput:hover,
+.bareInput:focus-visible,
+.bareInput[aria-invalid='true'] {
+  border-color: transparent;
+  background: transparent;
+}

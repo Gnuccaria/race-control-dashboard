@@ -1,0 +1,13 @@
+.raceForm {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.tabPanel[hidden] {
+  display: none;
+}
+
+.tabPanel:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}

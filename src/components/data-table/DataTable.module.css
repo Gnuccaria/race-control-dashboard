@@ -1,0 +1,120 @@
+/* Stili comuni alle tabelle degli elenchi (equipaggi, gare). */
+/* Su schermi stretti la tabella scorre in orizzontale invece di schiacciare le colonne. */
+.tableScroller {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.dataTable {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-body);
+}
+
+.dataTable thead {
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+.dataTable thead th:first-child {
+  padding-inline-start: var(--space-2);
+}
+
+.dataTable td {
+  padding: var(--space-3);
+  white-space: nowrap;
+}
+
+.dataTable tbody tr + tr {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.dataRow {
+  transition:
+    background-color var(--duration-quick),
+    box-shadow var(--duration-quick);
+}
+
+.dataRow:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* Riga selezionata: fondo più scuro e barra a sinistra, ben distinguibile anche in modalità notte. */
+.dataRow[data-selected] {
+  background: color-mix(in srgb, var(--color-text) 9%, var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--color-text);
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dataTable td:first-child {
+  padding-inline-start: var(--space-5);
+}
+
+/* Numeri allineati in colonna, come su una lavagna dei tempi. */
+.numberCell {
+  inline-size: 6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.missingValue {
+  color: var(--color-text-muted);
+}
+
+.dataTable .actionColumn {
+  inline-size: 3.5rem;
+  padding-block: var(--space-1);
+  text-align: end;
+}
+
+.detailLink {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+  transition:
+    color var(--duration-quick),
+    background-color var(--duration-quick);
+}
+
+.detailLink:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.detailLink:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.plainColumnHeader {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+}
+
+/* Conteggio a sinistra, suggerimento sulla selezione a destra (sotto, su schermi stretti). */
+.tableCaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  margin-block-end: calc(var(--space-2) * -1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

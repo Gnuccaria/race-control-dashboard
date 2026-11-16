@@ -1,0 +1,36 @@
+.checkboxField {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.checkboxInput {
+  flex: none;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin: 0.125rem 0 0;
+  accent-color: var(--color-text);
+  cursor: inherit;
+}
+
+.checkboxText {
+  display: grid;
+  gap: 0.125rem;
+  text-align: start;
+}
+
+.checkboxLabel {
+  font-weight: var(--font-weight-medium);
+}
+
+.checkboxDescription {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.checkboxField:has(.checkboxInput:disabled) {
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.6;
+}

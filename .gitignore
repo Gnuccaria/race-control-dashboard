@@ -1,0 +1,19 @@
+node_modules
+dist
+coverage
+*.local
+*.tsbuildinfo
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Tauri
+src-tauri/target
+src-tauri/gen
+
+# Server
+server/node_modules
+server/.wrangler
+.env
+.env.*
+!.env.example

@@ -1,0 +1,12 @@
+/* Ricerca più larga, i due menu affiancati; su schermi stretti va tutto in colonna. */
+.crewFilterBar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+@media (width < 44rem) {
+  .crewFilterBar {
+    grid-template-columns: 1fr;
+  }
+}

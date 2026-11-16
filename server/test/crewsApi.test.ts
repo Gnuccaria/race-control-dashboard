@@ -1,0 +1,270 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { checkDiscordMembership, clearVerifiedMembershipsForTests } from '../src/auth/discordMembership';
+import type { Env } from '../src/env';
+import {
+  authorizationHeader,
+  createTestApp,
+  createTestEnv,
+  getPath,
+  MEMBERSHIPS,
+  readError,
+  REQUIRED_DETAILS,
+  sendJson,
+} from './support/testApp';
+
+const REQUIRED_ROLE_ID = 'role-race-control';
+const VALID_CREW = { name: 'Team Rosso', number: 44, carId: 3, ...REQUIRED_DETAILS };
+
+const postCrew = (body: unknown, accessToken?: string) => sendJson('POST', '/crews', body, accessToken);
+const putCrew = (crewId: number, body: unknown, accessToken?: string) => sendJson('PUT', `/crews/${crewId}`, body, accessToken);
+
+describe('POST /crews', () => {
+  let env: Env;
+  let handleRequest: ReturnType<typeof createTestApp>;
+
+  beforeEach(() => {
+    env = createTestEnv();
+    handleRequest = createTestApp(MEMBERSHIPS);
+  });
+
+  it("salva l'equipaggio e registra chi l'ha creato", async () => {
+    const response = await handleRequest(postCrew(VALID_CREW, 'token-director'), env);
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ crew: { id: 1, ...VALID_CREW } });
+    const savedRow = await env.CREWS_DB.prepare('SELECT created_by_discord_id FROM crews').first<{ created_by_discord_id: string }>();
+    expect(savedRow?.created_by_discord_id).toBe('discord-42');
+  });
+
+  it('rifiuta chi non ha effettuato il login', async () => {
+    const response = await handleRequest(postCrew(VALID_CREW), env);
+    expect(response.status).toBe(401);
+    expect(await readError(response)).toBe('not-signed-in');
+  });
+
+  it('rifiuta un token che Discord non riconosce', async () => {
+    const response = await handleRequest(postCrew(VALID_CREW, 'token-falso'), env);
+    expect(response.status).toBe(401);
+  });
+
+  it('rifiuta chi non ha il ruolo richiesto', async () => {
+    const response = await handleRequest(postCrew(VALID_CREW, 'token-no-role'), env);
+    expect(response.status).toBe(403);
+    expect(await readError(response)).toBe('missing-role');
+  });
+
+  it('segnala quando Discord non è raggiungibile', async () => {
+    const response = await handleRequest(postCrew(VALID_CREW, 'token-discord-down'), env);
+    expect(response.status).toBe(503);
+  });
+
+  it("ricontrolla i dati anche se l'app li ha già convalidati", async () => {
+    const response = await handleRequest(postCrew({ name: 'Team-Rosso', number: 1000, carId: 'Fiat', ...REQUIRED_DETAILS }, 'token-director'), env);
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      error: { code: 'invalid-crew', details: { name: 'invalid-characters', number: 'invalid', carId: 'invalid' } },
+    });
+  });
+
+  it("rifiuta un'auto che non esiste nella tabella delle auto", async () => {
+    const response = await handleRequest(postCrew({ ...VALID_CREW, carId: 99 }, 'token-director'), env);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: { code: 'invalid-crew', details: { carId: 'unknown-car' } } });
+  });
+
+  it("dall'API auto, campionato e colore sono obbligatori", async () => {
+    const response = await handleRequest(postCrew({ name: 'Team Blu', number: 5 }, 'token-director'), env);
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      error: { code: 'invalid-crew', details: { carId: 'required', championship: 'required', color: 'required' } },
+    });
+  });
+
+
+  it('rifiuta JSON non valido e richieste troppo grandi', async () => {
+    expect((await handleRequest(postCrew('{non json', 'token-director'), env)).status).toBe(400);
+    expect((await handleRequest(postCrew({ ...VALID_CREW, padding: 'x'.repeat(3000) }, 'token-director'), env)).status).toBe(400);
+  });
+
+  it('non accetta due equipaggi con lo stesso numero', async () => {
+    await handleRequest(postCrew(VALID_CREW, 'token-director'), env);
+    const response = await handleRequest(postCrew({ name: 'Team Blu', number: 44, carId: 2, ...REQUIRED_DETAILS }, 'token-director'), env);
+
+    expect(response.status).toBe(409);
+    expect(await readError(response)).toBe('duplicate-crew-number');
+  });
+
+  it('non accetta due equipaggi con lo stesso nome, anche con maiuscole o spazi diversi', async () => {
+    await handleRequest(postCrew(VALID_CREW, 'token-director'), env);
+    const response = await handleRequest(postCrew({ name: ' team  ROSSO ', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+
+    expect(response.status).toBe(409);
+    expect(await readError(response)).toBe('duplicate-crew-name');
+  });
+
+  it('risponde 404 e 405 per percorsi e metodi sconosciuti', async () => {
+    expect((await handleRequest(new Request('https://race-control-api.test/altro'), env)).status).toBe(404);
+    expect((await handleRequest(new Request('https://race-control-api.test/crews', { method: 'PATCH' }), env)).status).toBe(405);
+    expect((await handleRequest(new Request('https://race-control-api.test/crews/abc'), env)).status).toBe(404);
+  });
+});
+
+describe('verifica del ruolo su Discord', () => {
+  const settings = { guildId: 'guild-1', organizationRoleId: 'role-organization', raceControlRoleId: REQUIRED_ROLE_ID, stewardsRoleId: 'role-stewards' };
+  const discordAnswering = (status: number, body: unknown = {}) => () =>
+    Promise.resolve(new Response(JSON.stringify(body), { status }));
+
+  beforeEach(() => {
+    clearVerifiedMembershipsForTests();
+  });
+
+  it('riconosce un membro con il ruolo', async () => {
+    const fetchFromDiscord = discordAnswering(200, { user: { id: 'discord-42' }, roles: [REQUIRED_ROLE_ID] });
+    expect(await checkDiscordMembership('token-a', settings, fetchFromDiscord)).toEqual({
+      status: 'member-with-role',
+      discordUserId: 'discord-42',
+      access: { organization: false, raceControl: true, stewards: false },
+    });
+    const steward = discordAnswering(200, { user: { id: 'discord-44' }, roles: ['role-stewards'] });
+    expect(await checkDiscordMembership('token-s', settings, steward)).toMatchObject({ access: { organization: false, raceControl: false, stewards: true } });
+    const organizer = discordAnswering(200, { user: { id: 'discord-45' }, roles: ['role-organization'] });
+    expect(await checkDiscordMembership('token-o', settings, organizer)).toMatchObject({ access: { organization: true, raceControl: false, stewards: false } });
+  });
+
+  it('distingue ruolo mancante, token non valido e utente fuori dal server', async () => {
+    expect(await checkDiscordMembership('token-b', settings, discordAnswering(200, { user: { id: '1' }, roles: [] }))).toEqual({
+      status: 'missing-role',
+    });
+    expect(await checkDiscordMembership('token-c', settings, discordAnswering(401))).toEqual({ status: 'invalid-token' });
+    expect(await checkDiscordMembership('token-d', settings, discordAnswering(404))).toEqual({ status: 'missing-role' });
+  });
+
+  it('per qualche minuto non richiede di nuovo a Discord una verifica già riuscita', async () => {
+    let discordRequests = 0;
+    const countingFetch = () => {
+      discordRequests += 1;
+      return Promise.resolve(new Response(JSON.stringify({ user: { id: '1' }, roles: [REQUIRED_ROLE_ID] }), { status: 200 }));
+    };
+
+    await checkDiscordMembership('token-e', settings, countingFetch);
+    await checkDiscordMembership('token-e', settings, countingFetch);
+    expect(discordRequests).toBe(1);
+  });
+});
+
+describe('GET /crews e /crews/:id', () => {
+  let env: Env;
+  let handleRequest: ReturnType<typeof createTestApp>;
+
+  beforeEach(async () => {
+    env = createTestEnv();
+    handleRequest = createTestApp(MEMBERSHIPS);
+    await handleRequest(postCrew({ name: 'Zeta', number: 90, carId: 2, ...REQUIRED_DETAILS }, 'token-director'), env);
+    await handleRequest(postCrew({ name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+  });
+
+  it('elenca gli equipaggi per numero crescente', async () => {
+    const response = await handleRequest(getPath('/crews', 'token-director'), env);
+    expect(response.status).toBe(200);
+    const { crews } = (await response.json()) as { crews: { number: number; color: string | null }[] };
+    expect(crews.map((crew) => crew.number)).toEqual([7, 90]);
+    expect(crews[1]?.color).toBe('#E10600');
+  });
+
+  it('restituisce un equipaggio o 404', async () => {
+    expect(await (await handleRequest(getPath('/crews/2', 'token-director'), env)).json()).toMatchObject({
+      crew: { id: 2, name: 'Alfa', number: 7 },
+    });
+    expect((await handleRequest(getPath('/crews/99', 'token-director'), env)).status).toBe(404);
+  });
+
+  it('anche la lettura richiede login e ruolo', async () => {
+    expect((await handleRequest(getPath('/crews'), env)).status).toBe(401);
+    expect((await handleRequest(getPath('/crews/1', 'token-no-role'), env)).status).toBe(403);
+  });
+});
+
+describe('PUT /crews/:id', () => {
+  let env: Env;
+  let handleRequest: ReturnType<typeof createTestApp>;
+
+  beforeEach(async () => {
+    env = createTestEnv();
+    handleRequest = createTestApp(MEMBERSHIPS);
+    await handleRequest(postCrew({ name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+    await handleRequest(postCrew({ name: 'Beta', number: 8, carId: 2, ...REQUIRED_DETAILS }, 'token-director'), env);
+  });
+
+  it('aggiorna i dati, anche mantenendo il proprio numero e nome', async () => {
+    const response = await handleRequest(
+      putCrew(1, { name: 'alfa', number: 7, carId: 6, championship: 'Cool1 FIE Championship', color: '#00a3e0' }, 'token-director'),
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      crew: { id: 1, name: 'alfa', number: 7, carId: 6, championship: 'Cool1 FIE Championship', color: '#00A3E0' },
+    });
+  });
+
+  it('rifiuta numero o nome già usati da un altro equipaggio', async () => {
+    const sameNumber = await handleRequest(putCrew(1, { name: 'Alfa', number: 8, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+    expect(sameNumber.status).toBe(409);
+    expect(await readError(sameNumber)).toBe('duplicate-crew-number');
+
+    const sameName = await handleRequest(putCrew(1, { name: ' BETA ', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+    expect(sameName.status).toBe(409);
+    expect(await readError(sameName)).toBe('duplicate-crew-name');
+  });
+
+  it('ricontrolla i dati, risponde 404 se l’equipaggio non esiste e richiede il ruolo', async () => {
+    expect((await handleRequest(putCrew(1, { name: 'Alfa!', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env)).status).toBe(422);
+    expect((await handleRequest(putCrew(99, { name: 'Gamma', number: 9, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env)).status).toBe(404);
+    expect((await handleRequest(putCrew(1, { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-no-role'), env)).status).toBe(403);
+  });
+});
+
+describe('DELETE /crews', () => {
+  let env: Env;
+  let handleRequest: ReturnType<typeof createTestApp>;
+
+  const deleteCrews = (body: unknown, accessToken?: string) =>
+    new Request('https://race-control-api.test/crews', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...authorizationHeader(accessToken) },
+      body: JSON.stringify(body),
+    });
+
+  const remainingNumbers = async () =>
+    ((await (await handleRequest(getPath('/crews', 'token-director'), env)).json()) as { crews: { number: number }[] }).crews.map(
+      (crew) => crew.number,
+    );
+
+  beforeEach(async () => {
+    env = createTestEnv();
+    handleRequest = createTestApp(MEMBERSHIPS);
+    for (const [name, number] of [['Alfa', 1], ['Beta', 2], ['Gamma', 3]] as const) {
+      await handleRequest(postCrew({ name, number, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
+    }
+  });
+
+  it('elimina gli equipaggi selezionati e ignora id inesistenti o ripetuti', async () => {
+    const response = await handleRequest(deleteCrews({ ids: [1, 3, 3, 99] }, 'token-director'), env);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ deletedCount: 2 });
+    expect(await remainingNumbers()).toEqual([2]);
+  });
+
+  it('rifiuta richieste malformate senza eliminare nulla', async () => {
+    for (const invalidBody of [{}, { ids: [] }, { ids: ['1'] }, { ids: [1.5] }, { ids: [0] }]) {
+      expect((await handleRequest(deleteCrews(invalidBody, 'token-director'), env)).status).toBe(400);
+    }
+    expect(await remainingNumbers()).toEqual([1, 2, 3]);
+  });
+
+  it('richiede login e ruolo', async () => {
+    expect((await handleRequest(deleteCrews({ ids: [1] }), env)).status).toBe(401);
+    expect((await handleRequest(deleteCrews({ ids: [1] }, 'token-no-role'), env)).status).toBe(403);
+    expect(await remainingNumbers()).toEqual([1, 2, 3]);
+  });
+});

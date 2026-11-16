@@ -1,0 +1,26 @@
+.progressBar {
+  display: block;
+  inline-size: 100%;
+  block-size: 0.375rem;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-border);
+  color: var(--color-text);
+  appearance: none;
+}
+
+.progressBar::-webkit-progress-bar {
+  background: var(--color-border);
+}
+
+.progressBar::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--color-text);
+  transition: inline-size var(--duration-quick);
+}
+
+.progressBar::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--color-text);
+}

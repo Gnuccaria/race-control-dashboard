@@ -1,0 +1,18 @@
+.navigationIndicator {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 20;
+  block-size: 2px;
+  background: var(--color-pit-board-figure);
+  transform-origin: left;
+  animation: navigation-progress 1.2s ease-out forwards;
+}
+
+@keyframes navigation-progress {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 0.9 1;
+  }
+}

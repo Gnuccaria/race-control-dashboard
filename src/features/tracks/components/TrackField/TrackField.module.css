@@ -1,0 +1,138 @@
+/* Campo nel form: si presenta come un menu, con una bandierina che lo distingue. */
+.trackField {
+  min-inline-size: 0;
+}
+
+.trackTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  block-size: var(--control-height);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--duration-quick);
+}
+
+.trackTrigger:not(:disabled):hover {
+  border-color: var(--color-border-strong);
+}
+
+.trackTrigger:focus-visible {
+  border-color: var(--color-text);
+  outline: none;
+}
+
+.trackTrigger:disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.invalidTrigger {
+  border-color: var(--color-danger);
+}
+
+.triggerIcon,
+.triggerChevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.triggerLabel {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerLabel[data-empty] {
+  color: var(--color-text-muted);
+}
+
+/* Popup */
+.pickerDialog {
+  inline-size: min(30rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-board);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 48px -16px color-mix(in srgb, #0f1318 40%, transparent);
+}
+
+.pickerDialog[open] {
+  display: grid;
+  gap: var(--space-4);
+  animation: picker-appear var(--duration-quick) ease-out;
+}
+
+.pickerDialog::backdrop {
+  background: var(--color-dialog-backdrop);
+  backdrop-filter: blur(2px);
+}
+
+.pickerTitle {
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pickerPanel,
+.pickerFields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.catalogMessage {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.catalogMessage[role='alert'] {
+  color: var(--color-danger);
+}
+
+/* Dati della configurazione scelta, separati dai menu da una linea sottile. */
+.trackDetails {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.trackLength {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.pickerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.removeTrackButton {
+  margin-inline-end: auto;
+}
+
+@keyframes picker-appear {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pickerDialog[open] {
+    animation: none;
+  }
+}

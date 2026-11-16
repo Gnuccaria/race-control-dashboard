@@ -1,0 +1,8 @@
+.fieldMessage {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.errorMessage {
+  color: var(--color-text-error);
+}

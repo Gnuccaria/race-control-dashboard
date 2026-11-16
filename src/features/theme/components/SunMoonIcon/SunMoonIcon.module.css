@@ -1,0 +1,47 @@
+/*
+ * Sole → luna. Tutte le parti si muovono insieme con la stessa curva:
+ * l'icona ruota leggermente, i raggi girano e si ritirano, il disco si ingrandisce
+ * e l'ombra della maschera scorre dentro il disco formando la falce.
+ */
+.sunMoonIcon {
+  --sun-moon-duration: 500ms;
+  --sun-moon-easing: cubic-bezier(0.65, 0, 0.35, 1);
+
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  color: var(--color-status-early);
+  transition:
+    rotate var(--sun-moon-duration) var(--sun-moon-easing),
+    color var(--sun-moon-duration) var(--sun-moon-easing);
+}
+
+.celestialDisc,
+.crescentShadow,
+.sunRays {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--sun-moon-duration) var(--sun-moon-easing),
+    opacity calc(var(--sun-moon-duration) * 0.6) var(--sun-moon-easing);
+}
+
+.sunMoonIcon[data-moon] {
+  rotate: 40deg;
+  color: var(--color-pit-board-figure);
+}
+
+.sunMoonIcon[data-moon] .celestialDisc {
+  transform: scale(1.75);
+}
+
+/* L'ombra entra dall'angolo in alto a destra e ritaglia la falce di luna. */
+.sunMoonIcon[data-moon] .crescentShadow {
+  transform: translate(-7px, 4px);
+}
+
+.sunMoonIcon[data-moon] .sunRays {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.4);
+}

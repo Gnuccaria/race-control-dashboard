@@ -1,0 +1,61 @@
+.toolCard {
+  display: grid;
+  gap: var(--space-5);
+  block-size: 100%;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color var(--duration-quick);
+}
+
+.toolCard:hover:not([data-under-construction]) {
+  border-color: var(--color-border-strong);
+}
+
+/* Strumento non ancora disponibile: riconoscibile ma chiaramente non cliccabile. */
+.toolCard[data-under-construction] {
+  border-style: dashed;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.toolCard[data-under-construction] .toolIcon,
+.toolCard[data-under-construction] .toolText {
+  opacity: 0.55;
+}
+
+.toolCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* L'icona riprende la lavagna dei box: grafite e giallo, come dentro lo strumento. */
+.toolIcon {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border-radius: var(--radius-control);
+  background: var(--color-pit-board);
+  color: var(--color-pit-board-figure);
+}
+
+.toolText {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.toolName {
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-semibold);
+}
+
+.toolDescription {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

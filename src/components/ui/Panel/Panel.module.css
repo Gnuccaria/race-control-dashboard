@@ -1,0 +1,30 @@
+.panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.panelHeader {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.panelTitle {
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+}
+
+.panelDescription {
+  max-inline-size: 60ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.panelContent {
+  display: grid;
+  gap: var(--space-5);
+}

@@ -1,0 +1,38 @@
+.sortDirectionIcon {
+  flex-shrink: 0;
+  transition: rotate var(--duration-quick) ease-out;
+  animation: sort-icon-enter var(--duration-quick) ease-out;
+}
+
+.sortDirectionIcon[data-direction='descending'] {
+  rotate: 180deg;
+}
+
+@keyframes sort-icon-enter {
+  from {
+    opacity: 0;
+    translate: 0 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortDirectionIcon {
+    transition: none;
+    animation: none;
+  }
+}
+
+.missingDataIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-status-early);
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

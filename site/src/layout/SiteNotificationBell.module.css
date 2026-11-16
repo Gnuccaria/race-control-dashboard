@@ -1,0 +1,6 @@
+.resultLine {
+  display: block;
+  margin-block-start: var(--space-1);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+}

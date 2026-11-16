@@ -1,0 +1,19 @@
+.colorDot {
+  display: inline-block;
+  flex-shrink: 0;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
+  /* Bordo visibile anche per colori simili allo sfondo (nero in modalità scura, bianco in chiara). */
+  border: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.smallColorDot {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+.colorDot[data-empty] {
+  border: 1.5px dashed var(--color-border-strong);
+}

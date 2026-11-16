@@ -1,0 +1,52 @@
+.toolLayout {
+  display: grid;
+  gap: var(--space-6);
+  max-inline-size: var(--layout-width-wide);
+  margin-inline: auto;
+}
+
+/* Mobile: dati, risultato, guida, nello stesso ordine del DOM. */
+.workspace {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-areas:
+    'inputs'
+    'results'
+    'guide';
+}
+
+.inputColumn {
+  grid-area: inputs;
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.resultsArea {
+  grid-area: results;
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.guideArea {
+  grid-area: guide;
+}
+
+/* Desktop: dati a sinistra, risultato a destra sempre visibile mentre si scorre. */
+@media (width >= 56rem) {
+  .workspace {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'inputs results'
+      'guide results';
+    gap: var(--space-4) var(--space-5);
+  }
+
+  .resultsArea[data-sticky] {
+    position: sticky;
+    inset-block-start: calc(var(--header-height) + var(--space-4));
+    align-self: start;
+  }
+}

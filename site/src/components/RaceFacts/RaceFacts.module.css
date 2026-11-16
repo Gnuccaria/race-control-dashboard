@@ -1,0 +1,11 @@
+/* Riquadro come quelli dell'app, con i valori in evidenza sotto le etichette. */
+.raceFacts {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.notSet {
+  color: var(--color-text-muted);
+}

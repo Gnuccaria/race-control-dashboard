@@ -1,0 +1,21 @@
+.buttonLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  min-inline-size: var(--button-min-inline-size);
+  white-space: nowrap;
+  block-size: var(--control-height);
+  padding-inline: var(--space-5);
+  border-radius: var(--radius-control);
+  background: var(--color-text);
+  color: var(--color-canvas);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: opacity var(--duration-quick);
+}
+
+/* Azione di servizio (Crea gara, Aggiungi penalità): stesso nero di Button primary. */
+.buttonLink:hover {
+  opacity: 0.88;
+}

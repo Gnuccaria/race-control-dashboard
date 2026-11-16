@@ -1,0 +1,18 @@
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  inline-size: fit-content;
+  margin-inline-start: calc(var(--space-1) * -1);
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  transition: color var(--duration-quick);
+}
+
+.backLink:hover {
+  color: var(--color-text);
+}

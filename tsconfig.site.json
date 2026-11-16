@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.site.tsbuildinfo",
+    "paths": {
+      "@site/*": ["./site/src/*"],
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": ["site/src", "src/vite-env.d.ts"]
+}

@@ -1,0 +1,32 @@
+/* Card della home, come le sezioni dell'app: colonne da almeno 18rem. */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-4);
+}
+
+/* Card che richiede l'accesso: stessa card, come pulsante (il clic ricorda di accedere). */
+.lockedCard {
+  inline-size: 100%;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.signInReminder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--color-discord);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.signInReminder p {
+  margin: 0;
+  max-inline-size: 60ch;
+}

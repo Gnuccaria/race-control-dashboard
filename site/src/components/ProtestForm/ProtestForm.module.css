@@ -1,0 +1,154 @@
+.protestForm {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Campionato, stint, giro e curva sulla stessa riga su schermi larghi. */
+.fieldRow {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1.2fr) minmax(5rem, 8rem) minmax(6rem, 9rem) minmax(10rem, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.privacyNotice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 3px solid var(--color-status-early);
+  background: var(--color-status-early-surface);
+  font-size: var(--font-size-small);
+}
+
+/* Descrizione: il contatore dei caratteri rimasti, quando compare, sta in basso a destra sotto il campo. */
+.descriptionField {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.characterCounter {
+  margin: 0;
+  justify-self: end;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.characterCounter[data-exhausted] {
+  color: var(--color-text-error);
+}
+
+.videoGroup {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.groupLabel {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.videoField {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* Zona tratteggiata: etichetta del campo file, che resta nella pagina ma fuori dalla vista. */
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-4);
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-group);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--duration-quick), background-color var(--duration-quick);
+}
+
+.dropzone:hover,
+.dropzone[data-dragging] {
+  border-color: var(--color-confirm);
+  background: var(--color-surface);
+}
+
+.videoField:has(.fileInput:focus-visible) .dropzone {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.dropzoneTitle {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+
+.dropzoneHint {
+  font-size: var(--font-size-small);
+}
+
+.fileInput {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.chosenVideo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.chosenVideo[data-invalid] {
+  border-color: var(--color-text-error);
+}
+
+.chosenVideoName {
+  flex: 1 1 12rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  font-weight: var(--font-weight-medium);
+}
+
+.chosenVideoSize {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.fieldError {
+  margin: 0;
+  color: var(--color-text-error);
+  font-size: var(--font-size-small);
+}
+
+.uploadProgress {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+@media (width < 44rem) {
+  .fieldRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fieldRow > :first-child,
+  .fieldRow > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone {
+    transition: none;
+  }
+}

@@ -1,0 +1,107 @@
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { CREW_API_URL } from '@/config/apiConfig';
+import { getSessionAccessToken } from '@/features/auth/authSessionStore';
+import type { Messages } from '@/i18n/messages';
+
+/** Ogni errore che il server (o la rete) può restituire ha un messaggio in messages.serverErrors. */
+export type ServerErrorKind = keyof Messages['serverErrors'];
+
+export type ServerApiResult<Value> =
+  | { readonly isSuccess: true; readonly value: Value }
+  | { readonly isSuccess: false; readonly errorKind: ServerErrorKind };
+
+/** Codici di errore del server (server/src/http/jsonResponse.ts) → messaggi mostrati nell'app. */
+const ERROR_KIND_BY_SERVER_CODE: Record<string, ServerErrorKind> = {
+  'duplicate-crew-number': 'duplicate-number',
+  'duplicate-crew-name': 'duplicate-name',
+  'invalid-crew': 'invalid-crew',
+  'invalid-request': 'invalid-crew',
+  'crew-in-race-results': 'crew-in-race-results',
+  'invalid-race': 'invalid-race',
+  'duplicate-race-round': 'duplicate-race-round',
+  'invalid-penalty': 'invalid-penalty',
+  'invalid-track': 'invalid-track',
+  'duplicate-track': 'duplicate-track',
+  'not-signed-in': 'not-signed-in',
+  'missing-role': 'missing-role',
+  'discord-unavailable': 'discord-unavailable',
+  'not-found': 'not-found',
+  'invalid-ticket': 'invalid-ticket',
+  'ticket-already-resolved': 'ticket-already-resolved',
+  'video-expired': 'video-expired',
+  'invalid-protest': 'invalid-protest',
+};
+
+async function readServerErrorCode(errorResponse: Response): Promise<string | undefined> {
+  try {
+    const errorBody = (await errorResponse.json()) as { error?: { code?: string } };
+    return errorBody.error?.code;
+  } catch {
+    return undefined;
+  }
+}
+
+export interface ServerApiRequest {
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  readonly path: string;
+  readonly body?: unknown;
+}
+
+/**
+ * Unico punto di contatto con il server (equipaggi, gare, piste). Il token Discord della sessione permette
+ * al server di verificare il ruolo; la chiamata passa dal lato nativo di Tauri (nessun blocco CORS).
+ */
+export async function requestServerApi<Value>(
+  { method, path, body }: ServerApiRequest,
+  readValue: (responseBody: unknown) => Value,
+): Promise<ServerApiResult<Value>> {
+  const accessToken = getSessionAccessToken();
+  if (!accessToken) return { isSuccess: false, errorKind: 'not-signed-in' };
+
+  let serverResponse: Response;
+  try {
+    serverResponse = await tauriFetch(`${CREW_API_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(body !== undefined && { 'Content-Type': 'application/json' }),
+      },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    });
+  } catch (networkError) {
+    // Il dettaglio (es. connessione rifiutata, indirizzo non permesso) resta negli strumenti per sviluppatori.
+    console.error(`Server non raggiungibile su ${CREW_API_URL}`, networkError);
+    return { isSuccess: false, errorKind: 'server-unreachable' };
+  }
+
+  if (serverResponse.ok) {
+    // 204 (es. risultato di un ticket) non ha corpo: niente JSON da leggere.
+    const responseBody: unknown = serverResponse.status === 204 ? undefined : await serverResponse.json();
+    return { isSuccess: true, value: readValue(responseBody) };
+  }
+
+  const serverErrorCode = await readServerErrorCode(serverResponse);
+  return { isSuccess: false, errorKind: (serverErrorCode && ERROR_KIND_BY_SERVER_CODE[serverErrorCode]) || 'unexpected' };
+}
+
+/** Lettore della risposta delle eliminazioni multiple: { deletedCount }. */
+export const readDeletedCount = (responseBody: unknown) => (responseBody as { deletedCount: number }).deletedCount;
+
+/**
+ * File dal server (es. il video di una protesta), con la stessa autorizzazione delle altre richieste: un <video>
+ * non può mandare il token, quindi l'app lo scarica e lo riproduce dalla memoria.
+ */
+export async function requestServerBlob(path: string): Promise<ServerApiResult<Blob>> {
+  const accessToken = getSessionAccessToken();
+  if (!accessToken) return { isSuccess: false, errorKind: 'not-signed-in' };
+  let serverResponse: Response;
+  try {
+    serverResponse = await tauriFetch(`${CREW_API_URL}${path}`, { method: 'GET', headers: { Authorization: `Bearer ${accessToken}` } });
+  } catch (networkError) {
+    console.error(`Server non raggiungibile su ${CREW_API_URL}`, networkError);
+    return { isSuccess: false, errorKind: 'server-unreachable' };
+  }
+  if (serverResponse.ok) return { isSuccess: true, value: await serverResponse.blob() };
+  const serverErrorCode = await readServerErrorCode(serverResponse);
+  return { isSuccess: false, errorKind: (serverErrorCode && ERROR_KIND_BY_SERVER_CODE[serverErrorCode]) || 'unexpected' };
+}

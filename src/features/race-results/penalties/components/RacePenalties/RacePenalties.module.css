@@ -1,0 +1,14 @@
+.racePenalties {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

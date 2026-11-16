@@ -1,0 +1,8 @@
+.homePage {
+  display: grid;
+  align-content: center;
+  gap: var(--space-7);
+  max-inline-size: var(--layout-width-wide);
+  min-block-size: calc(100dvh - var(--header-height) - 2 * var(--space-7));
+  margin-inline: auto;
+}

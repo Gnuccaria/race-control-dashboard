@@ -1,0 +1,4 @@
+.crewList {
+  display: grid;
+  gap: var(--space-4);
+}

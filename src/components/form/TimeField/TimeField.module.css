@@ -1,0 +1,15 @@
+/* Ore, minuti ed eventualmente AM/PM su una riga, larghi quanto serve. */
+.timeField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.part {
+  inline-size: 5.5rem;
+}
+
+.separator {
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

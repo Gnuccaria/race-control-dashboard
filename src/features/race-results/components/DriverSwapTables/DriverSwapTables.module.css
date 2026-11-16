@@ -1,0 +1,144 @@
+.driverSwaps {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.notice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.errorMessage {
+  color: var(--color-text-error);
+  font-size: var(--font-size-small);
+}
+
+/* Menu "Da stint 1 a stint 2" sopra la tabella. */
+.swapPicker {
+  max-inline-size: 22rem;
+}
+
+.summary,
+.swapSection {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tableTitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.emptySummary {
+  color: var(--color-text-muted);
+}
+
+.tableScroller {
+  overflow-x: auto;
+}
+
+.swapTable {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.swapTable.summaryTable {
+  justify-self: start;
+  inline-size: auto;
+  min-inline-size: 18rem;
+}
+
+.swapTable th {
+  padding: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.swapTable td {
+  padding: var(--space-1) var(--space-2);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.swapTable tbody tr + tr {
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* Riga con penalità: un filo rosso a sinistra, come le righe del podio sul sito. */
+.swapTable tbody tr[data-penalty] {
+  box-shadow: inset 3px 0 0 var(--color-danger);
+}
+
+.swapTable tbody tr[data-cancelled] {
+  box-shadow: inset 3px 0 0 var(--color-border-strong);
+}
+
+.swapTable tbody tr[data-cancelled] .penaltyValue {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.numberColumn {
+  inline-size: 4.5rem;
+}
+
+.swapTable .numberCell {
+  font-weight: var(--font-weight-semibold);
+}
+
+.timeColumn {
+  inline-size: 12.5rem;
+}
+
+.diffColumn {
+  inline-size: 8rem;
+}
+
+.cancelledColumn {
+  inline-size: 5.5rem;
+  text-align: center;
+}
+
+.swapTable .numeric {
+  text-align: end;
+}
+
+.swapTable .cancelledCell {
+  text-align: center;
+}
+
+.notesCell {
+  min-inline-size: 12rem;
+}
+
+.penaltyValue {
+  font-weight: var(--font-weight-semibold);
+}
+
+.missing {
+  color: var(--color-text-muted);
+}
+
+.penaltyFlag {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: var(--color-status-late-surface);
+  color: var(--color-status-late);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+}
+
+.checkbox {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  accent-color: var(--color-text);
+}
+
+.checkbox:disabled {
+  pointer-events: none;
+}

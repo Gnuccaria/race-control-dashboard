@@ -1,0 +1,92 @@
+.protestsPage {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.crewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.crewChip {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.protestDescription {
+  margin: 0;
+  max-inline-size: 75ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.missingText {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.videos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 44rem));
+  gap: var(--space-5);
+}
+
+.videoBlock {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.videoHeading {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Stesso riquadro 16:9 per il video caricato e per YouTube. */
+.videoPlayer {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: var(--radius-group);
+  background: #000;
+}
+
+.youtubeVideo {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.externalLink {
+  justify-self: start;
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+}
+
+.videoStatus {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-group);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.reviewForm {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.reviewActions {
+  display: flex;
+  justify-content: flex-end;
+}

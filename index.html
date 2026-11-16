@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Race Control Dashboard: strumenti per la direzione gara delle endurance a lobby." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Race Control Dashboard</title>
+    <script>
+      // Applica il tema scelto manualmente prima del primo paint, così non si vede il lampo del tema sbagliato.
+      // La chiave è la stessa di THEME_PREFERENCE_STORAGE_KEY in src/features/theme/themePreferenceStore.ts.
+      try {
+        const storedThemePreference = localStorage.getItem('app:theme-preference');
+        if (storedThemePreference === 'light' || storedThemePreference === 'dark') {
+          document.documentElement.dataset.theme = storedThemePreference;
+        }
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

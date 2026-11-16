@@ -1,0 +1,142 @@
+.crewMultiPicker {
+  min-inline-size: 0;
+}
+
+/* Ha l'aspetto di un campo di testo: dentro, le clip con i numeri delle vetture scelte. */
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--duration-quick);
+}
+
+.trigger:not(:disabled):hover {
+  border-color: var(--color-border-strong);
+}
+
+.trigger:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.trigger[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+/* Sola lettura: non si apre e non reagisce al passaggio del mouse. */
+.trigger:disabled {
+  cursor: default;
+  pointer-events: none;
+}
+
+.trigger:disabled .chevron {
+  display: none;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+}
+
+.chip {
+  padding: 0.125rem var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.chevron {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: var(--color-text-muted);
+}
+
+/* Elenco nel top layer, ancorato sotto al campo (o sopra, se sotto non c'è spazio). */
+.dropdown {
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(left);
+  min-inline-size: anchor-size(width);
+  max-block-size: min(22rem, 55vh);
+  margin: var(--space-1) 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 16px 32px -12px color-mix(in srgb, #0f1318 35%, transparent);
+  position-try-fallbacks: flip-block;
+}
+
+.options {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: calc(var(--radius-control) - 2px);
+  cursor: pointer;
+}
+
+.option:hover,
+.option:has(:focus-visible) {
+  background: var(--color-surface-sunken);
+}
+
+.checkbox {
+  flex: none;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-text);
+  cursor: inherit;
+}
+
+.crewNumber {
+  flex-shrink: 0;
+  min-inline-size: 2.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.crewName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

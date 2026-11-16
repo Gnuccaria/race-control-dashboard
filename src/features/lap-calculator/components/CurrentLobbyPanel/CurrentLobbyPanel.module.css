@@ -1,0 +1,15 @@
+.timeFields,
+.lobbyFields {
+  display: grid;
+  gap: var(--space-5) var(--space-4);
+}
+
+/* Gli orari sono compatti: restano affiancati anche su telefono. */
+.timeFields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+}
+
+/* Contatore e stepper hanno bisogno di più spazio: si impilano sotto i 26rem circa. */
+.lobbyFields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}

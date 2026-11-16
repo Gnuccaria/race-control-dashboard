@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Risultati e classifiche delle gare della lega." />
+    <meta name="color-scheme" content="light dark" />
+    <title>Risultati Race Control</title>
+    <script>
+      // Applica la modalità notte scelta prima del primo disegno (stessa chiave dell'app, vedi themePreferenceStore.ts).
+      try {
+        const storedThemePreference = localStorage.getItem('app:theme-preference');
+        if (storedThemePreference === 'light' || storedThemePreference === 'dark') {
+          document.documentElement.dataset.theme = storedThemePreference;
+        }
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

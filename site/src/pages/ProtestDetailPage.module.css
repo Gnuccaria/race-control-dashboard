@@ -1,0 +1,41 @@
+/* Protesta respinta: in evidenza sopra i dati, con la motivazione dei Commissari. */
+.rejection {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--color-danger);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.rejectionTitle {
+  margin: 0;
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-semibold);
+}
+
+.rejectionReason {
+  margin: 0;
+  max-inline-size: 75ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rejectionDate {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.description {
+  margin: 0;
+  max-inline-size: 75ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.missingText {
+  margin: 0;
+  color: var(--color-text-muted);
+}

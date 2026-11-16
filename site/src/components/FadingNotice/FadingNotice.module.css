@@ -1,0 +1,14 @@
+.fadingNotice {
+  opacity: 1;
+  transition: opacity 600ms ease-out;
+}
+
+.fadingNotice[data-fading] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fadingNotice {
+    transition: none;
+  }
+}

@@ -1,0 +1,44 @@
+.textarea {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color var(--duration-quick);
+}
+
+.textarea:hover:not(:read-only) {
+  border-color: var(--color-border-strong);
+}
+
+.textarea:focus-visible {
+  border-color: var(--color-text);
+  outline: none;
+}
+
+.textarea[aria-invalid='true'] {
+  border-color: var(--color-text-error);
+}
+
+/* Sola lettura: nessun clic né ridimensionamento; l'altezza segue il testo, così si legge tutto senza scorrere. */
+.textarea:read-only,
+.textarea:disabled {
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  caret-color: transparent;
+  resize: none;
+  field-sizing: content;
+}
+
+.textarea:read-only:focus,
+.textarea:read-only:focus-visible {
+  border-color: var(--color-border);
+  outline: none;
+}

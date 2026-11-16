@@ -1,0 +1,13 @@
+.boardFootnote {
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid color-mix(in srgb, var(--color-pit-board-muted) 30%, transparent);
+  color: var(--color-pit-board-muted);
+  font-size: var(--font-size-small);
+}
+
+.footnoteValue {
+  margin-inline-start: var(--space-1);
+  color: var(--color-pit-board-text);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

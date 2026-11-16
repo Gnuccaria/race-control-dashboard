@@ -1,0 +1,25 @@
+.inputWithUnit {
+  display: flex;
+  align-items: center;
+  padding-inline-end: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  transition: border-color var(--duration-quick);
+}
+
+.inputWithUnit:hover {
+  border-color: var(--color-border-strong);
+}
+
+.inputWithUnit:focus-within {
+  border-color: var(--color-text);
+}
+
+.inputWithUnit[data-invalid] {
+  border-color: var(--color-text-error);
+}
+
+.unitLabel {
+  color: var(--color-text-muted);
+}

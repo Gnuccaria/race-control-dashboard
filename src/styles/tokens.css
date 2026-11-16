@@ -1,0 +1,88 @@
+/*
+ * Design token. I colori usano light-dark(): la modalità scura segue il sistema.
+ * Palette ispirata al paddock: asfalto, pista, linee bianche e il giallo della lavagna box.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Superfici */
+  --color-canvas: light-dark(#f1f3f2, #15191e);
+  --color-surface: light-dark(#ffffff, #1c2228);
+  --color-surface-sunken: light-dark(#f6f7f7, #181d22);
+  --color-border: light-dark(#dce1e4, #2b333b);
+  --color-border-strong: light-dark(#b8c0c7, #46505a);
+
+  /* Testo */
+  --color-text: light-dark(#20262e, #e7ebee);
+  --color-text-muted: light-dark(#66717c, #97a1ab);
+  --color-text-error: light-dark(#b8372d, #f2867c);
+
+  /* Larghezza minima dei pulsanti: più lunghi solo quanto serve al testo (più il padding). */
+  --button-min-inline-size: 7rem;
+
+  /* Pulsanti di conferma/salvataggio (verde); testo bianco leggibile in entrambi i temi */
+  /* Palette di Discord, solo per i pulsanti di accesso con Discord. */
+  --color-discord: #5865f2;
+  --color-discord-hover: #4752c4;
+  --color-on-discord: #ffffff;
+  --color-confirm: light-dark(#1d7748, #1f7f4f);
+  --color-confirm-hover: light-dark(#17613a, #23925a);
+  --color-on-confirm: #ffffff;
+
+  /* Azioni distruttive (eliminare, uscire senza salvare) */
+  --color-danger: light-dark(#c9372c, #d9463b);
+  --color-danger-hover: light-dark(#ae2e24, #e55a4f);
+  --color-on-danger: #ffffff;
+  --color-dialog-backdrop: color-mix(in srgb, #0f1318 45%, transparent);
+
+  /* Lavagna box: unico accento della pagina */
+  --color-pit-board: light-dark(#20262e, #242c35);
+  --color-pit-board-figure: #f2c94c;
+  --color-pit-board-text: #d5dbe0;
+  --color-pit-board-muted: #9aa4ad;
+
+  /* Stato dello stint */
+  --color-status-on-time: light-dark(#23845a, #5ccb93);
+  --color-status-on-time-surface: light-dark(#e5f3ec, #18322a);
+  --color-status-early: light-dark(#9a6a07, #e5b04a);
+  --color-status-early-surface: light-dark(#fbf0d9, #372c14);
+  --color-status-late: light-dark(#b8372d, #f2867c);
+  --color-status-late-surface: light-dark(#fbe6e3, #3b1f1d);
+
+  /* Tipografia: un'unica famiglia variabile, larghezza normale per l'interfaccia e condensata per le cifre */
+  --font-family-sans: 'Saira Variable', 'Saira', ui-sans-serif, system-ui, sans-serif;
+  --font-width-condensed: 62.5%;
+  --font-size-small: 0.8125rem;
+  --font-size-body: 0.9375rem;
+  --font-size-large: 1.125rem;
+  --font-size-title: clamp(1.625rem, 1.2rem + 1.4vw, 2.125rem);
+  --font-size-figure: clamp(5.5rem, 4rem + 7vw, 8.5rem);
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  /* Spaziature (scala da 4px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Raggi: crescono con la gerarchia dell'elemento */
+  --radius-control: 0.5rem;
+  --radius-group: 0.75rem;
+  --radius-board: 1.25rem;
+
+  --control-height: 2.75rem;
+  --header-height: 3.75rem;
+  /*
+   * Riquadro comune a tutte le pagine e alla barra in alto: stessa larghezza (--layout-width-wide) e stesso
+   * margine laterale (--layout-gutter), così ogni schermata ha esattamente gli stessi bordi sinistro e destro.
+   */
+  --layout-gutter: clamp(var(--space-4), 4vw, var(--space-6));
+  --layout-width-wide: 104rem;
+  --focus-ring: 2px solid var(--color-text);
+  --duration-quick: 180ms;
+}

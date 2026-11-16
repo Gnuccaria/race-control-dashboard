@@ -1,0 +1,85 @@
+﻿continent;track_name;configuration;length_meters;has_reverse_layout
+Europe - Middle East;24 Heures du Mans Racing Circuit;Full Course;13629;false
+Europe - Middle East;24 Heures du Mans Racing Circuit;No Chicane;13567;false
+Europe - Middle East;Alsace;Village;5423;true
+Europe - Middle East;Alsace;Test Course;2118;true
+Europe - Middle East;Autodrome Lago Maggiore;Full Course;5809;true
+Europe - Middle East;Autodrome Lago Maggiore;Centre;1706;true
+Europe - Middle East;Autodrome Lago Maggiore;East End;2010;true
+Europe - Middle East;Autodrome Lago Maggiore;West End;2444;true
+Europe - Middle East;Autodrome Lago Maggiore;East;3643;true
+Europe - Middle East;Autodrome Lago Maggiore;West;4168;true
+Americas;Interlagos;Full Course;4309;false
+Europe - Middle East;Monza;Full Course;5793;false
+Europe - Middle East;Monza;No Chicane;5755;false
+Asia;Autopolis International Racing Course;Full Course;4674;false
+Asia;Autopolis International Racing Course;Shortcut Course;3022;false
+Americas;Blue Moon Speedway;Full Course;3200;true
+Americas;Blue Moon Speedway;Infield A;3350;true
+Americas;Blue Moon Speedway;Infield B;2860;true
+Europe - Middle East;Brands Hatch;Grand Prix Circuit;3946;false
+Europe - Middle East;Brands Hatch;Indy Circuit;1944;false
+Asia;Broad Bean Raceway;Full Course;1665;true
+Europe - Middle East;Circuit de Barcelona-Catalunya;Grand Prix Layout;4655;false
+Europe - Middle East;Circuit de Barcelona-Catalunya;Grand Prix Layout No Chicane;4730;false
+Europe - Middle East;Circuit de Barcelona-Catalunya;National Layout;2977;false
+Europe - Middle East;Circuit de Barcelona-Catalunya;Rallycross Layout;1133;false
+Europe - Middle East;Circuit de Sainte-Croix;Layout A;9477;true
+Europe - Middle East;Circuit de Sainte-Croix;Layout B;7062;true
+Europe - Middle East;Circuit de Sainte-Croix;Layout C;10825;true
+Europe - Middle East;Circuit de Spa-Francorchamps;Full Course;7044;false
+Europe - Middle East;Circuit de Spa-Francorchamps;24h Layout;7044;false
+Americas;Circuit Gilles Villeneuve;Full Course;4361;false
+Americas;Colorado Springs;Lake;2990;true
+Americas;Daytona International Speedway;Tri-Oval;4023;false
+Americas;Daytona International Speedway;Road Course;5729;false
+Europe - Middle East;Deep Forest Raceway;Full Course;4253;true
+Europe - Middle East;Dragon Trail;Seaside;5209;true
+Europe - Middle East;Dragon Trail;Gardens;4352;true
+Europe - Middle East;Eiger Nordwand;Full Course;2436;true
+Americas;Fishermans Ranch;Full Course;6893;true
+Asia;Fuji International Speedway;Full Course;4563;true
+Asia;Fuji International Speedway;Short Course;4526;true
+Europe - Middle East;Goodwood Motor Circuit;Full Course;3809;false
+Americas;Grand Valley;Highway 1;5099;true
+Americas;Grand Valley;South;3076;true
+Asia;High Speed Ring;Full Course;4345;true
+Asia;Kyoto Driving Park;Yamagiwa;4912;true
+Asia;Kyoto Driving Park;Miyabi;1953;true
+Asia;Kyoto Driving Park;Yamagiwa + Miyabi;6846;true
+Americas;Lake Louise;Tri-Oval;3068;true
+Americas;Lake Louise;Short Track;2577;true
+Americas;Lake Louise;Long Track;3694;true
+Americas;Michelin raceway Road Atlanta;Full Course;4088;false
+Asia;Mount Panorama Circuit;Full Course;6213;false
+Americas;Northern Isle Speedway;Full Course;900;false
+Europe - Middle East;Nürburgring;Nordschleife;20832;false
+Europe - Middle East;Nürburgring;24h;25378;false
+Europe - Middle East;Nürburgring;Grand Prix;5148;false
+Europe - Middle East;Nürburgring;Endurance;23832;false
+Europe - Middle East;Nürburgring;Sprint;3629;false
+Europe - Middle East;Red Bull Ring;Full Course;4318;false
+Europe - Middle East;Red Bull Ring;Short Track;2336;false
+Europe - Middle East;Sardegna - Road Track;Layout A;5113;true
+Europe - Middle East;Sardegna - Road Track;Layout B;3893;true
+Europe - Middle East;Sardegna - Road Track;Layout C;2661;true
+Europe - Middle East;Sardegna - Windmills;Full Course;3310;true
+Americas;Special Stage Route X;Full Course;30283;false
+Asia;SUGO International Racing Course;Full Course;3586;false
+Asia;Suzuka Circuit;Full Course;5807;false
+Asia;Suzuka Circuit;East Course;2243;false
+Asia;Tokyo Expressway;Central Clockwise;4405;false
+Asia;Tokyo Expressway;East Clockwise;7301;false
+Asia;Tokyo Expressway;South Clockwise;5201;false
+Asia;Tokyo Expressway;Central Counterclockwise;4369;false
+Asia;Tokyo Expressway;East Counterclockwise;7192;false
+Asia;Tokyo Expressway;South Counterclockwise;6560;false
+Americas;Trial Mountain;Full Course;5434;true
+Asia;Tsukuba Circuit;Full Course;2045;false
+Americas;Watkins Glen International;Long Course;5423;false
+Americas;Watkins Glen International;Short Course;3942;false
+Americas;Weathertech Raceway Laguna Seca;Full Course;3602;false
+Americas;Willow Springs International Raceway;Big Willow;3951;false
+Americas;Willow Springs International Raceway;Streets of Willow Springs;2675;false
+Americas;Willow Springs International Raceway;Horse Thief Mile;1624;false
+Europe - Middle East;Yas Marina Circuit;Full Course;5281;false

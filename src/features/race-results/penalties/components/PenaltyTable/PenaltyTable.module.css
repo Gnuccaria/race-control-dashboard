@@ -1,0 +1,44 @@
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  padding: 0.125rem var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+/* La violazione può essere lunga: va a capo invece di allargare la tabella. */
+.violationCell {
+  min-inline-size: 16rem;
+  white-space: normal !important;
+}
+
+.decisionList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.decisionCar {
+  display: inline-block;
+  min-inline-size: 3rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.automaticPenalty {
+  display: block;
+  padding-inline-start: 3rem;
+  color: var(--color-status-early);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}

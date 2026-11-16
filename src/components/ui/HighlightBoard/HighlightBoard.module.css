@@ -1,0 +1,64 @@
+/* La lavagna dei box: unico elemento forte di ogni strumento, grafite con cifre gialle. */
+.highlightBoard {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-board);
+  background: var(--color-pit-board);
+  color: var(--color-pit-board-text);
+}
+
+.boardTitle {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+}
+
+.boardFigure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-4);
+  margin-block: var(--space-1) var(--space-2);
+  color: var(--color-pit-board-figure);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 0.85;
+  animation: figure-refresh var(--duration-quick) ease-out;
+}
+
+.boardFigure[data-empty] {
+  color: var(--color-pit-board-muted);
+  font-weight: var(--font-weight-regular);
+  opacity: 0.6;
+}
+
+.figurePart {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.figureValue {
+  font-size: var(--font-size-figure);
+  font-stretch: var(--font-width-condensed);
+  letter-spacing: -0.02em;
+}
+
+.figureUnit {
+  color: var(--color-pit-board-muted);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-medium);
+}
+
+.boardContent {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 44ch;
+}
+
+@keyframes figure-refresh {
+  from {
+    opacity: 0.2;
+    translate: 0 0.08em;
+  }
+}

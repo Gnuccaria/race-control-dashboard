@@ -1,0 +1,30 @@
+/* Accesso con Discord in cima alla tendina, separato da tema e lingua come il profilo nell'app. */
+.signInArea {
+  display: grid;
+  gap: var(--space-2);
+  padding-block-end: var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.signInButton {
+  justify-self: stretch;
+}
+
+.signInHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.signInError {
+  margin: 0;
+  color: var(--color-text-error);
+  font-size: var(--font-size-small);
+}
+
+/* Campanella dei risultati accanto al profilo. */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

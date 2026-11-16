@@ -1,0 +1,22 @@
+.statusBadge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.positive {
+  background: var(--color-status-on-time-surface);
+  color: var(--color-status-on-time);
+}
+
+.warning {
+  background: var(--color-status-early-surface);
+  color: var(--color-status-early);
+}
+
+.critical {
+  background: var(--color-status-late-surface);
+  color: var(--color-status-late);
+}

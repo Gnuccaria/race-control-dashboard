@@ -1,0 +1,100 @@
+.penaltyFields {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Violazione (numero dell'articolo, corto) e documento sulla stessa riga. */
+.violationRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) minmax(12rem, 22rem);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* Una riga per vettura coinvolta: a sinistra la vettura, a destra la sua decisione. */
+.decisions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.decisionsHeader {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.decisionsTitle {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.decisionList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  list-style: none;
+}
+
+.decisionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.decisionRow + .decisionRow {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.crew {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.crewNumber {
+  min-inline-size: 2.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.crewName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decisionControl {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.reprimandNote {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* Terza reprimenda: scatta la penalità in griglia, va notata. */
+.reprimandNote[data-grid-penalty] {
+  color: var(--color-status-early);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (width < 40rem) {
+  .violationRow {
+    grid-template-columns: 1fr;
+  }
+
+  .decisionRow {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+}

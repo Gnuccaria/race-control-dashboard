@@ -1,0 +1,22 @@
+.brandMark {
+  --brand-mark-size: 1.75rem;
+
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: var(--brand-mark-size);
+  block-size: var(--brand-mark-size);
+  border-radius: calc(var(--brand-mark-size) * 0.23);
+  background: var(--color-pit-board);
+}
+
+.largeBrandMark {
+  --brand-mark-size: 3.5rem;
+}
+
+.brandMarkStripe {
+  inline-size: 50%;
+  block-size: 10.5%;
+  border-radius: 999px;
+  background: var(--color-pit-board-figure);
+}

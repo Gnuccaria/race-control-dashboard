@@ -1,0 +1,121 @@
+.crewResultPicker {
+  min-inline-size: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--duration-quick);
+}
+
+.trigger:not(:disabled):hover {
+  border-color: var(--color-border-strong);
+}
+
+.trigger:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.trigger:disabled {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Equipaggio già inserito più in alto: sottolineatura rossa. */
+.trigger[aria-invalid='true'] {
+  border-color: var(--color-border);
+  box-shadow: inset 0 -2px 0 var(--color-danger);
+}
+
+.chevron {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: var(--color-text-muted);
+}
+
+.trigger:disabled .chevron {
+  display: none;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.colorDot {
+  flex-shrink: 0;
+  inline-size: 1rem;
+  block-size: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 15%, transparent);
+  border-radius: 50%;
+}
+
+.colorDot[data-empty] {
+  border: 1.5px dashed var(--color-border-strong);
+}
+
+.crewNumber {
+  flex-shrink: 0;
+  min-inline-size: 2.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+}
+
+.crewName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Elenco nel top layer, ancorato sotto al pulsante (o sopra, se sotto non c'è spazio). */
+.listbox {
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(left);
+  min-inline-size: anchor-size(width);
+  max-block-size: min(20rem, 50vh);
+  margin: var(--space-1) 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 16px 32px -12px color-mix(in srgb, #0f1318 35%, transparent);
+  position-try-fallbacks: flip-block;
+}
+
+.listbox:focus-visible {
+  outline: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: calc(var(--radius-control) - 2px);
+  cursor: pointer;
+}
+
+.option[data-active] {
+  background: var(--color-surface-sunken);
+}
+
+.option[aria-selected='true'] {
+  font-weight: var(--font-weight-semibold);
+}
