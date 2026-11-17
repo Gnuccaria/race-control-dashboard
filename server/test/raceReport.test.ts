@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
 import { buildRaceReport, describeDecision, describeDecisions, formatReportTime, joinCarNumbers, reportFileName } from '../src/reports/raceReportData';
 import { readReportLanguage, reportTexts } from '../src/reports/reportTexts';
-import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
 
 describe('dati del referto', () => {
   it('scrive tempi, vetture e decisioni come nel referto originale', () => {
@@ -145,7 +145,7 @@ describe('GET /public/races/:id/report.pdf', () => {
     handleRequest = createTestApp();
     await request('POST', '/crews', { name: 'Alfa', number: 16, carId: 1, ...REQUIRED_DETAILS });
     await request('POST', '/crews', { name: 'Beta Café', number: 44, carId: 2, ...REQUIRED_DETAILS });
-    await request('POST', '/races', {
+    await request('POST', '/races', withSchedule({
       name: '1000 km di Suzuka',
       championship: REQUIRED_DETAILS.championship,
       duration: '6 hours',
@@ -156,7 +156,7 @@ describe('GET /public/races/:id/report.pdf', () => {
         { position: 1, crewId: 1, laps: 139 },
         { position: 2, crewId: 2, laps: 139, gapMs: 58_196 },
       ],
-    });
+    }));
     await request('POST', '/races/1/penalties', {
       crews: [{ crewId: 1, decision: null }, { crewId: 2, decision: 'time-10' }],
       violation: '2.3.1',

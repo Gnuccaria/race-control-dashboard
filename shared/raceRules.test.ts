@@ -18,7 +18,11 @@ import {
   validateRaceDraft,
 } from './raceRules';
 
+/** Orari in ora italiana, obbligatori. */
+const SCHEDULE = { startTime: '21:00', endDate: '2026-11-08', endTime: '23:30' };
+
 const COMPLETE_RACE = {
+  ...SCHEDULE,
   name: '  6 Ore   di Monza ',
   championship: 'Cool1 FIE Championship',
   duration: '6 hours',
@@ -54,21 +58,20 @@ describe('regole gara', () => {
     expect(isIsoDate('20/11/2026')).toBe(false);
   });
 
-  it('rifiuta le date successive a oggi, ammette oggi e il passato', () => {
-    const base = { championship: 'Cool1 FIE Championship', duration: '12 hours', round: 1, results: [] };
-    const today = '2026-11-13';
-    expect(validateRaceDraft({ ...base, raceDate: today }, { latestRaceDate: today }).isValid).toBe(true);
-    expect(validateRaceDraft({ ...base, raceDate: '2025-03-01' }, { latestRaceDate: today }).isValid).toBe(true);
-    expect(validateRaceDraft({ ...base, raceDate: '2026-11-14' }, { latestRaceDate: today })).toEqual({
-      isValid: false,
-      issues: { raceDate: 'future' },
+  it('ammette le gare future; orari di inizio e fine obbligatori, con la fine dopo l’inizio', () => {
+    const base = { championship: 'Cool1 FIE Championship', duration: '12 hours', round: 1, results: [], raceDate: '2099-01-01' };
+    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2099-01-02', endTime: '08:00' })).toMatchObject({
+      isValid: true,
+      race: { raceDate: '2099-01-01', startTime: '20:00', endDate: '2099-01-02', endTime: '08:00' },
     });
-    // Senza data limite (vecchie chiamate) la regola non si applica.
-    expect(validateRaceDraft({ ...base, raceDate: '2099-01-01' }).isValid).toBe(true);
+    expect(validateRaceDraft(base)).toEqual({ isValid: false, issues: { startTime: 'invalid', endDate: 'invalid', endTime: 'invalid' } });
+    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2099-01-01', endTime: '20:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
+    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2098-12-31', endTime: '23:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
+    expect(validateRaceDraft({ ...base, startTime: '24:00', endDate: '2099-01-01', endTime: '9:00' })).toEqual({ isValid: false, issues: { startTime: 'invalid', endTime: 'invalid' } });
   });
 
   it('al contrario solo con una pista indicata', () => {
-    const base = { championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-11-01', results: [] };
+    const base = { championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-11-01', ...SCHEDULE, endDate: '2026-11-01', results: [] };
     expect(validateRaceDraft({ ...base, trackId: 4, isTrackReversed: true })).toMatchObject({ isValid: true, race: { trackId: 4, isTrackReversed: true } });
     expect(validateRaceDraft({ ...base, trackId: null, isTrackReversed: true })).toEqual({ isValid: false, issues: { trackId: 'reverse-unavailable' } });
     expect(validateRaceDraft({ ...base, trackId: 4, isTrackReversed: 'sì' })).toEqual({ isValid: false, issues: { trackId: 'invalid' } });
@@ -130,7 +133,16 @@ describe('regole gara', () => {
   it('elenca i problemi: campionato, round, data, pista, classifica', () => {
     expect(validateRaceDraft({ round: 0, raceDate: '2026-13-01', trackId: 'x', results: 'no' })).toEqual({
       isValid: false,
-      issues: { championship: 'required', round: 'invalid', trackId: 'invalid', raceDate: 'invalid', results: 'invalid' },
+      issues: {
+        championship: 'required',
+        round: 'invalid',
+        trackId: 'invalid',
+        raceDate: 'invalid',
+        startTime: 'invalid',
+        endDate: 'invalid',
+        endTime: 'invalid',
+        results: 'invalid',
+      },
     });
     // Durata: sempre obbligatoria, tra quelle del campionato; nome facoltativo ma valido.
     expect(validateRaceDraft({ ...COMPLETE_RACE, duration: undefined })).toEqual({ isValid: false, issues: { duration: 'required' } });

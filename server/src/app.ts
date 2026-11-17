@@ -26,8 +26,6 @@ const RESOURCE_PATH_PATTERN = /^\/([a-z]+)(?:\/(\d{1,9}))?$/;
 const RACE_PENALTIES_PATTERN = /^\/races\/(\d{1,9})\/penalties(?:\/(\d{1,9}))?$/;
 /** Reprimende già date prima di una penalità: /races/42/reprimands?before=7. */
 const RACE_REPRIMANDS_PATTERN = /^\/races\/(\d{1,9})\/reprimands$/;
-/** Proteste aperte o chiuse per una gara (Organizzazione): /races/42/protests. */
-const RACE_PROTESTS_PATTERN = /^\/races\/(\d{1,9})\/protests$/;
 /** Solo i cambi pilota di una gara (Commissari Sportivi): /races/42/driver-swaps. */
 const RACE_DRIVER_SWAPS_PATTERN = /^\/races\/(\d{1,9})\/driver-swaps$/;
 /** Lettura pubblica per il sito: /public/races, /public/races/42 e il referto /public/races/42/report.pdf. */
@@ -48,7 +46,7 @@ const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
  *   GET · POST · DELETE /crews       GET · PUT /crews/:id
  *   GET · POST · DELETE /races       GET · PUT /races/:id
  *   GET · POST · DELETE /races/:id/penalties    GET · PUT /races/:id/penalties/:penaltyId
- *   GET /races/:id/reprimands[?before=:penaltyId]   PUT /races/:id/protests (la gara accetta proteste dal sito?)
+ *   GET /races/:id/reprimands[?before=:penaltyId]
  *   PUT /races/:id/driver-swaps   (solo i cambi pilota, Commissari Sportivi)
  *   GET · POST /tracks
  *   GET /cars
@@ -154,11 +152,6 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
       if (raceIdText === undefined) return publicRaceHandlers.listRaces(request, env);
       if (publicMatch[2]) return publicRaceHandlers.getRaceReport(request, env, Number(raceIdText));
       return publicRaceHandlers.getRace(request, env, Number(raceIdText));
-    }
-
-    const raceProtestsMatch = RACE_PROTESTS_PATTERN.exec(pathname);
-    if (raceProtestsMatch) {
-      return request.method === 'PUT' ? raceHandlers.updateProtestSetting(request, env, Number(raceProtestsMatch[1])) : methodNotAllowed();
     }
 
     const driverSwapsMatch = RACE_DRIVER_SWAPS_PATTERN.exec(pathname);

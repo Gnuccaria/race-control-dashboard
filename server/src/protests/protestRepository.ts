@@ -1,3 +1,4 @@
+import { isProtestWindowOpen } from '../../../shared/raceSchedule';
 import {
   isProtestVideoExpired,
   isProtestVideoType,
@@ -311,16 +312,23 @@ export async function listProtests(database: SqlDatabase): Promise<Protest[]> {
   return results.map((row) => toProtest(row));
 }
 
-/** Gare che accettano proteste in un campionato, dalla più recente: il menu "Gara" del modulo del sito. */
-export async function listRacesAcceptingProtests(database: SqlDatabase, championship: string): Promise<ProtestRaceOption[]> {
+/**
+ * Gare dei campionati indicati per cui adesso si possono mandare proteste (dall'ora di inizio a 48 ore dopo la fine),
+ * dalla più recente: il menu "Gara" del modulo del sito.
+ */
+export async function listRacesOpenForProtests(database: SqlDatabase, championships: readonly string[], now = Date.now()): Promise<ProtestRaceOption[]> {
   const { results } = await database
     .prepare(
-      `SELECT id, name, round, championship, race_date AS raceDate FROM races
-       WHERE accepts_protests = 1 AND championship = ? ORDER BY race_date DESC, round DESC`,
+      `SELECT id, name, round, championship, race_date AS raceDate, start_time AS startTime, end_date AS endDate, end_time AS endTime
+       FROM races
+       WHERE championship IN (SELECT value FROM json_each(?)) AND start_time IS NOT NULL
+       ORDER BY race_date DESC, round DESC`,
     )
-    .bind(championship)
-    .all<ProtestRaceOption>();
-  return results;
+    .bind(JSON.stringify(championships))
+    .all<ProtestRaceOption & { startTime: string; endDate: string | null; endTime: string | null }>();
+  return results
+    .filter((race) => isProtestWindowOpen(race, now))
+    .map(({ id, name, round, championship, raceDate }) => ({ id, name, round, championship, raceDate }));
 }
 
 export async function findProtest(database: SqlDatabase, protestId: number): Promise<Protest | null> {

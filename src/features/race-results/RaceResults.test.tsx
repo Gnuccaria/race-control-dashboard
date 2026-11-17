@@ -7,7 +7,7 @@ import { fetchCrews } from '@/features/crews/services/crewApi';
 import { renderApp } from '@/test/renderWithRouter';
 import { chooseTrack } from '@/test/chooseTrack';
 import { testCarId } from '@/test/testCars';
-import { createRace, deleteRaces, fetchRace, fetchRaces, saveRaceProtestSetting, updateRace, updateRaceDriverSwaps } from './services/raceApi';
+import { createRace, deleteRaces, fetchRace, fetchRaces, updateRace, updateRaceDriverSwaps } from './services/raceApi';
 
 vi.mock('@/features/auth/services/desktopBridge');
 vi.mock('@/features/auth/services/discordApi');
@@ -42,7 +42,9 @@ const summary = (id: number, round: number, raceDate: string): RaceSummary => ({
   isTrackReversed: false,
   raceDate,
   updatedAt: '2026-11-13T10:00:00Z',
-  acceptsProtests: false,
+  startTime: '21:00',
+  endDate: raceDate,
+  endTime: '23:30',
 });
 
 const RACES = [summary(1, 1, '2026-09-14'), summary(2, 2, '2026-10-05')];
@@ -136,12 +138,16 @@ describe('Nuova gara', () => {
     await user.type(screen.getByRole('textbox', { name: 'Round' }), 'r3');
     expect(screen.getByRole('textbox', { name: 'Round' })).toHaveValue('3');
 
-    // Una gara non può essere nel futuro.
-    await user.type(screen.getByLabelText('Data di svolgimento'), '2099-01-01');
-    expect(screen.getByText('La data non può essere successiva a oggi: registra la gara dopo averla corsa.')).toBeInTheDocument();
-    expect(saveButton).toBeDisabled();
-    await user.clear(screen.getByLabelText('Data di svolgimento'));
-    await user.type(screen.getByLabelText('Data di svolgimento'), '2026-11-08');
+    // Data e orari in ora italiana, obbligatori; la data di fine segue quella di inizio; la fine dopo l'inizio.
+    await user.type(screen.getByLabelText('Data di inizio'), '2026-11-08');
+    expect(screen.getByLabelText('Data di fine')).toHaveValue('2026-11-08');
+    await user.type(screen.getByLabelText('Ora di inizio'), '20:00');
+    await user.type(screen.getByLabelText('Ora di fine'), '19:00');
+    expect(screen.getByText('La fine deve essere dopo l\'inizio.')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Data di fine'));
+    await user.type(screen.getByLabelText('Data di fine'), '2026-11-09');
+    await user.clear(screen.getByLabelText('Ora di fine'));
+    await user.type(screen.getByLabelText('Ora di fine'), '08:00');
     expect(saveButton).toBeDisabled();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '12 ore');
     expect(saveButton).toBeEnabled();
@@ -233,6 +239,9 @@ describe('Nuova gara', () => {
       trackId: 1,
       isTrackReversed: true,
       raceDate: '2026-11-08',
+      startTime: '20:00',
+      endDate: '2026-11-09',
+      endTime: '08:00',
       results: [
         { position: 1, crewId: 2, laps: 25, gapMs: null },
         { position: 2, crewId: 1, laps: 24, gapMs: 65_300 },
@@ -264,7 +273,9 @@ describe('Nuova gara', () => {
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
     await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '6 ore');
     await user.type(screen.getByRole('textbox', { name: 'Round' }), '1');
-    await user.type(screen.getByLabelText('Data di svolgimento'), '2026-11-08');
+    await user.type(screen.getByLabelText('Data di inizio'), '2099-01-01');
+    await user.type(screen.getByLabelText('Ora di inizio'), '21:00');
+    await user.type(screen.getByLabelText('Ora di fine'), '23:00');
     await user.click(screen.getByRole('button', { name: 'Salva gara' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già una gara con questo round nello stesso campionato.');
@@ -413,25 +424,5 @@ describe('Dettaglio gara', () => {
       { swap: 1, crewId: 2, pitInMs: 3_610_000, pitOutMs: 605_000, isCancelled: true, notes: 'Box lento' },
       { swap: 2, crewId: 1, pitInMs: 8_000_600, pitOutMs: null, isCancelled: false, notes: 'Rientro anticipato' },
     ]);
-  });
-
-  it('l’interruttore "Accetta proteste" si salva subito, senza "Modifica"', async () => {
-    vi.mocked(saveRaceProtestSetting).mockResolvedValue({ isSuccess: true, value: true });
-    const user = userEvent.setup();
-    renderApp(`${LIST_PATH}/1`);
-
-    const toggle = await screen.findByRole('switch', { name: /Accetta proteste/ });
-    expect(toggle).not.toBeChecked();
-    await user.click(toggle);
-    expect(saveRaceProtestSetting).toHaveBeenCalledWith(1, true);
-    expect(toggle).toBeChecked();
-    expect(screen.getByText(/La gara compare nel menu "Gara"/)).toBeInTheDocument();
-    expect(updateRace).not.toHaveBeenCalled();
-  });
-
-  it('Gestisci cambi pilota non mostra l’interruttore delle proteste', async () => {
-    renderApp('/commissari/cambi-pilota/1');
-    expect(await screen.findByRole('combobox', { name: 'Cambio pilota' })).toBeInTheDocument();
-    expect(screen.queryByRole('switch', { name: /Accetta proteste/ })).not.toBeInTheDocument();
   });
 });

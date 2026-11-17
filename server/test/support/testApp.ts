@@ -5,6 +5,9 @@ import { createInMemorySqlDatabase } from './inMemorySqlDatabase';
 
 /** Strumenti comuni ai test delle API: ambiente con SQLite in memoria e verifica Discord simulata. */
 
+/** Orari obbligatori di una gara (ora italiana): dalle 21:00 alle 23:30 del giorno della gara. */
+export const withSchedule = <Race extends { readonly raceDate: string }>(race: Race) => ({ startTime: '21:00', endDate: race.raceDate, endTime: '23:30', ...race });
+
 export function createTestEnv(): Env {
   return {
     CREWS_DB: createInMemorySqlDatabase(),

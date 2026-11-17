@@ -1,3 +1,4 @@
+import { hasRaceStarted } from '../../../shared/raceSchedule';
 import type { Env } from '../env';
 import { errorResponse, publicJsonResponse, publicPdfResponse } from '../http/jsonResponse';
 import { findRaceSummaryById, listPublicRaceResults, listRaces } from '../races/raceRepository';
@@ -14,13 +15,14 @@ const roundTitle = (round: number, championship: string) => `Round ${round} – 
  * e solo i dati da mostrare (nessun id Discord di chi ha inserito la gara).
  */
 export const publicRaceHandlers = {
+  // Le gare inserite in anticipo non si mostrano finché non cominciano.
   async listRaces(_request: Request, env: Env): Promise<Response> {
-    return publicJsonResponse({ races: await listRaces(env.CREWS_DB) });
+    return publicJsonResponse({ races: (await listRaces(env.CREWS_DB)).filter((race) => hasRaceStarted(race)) });
   },
 
   async getRace(_request: Request, env: Env, raceId: number): Promise<Response> {
     const race = await findRaceSummaryById(env.CREWS_DB, raceId);
-    if (!race) return errorResponse(404, 'not-found');
+    if (!race || !hasRaceStarted(race)) return errorResponse(404, 'not-found');
     return publicJsonResponse({ race: { ...race, results: await listPublicRaceResults(env.CREWS_DB, raceId) } });
   },
 
@@ -30,7 +32,8 @@ export const publicRaceHandlers = {
    * ?lang=it|en|fr|de sceglie la lingua dei testi fissi (italiano se manca); in inglese anche violazioni e motivazioni.
    */
   async getRaceReport(request: Request, env: Env, raceId: number): Promise<Response> {
-    const input = await loadRaceReportInput(env.CREWS_DB, raceId, roundTitle);
+    const race = await findRaceSummaryById(env.CREWS_DB, raceId);
+    const input = race && hasRaceStarted(race) ? await loadRaceReportInput(env.CREWS_DB, raceId, roundTitle) : null;
     if (!input) return errorResponse(404, 'not-found');
     const language = readReportLanguage(new URL(request.url).searchParams.get('lang'));
     const pdfBytes = await renderRaceReportPdf(buildRaceReport({ ...input, language }));

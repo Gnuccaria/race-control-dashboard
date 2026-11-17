@@ -7,7 +7,6 @@ import { useI18n } from '@/i18n/useI18n';
 import { formatIsoDate } from '@/lib/dateFormatting';
 import styles from './RacePage.module.css';
 import { RaceEditor } from './components/RaceEditor/RaceEditor';
-import { RaceProtestSwitch } from './components/RaceProtestSwitch/RaceProtestSwitch';
 import { DRIVER_SWAP_TABS, RESULTS_TABS } from './components/RaceForm/raceFormTabs';
 import type { NewRaceLocationState } from './hooks/useCreateRace';
 import { fetchRace } from './services/raceApi';
@@ -16,7 +15,7 @@ const RACE_ID_PATTERN = /^\d{1,9}$/;
 
 /**
  * Dettaglio di una gara. "results" per Gestisci ordini di arrivo (…/ordini-di-arrivo/:raceId: anagrafica e
- * dettagli, con l'interruttore "Accetta proteste"), "driverSwaps" per Gestisci cambi pilota dei Commissari (…/cambi-pilota/:raceId: solo i
+ * dettagli, con gli orari che aprono e chiudono le proteste), "driverSwaps" per Gestisci cambi pilota dei Commissari (…/cambi-pilota/:raceId: solo i
  * cambi pilota). La gara e il salvataggio sono gli stessi.
  */
 function RaceDetail({ mode }: { readonly mode: 'results' | 'driverSwaps' }) {
@@ -59,13 +58,6 @@ function RaceDetail({ mode }: { readonly mode: 'results' | 'driverSwaps' }) {
       {queryState.status === 'loading' && <LoadingStatus>{raceTexts.detail.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
         <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
-      )}
-      {loadedRace && mode === 'results' && (
-        <RaceProtestSwitch
-          raceId={loadedRace.id}
-          acceptsProtests={loadedRace.acceptsProtests}
-          onSaved={(acceptsProtests) => replaceValue({ ...loadedRace, acceptsProtests })}
-        />
       )}
       {loadedRace && (
         <RaceEditor

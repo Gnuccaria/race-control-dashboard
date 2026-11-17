@@ -4,9 +4,20 @@ import { createApp } from '../src/app';
 import type { Env, VideoBucket } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { createTestEnv, getPath, MEMBERSHIPS, readError, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestEnv, getPath, MEMBERSHIPS, readError, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+/** Data e ora (in ora italiana) di adesso più offsetMs, come si salvano gli orari delle gare. */
+function romeLocal(offsetMs: number) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      .formatToParts(new Date(Date.now() + offsetMs))
+      .map((part) => [part.type, part.value]),
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
 const VEZ_ROLE = '1571641908688588963';
 const GUILD_ROLES = [
   { id: VEZ_ROLE, name: '#16 Vez Team Lime' },
@@ -97,13 +108,26 @@ describe('proteste', () => {
       { name: 'Team Kyoto', number: 8, championship: 'All Japan GT Championship', color: '#283593' },
     ];
     for (const crew of crews) await handleRequest(sendJson('POST', '/crews', { ...crew, carId: 1 }, 'token-director'), env);
-    // Gare: 1 e 3 accettano proteste (FIE e All Japan GT), 2 no.
-    await env.CREWS_DB.prepare(
-      `INSERT INTO races (id, name, championship, round, race_date, created_by_discord_id, accepts_protests) VALUES
-        (1, '6 Ore di Monza', 'Cool1 FIE Championship', 1, '2026-10-05', 't', 1),
-        (2, NULL, 'Cool1 FIE Championship', 2, '2026-11-02', 't', 0),
-        (3, NULL, 'All Japan GT Championship', 1, '2026-10-12', 't', 1)`,
-    ).run();
+    // Gare, con gli orari in ora italiana rispetto ad adesso:
+    // 1 (FIE) è iniziata un'ora fa e finisce tra un'ora: proteste aperte;
+    // 2 (FIE) è finita più di 48 ore fa: proteste chiuse; 4 (FIE) comincia domani: non ancora aperte;
+    // 3 (All Japan GT) è in corso, ma di un altro campionato.
+    const races: [number, string | null, string, number, number, number][] = [
+      [1, '6 Ore di Monza', 'Cool1 FIE Championship', 1, -HOUR, HOUR],
+      [2, null, 'Cool1 FIE Championship', 2, -3 * DAY - 2 * HOUR, -3 * DAY],
+      [3, null, 'All Japan GT Championship', 1, -HOUR, HOUR],
+      [4, null, 'Cool1 FIE Championship', 3, DAY, DAY + 6 * HOUR],
+    ];
+    for (const [id, name, championship, round, startOffset, endOffset] of races) {
+      const start = romeLocal(startOffset);
+      const end = romeLocal(endOffset);
+      await env.CREWS_DB.prepare(
+        `INSERT INTO races (id, name, championship, round, race_date, start_time, end_date, end_time, created_by_discord_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 't')`,
+      )
+        .bind(id, name, championship, round, start.date, start.time, end.date, end.time)
+        .run();
+    }
   });
 
   it('legge il link YouTube in tutte le forme comuni', () => {
@@ -146,12 +170,12 @@ describe('proteste', () => {
     expect(validateProtestDraft({ raceId: 1, stint: 1, lap: 1, corner: '3', description: 'a'.repeat(500) }).isValid).toBe(true);
   });
 
-  it('il modulo riceve l’equipaggio dal ruolo, le gare del suo campionato che accettano proteste e gli altri equipaggi', async () => {
+  it('il modulo riceve l’equipaggio dal ruolo, le gare del suo campionato con le proteste aperte e gli altri equipaggi', async () => {
     expect(await siteRequest('GET', '/public/protests/form', 'site-vez')).toEqual({
       status: 200,
       body: {
         crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' },
-        races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: '2026-10-05' }],
+        races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: romeLocal(-HOUR).date }],
         otherCrews: [
           { id: 3, number: 26, name: 'GT Extreme Drivers', color: '#E10600' },
           { id: 2, number: 44, name: 'Firestarter Project', color: '#E10600' },
@@ -162,17 +186,25 @@ describe('proteste', () => {
     expect((await siteRequest('GET', '/public/protests/form', '')).status).toBe(401);
   });
 
-  it('l’Organizzazione apre e chiude le proteste di una gara', async () => {
-    const setting = (raceId: number, body: unknown, token = 'token-organization') => handleRequest(sendJson('PUT', `/races/${raceId}/protests`, body, token), env);
-    expect(await (await setting(2, { acceptsProtests: true })).json()).toEqual({ acceptsProtests: true });
-    expect(await (await handleRequest(getPath('/races/2', 'token-director'), env)).json()).toMatchObject({ race: { acceptsProtests: true } });
-    expect((await siteRequest('GET', '/public/protests/form', 'site-vez')).body).toMatchObject({ races: [{ id: 2 }, { id: 1 }] });
-    await setting(1, { acceptsProtests: false });
-    expect((await siteRequest('GET', '/public/protests/form', 'site-vez')).body).toMatchObject({ races: [{ id: 2 }] });
-    expect(await submit(protest({ raceId: 1 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
-    expect((await setting(2, { acceptsProtests: 'sì' })).status).toBe(422);
-    expect((await setting(9, { acceptsProtests: true })).status).toBe(404);
-    expect((await setting(2, { acceptsProtests: false }, 'token-steward')).status).toBe(403);
+  it('le proteste si aprono all’inizio della gara e si chiudono 48 ore dopo la fine', async () => {
+    const setTimes = (raceId: number, startOffset: number, endOffset: number) => {
+      const start = romeLocal(startOffset);
+      const end = romeLocal(endOffset);
+      return env.CREWS_DB.prepare('UPDATE races SET race_date = ?, start_time = ?, end_date = ?, end_time = ? WHERE id = ?')
+        .bind(start.date, start.time, end.date, end.time, raceId)
+        .run();
+    };
+    const raceIds = async () => ((await siteRequest('GET', '/public/protests/form', 'site-vez')).body.races as { id: number }[]).map((race) => race.id);
+    // Finita da 47 ore: ancora aperta; da 49 ore: chiusa.
+    await setTimes(2, -50 * HOUR, -47 * HOUR);
+    expect(await raceIds()).toEqual(expect.arrayContaining([1, 2]));
+    await setTimes(2, -52 * HOUR, -49 * HOUR);
+    expect(await raceIds()).toEqual([1]);
+    expect(await submit(protest({ raceId: 2 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
+    expect(await submit(protest({ raceId: 4 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
+    // Senza orari (gara salvata prima) le proteste restano chiuse.
+    await env.CREWS_DB.prepare('UPDATE races SET start_time = NULL WHERE id = 1').run();
+    expect(await raceIds()).toEqual([]);
   });
 
   it('salva la protesta e i Commissari la leggono nell’app', async () => {
@@ -199,7 +231,7 @@ describe('proteste', () => {
     expect((await handleRequest(getPath('/protests', 'token-no-role'), env)).status).toBe(403);
   });
 
-  it('solo gare del proprio campionato che accettano proteste; altri equipaggi della gara e mai il proprio', async () => {
+  it('solo gare del proprio campionato con le proteste aperte; altri equipaggi della gara e mai il proprio', async () => {
     expect(await submit(protest({ raceId: 3 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
     expect(await submit(protest({ raceId: 2 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
     expect(await submit(protest({ otherCrewIds: [4] }))).toMatchObject({ status: 422, body: { error: { code: 'invalid-protest', details: { otherCrewIds: 'invalid' } } } });
@@ -390,7 +422,7 @@ describe('ruoli dell’app: Direzione Gara e Commissari Sportivi', () => {
     const handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }));
     await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-organization'), env);
     await handleRequest(sendJson('POST', '/crews', { name: 'Kyoto', number: 8, carId: 1, championship: 'All Japan GT Championship', color: '#283593' }, 'token-organization'), env);
-    const race = { championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-09-14', results: [{ position: 1, crewId: 1, laps: 30, gapMs: null }] };
+    const race = withSchedule({ championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-09-14', results: [{ position: 1, crewId: 1, laps: 30, gapMs: null }] });
     expect((await handleRequest(sendJson('POST', '/races', race, 'token-organization'), env)).status).toBe(201);
     const swap = { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 600_000, isCancelled: false, notes: 'Box' };
 

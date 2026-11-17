@@ -43,8 +43,10 @@ const summary = (id: number, round: number, raceDate: string, trackName: string 
   trackConfiguration: null,
   isTrackReversed: false,
   raceDate,
+  startTime: null,
+  endDate: null,
+  endTime: null,
   updatedAt: `2026-11-${String(id).padStart(2, '0')}T10:00:00Z`,
-  acceptsProtests: false,
 });
 
 const RACES = [summary(1, 1, '2026-09-10', 'Monza'), summary(2, 3, '2026-11-05'), summary(3, 2, '2026-10-01', 'Imola')];
@@ -100,6 +102,9 @@ describe('form della gara', () => {
     totalLapsText: '',
     roundText: '4',
     raceDate: '2026-11-08',
+    startTime: '21:00',
+    endDate: '2026-11-08',
+    endTime: '23:30',
     trackId: null,
     isTrackReversed: false,
     crewIdByPosition: [7, null, 9, ...Array.from({ length: 11 }, () => null)],
@@ -123,9 +128,9 @@ describe('form della gara', () => {
 
   it('decide la vettura di ogni riga e blocca gli equipaggi senza auto', () => {
     const cars = new Map<number, number | null>([[7, 3], [9, null]]);
-    expect(checkRaceDraft(completeValues, undefined, cars)).toMatchObject({ positionsWithoutCar: [3], hasResultsErrors: true, isComplete: false });
+    expect(checkRaceDraft(completeValues, cars)).toMatchObject({ positionsWithoutCar: [3], hasResultsErrors: true, isComplete: false });
     // L'equipaggio 9 era già in P3 con un'auto salvata: la riga invariata la tiene.
-    const saved = checkRaceDraft({ ...completeValues, savedResults: [{ position: 3, crewId: 9, laps: 24, gapMs: null, carId: 5 }] }, undefined, cars);
+    const saved = checkRaceDraft({ ...completeValues, savedResults: [{ position: 3, crewId: 9, laps: 24, gapMs: null, carId: 5 }] }, cars);
     expect([...saved.carIdByPosition]).toEqual([[1, 3], [3, 5]]);
     expect(saved.isComplete).toBe(true);
   });
@@ -160,10 +165,11 @@ describe('form della gara', () => {
 
   it('segnala round non valido ed equipaggi ripetuti', () => {
     expect(checkRaceDraft({ ...completeValues, roundText: '0' })).toMatchObject({ isRoundInvalid: true, isComplete: false });
-    // Data nel futuro rispetto a "oggi": errore in Anagrafica e salvataggio bloccato.
-    expect(checkRaceDraft(completeValues, '2026-11-08')).toMatchObject({ isRaceDateInFuture: false, isComplete: true });
-    expect(checkRaceDraft(completeValues, '2026-11-07')).toMatchObject({ isRaceDateInFuture: true, hasInfoErrors: true, isComplete: false });
-    expect(validateRaceValues(completeValues, '2026-11-07')).toMatchObject({ isValid: false, issues: { raceDate: 'future' } });
+    // Orari obbligatori, con la fine dopo l'inizio; le date future vanno bene.
+    expect(checkRaceDraft({ ...completeValues, raceDate: '2099-01-01', endDate: '2099-01-01' })).toMatchObject({ isComplete: true });
+    expect(checkRaceDraft({ ...completeValues, endTime: '' })).toMatchObject({ isEndBeforeStart: false, isComplete: false });
+    expect(checkRaceDraft({ ...completeValues, endTime: '20:00' })).toMatchObject({ isEndBeforeStart: true, hasInfoErrors: true, isComplete: false });
+    expect(validateRaceValues({ ...completeValues, endTime: '20:00' })).toMatchObject({ isValid: false, issues: { endTime: 'before-start' } });
     const repeated = checkRaceDraft({
       ...completeValues,
       crewIdByPosition: [7, 9, 7, ...Array.from({ length: 11 }, () => null)],
@@ -242,11 +248,20 @@ describe('cambi pilota nel form', () => {
   });
 
   it('il form passa al server le righe e blocca il salvataggio con tempi non validi', () => {
-    const raceValues = { ...EMPTY_RACE_VALUES, championship: CHAMPIONSHIP, duration: '6 hours' as const, roundText: '4', raceDate: '2026-11-08' };
+    const raceValues = {
+      ...EMPTY_RACE_VALUES,
+      championship: CHAMPIONSHIP,
+      duration: '6 hours' as const,
+      roundText: '4',
+      raceDate: '2026-11-08',
+      startTime: '21:00',
+      endDate: '2026-11-08',
+      endTime: '23:30',
+    };
     const values = { ...raceValues, driverSwap: { rowsBySwap: [{ 7: row('1:0', '') }] } };
     const sheet = computeDriverSwapSheet(values.driverSwap, [7, 9], 5);
-    expect(checkRaceDraft(values, undefined, undefined, sheet)).toMatchObject({ hasDriverSwapErrors: true, isComplete: false });
+    expect(checkRaceDraft(values, undefined, sheet)).toMatchObject({ hasDriverSwapErrors: true, isComplete: false });
     const entries = [{ swap: 1, crewId: 7, pitInMs: 1_000, pitOutMs: 2_000, isCancelled: false, notes: '' }];
-    expect(validateRaceValues(raceValues, undefined, entries)).toMatchObject({ isValid: true, race: { driverSwaps: entries } });
+    expect(validateRaceValues(raceValues, entries)).toMatchObject({ isValid: true, race: { driverSwaps: entries } });
   });
 });

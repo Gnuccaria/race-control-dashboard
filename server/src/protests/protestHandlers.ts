@@ -33,7 +33,7 @@ import {
   listChampionshipCrews,
   listProtests,
   listProtestsVisibleTo,
-  listRacesAcceptingProtests,
+  listRacesOpenForProtests,
   type ProtestViewer,
   rejectProtest,
   reopenProtest,
@@ -96,7 +96,7 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       const lookup = await findTicketCrewFromRoles(discordFetch, env, env.CREWS_DB, member.roleIds);
       if (!('crew' in lookup)) return crewProblemResponse(lookup.problem);
       const championship = lookup.crew.championship;
-      const races = championship ? await listRacesAcceptingProtests(env.CREWS_DB, championship) : [];
+      const races = championship ? await listRacesOpenForProtests(env.CREWS_DB, [championship]) : [];
       const otherCrews = championship ? await listChampionshipCrews(env.CREWS_DB, championship, lookup.crew.id) : [];
       return jsonResponse(200, { crew: lookup.crew, races, otherCrews });
     },
@@ -111,9 +111,9 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       const { profile } = member;
       if ((await countRecentProtestsBy(env.CREWS_DB, profile.id)) >= MAX_PROTESTS_PER_DAY) return errorResponse(429, 'too-many-protests');
 
-      // La gara deve accettare proteste ed essere del campionato dell'equipaggio.
+      // La gara deve essere del campionato dell'equipaggio, con le proteste aperte (dall'inizio a 48 ore dopo la fine).
       const race = lookup.crew.championship
-        ? (await listRacesAcceptingProtests(env.CREWS_DB, lookup.crew.championship)).find((option) => option.id === validation.protest.raceId)
+        ? (await listRacesOpenForProtests(env.CREWS_DB, [lookup.crew.championship])).find((option) => option.id === validation.protest.raceId)
         : undefined;
       if (!race) return errorResponse(422, 'invalid-protest', { raceId: 'invalid' });
       // Gli altri equipaggi devono essere del campionato della gara (e non il proprio).

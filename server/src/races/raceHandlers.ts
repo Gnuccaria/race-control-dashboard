@@ -1,5 +1,5 @@
 import { driverSwapCount, readDriverSwaps } from '../../../shared/driverSwapRules';
-import { type RaceDraft, readRaceProtestSetting, resolveResultCars, type SavedRaceResult, todayIsoDate, validateRaceDraft } from '../../../shared/raceRules';
+import { type RaceDraft, resolveResultCars, type SavedRaceResult, validateRaceDraft } from '../../../shared/raceRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
@@ -18,16 +18,8 @@ import {
   listRaceResults,
   listRaces,
   replaceDriverSwaps,
-  setRaceAcceptsProtests,
   updateRace,
 } from './raceRepository';
-
-/**
- * Il server non sa in che fuso orario si trova chi usa l'app: come "oggi" prende la data del fuso
- * più avanti al mondo (UTC+14). Così una gara corsa oggi non viene mai rifiutata, mentre un giorno
- * davvero futuro sì; il controllo esatto sull'ora locale lo fa l'app.
- */
-const LATEST_TIME_ZONE = 'Pacific/Kiritimati';
 
 type RaceDraftReading =
   | { readonly race: RaceDraft; readonly results: readonly SavedRaceResult[] }
@@ -43,7 +35,7 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
   const requestBody = await readJsonBody(request, MAX_RACE_BODY_BYTES);
   if (requestBody === undefined) return { errorResponse: errorResponse(400, 'invalid-request') };
 
-  const validation = validateRaceDraft(requestBody, { latestRaceDate: todayIsoDate(new Date(), LATEST_TIME_ZONE) });
+  const validation = validateRaceDraft(requestBody);
   if (!validation.isValid) return { errorResponse: errorResponse(422, 'invalid-race', validation.issues) };
   const { race } = validation;
 
@@ -129,16 +121,6 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
      * PUT /races/:id/driver-swaps con { driverSwaps } — solo i cambi pilota di una gara già creata (Commissari
      * Sportivi): stesse regole della gara intera (numero di cambi del campionato, equipaggi del campionato).
      */
-    /** PUT /races/:id/protests { acceptsProtests } — apre o chiude le proteste della gara (Organizzazione). */
-    async updateProtestSetting(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-      const setting = readRaceProtestSetting(await readJsonBody(request).catch(() => null));
-      if (!setting) return errorResponse(422, 'invalid-race', { acceptsProtests: 'invalid' });
-      if (!(await setRaceAcceptsProtests(env.CREWS_DB, raceId, setting.acceptsProtests))) return errorResponse(404, 'not-found');
-      return jsonResponse(200, setting);
-    },
-
     async updateDriverSwaps(request: Request, env: Env, raceId: number): Promise<Response> {
       const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
       if (authorization instanceof Response) return authorization;

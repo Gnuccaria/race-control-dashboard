@@ -18,9 +18,9 @@ import {
   resolveResultCars,
   type SavedRace,
   type SavedRaceResult,
-  todayIsoDate,
   validateRaceDraft,
 } from '@shared/raceRules';
+import { isRaceTime, raceInstants } from '@shared/raceSchedule';
 import { type DriverSwapSheet, type DriverSwapValues, EMPTY_DRIVER_SWAP_VALUES, toDriverSwapValues } from './driverSwapDraft';
 
 /** Valori del form di una gara così come sono a schermo ('' / null = non scelto). */
@@ -32,7 +32,11 @@ export interface RaceDraftValues {
   /** Giri totali come testo (facoltativi). */
   readonly totalLapsText: string;
   readonly roundText: string;
+  /** Data di inizio (anche futura), ora di inizio, data e ora di fine: in ora italiana. */
   readonly raceDate: string;
+  readonly startTime: string;
+  readonly endDate: string;
+  readonly endTime: string;
   /** Pista scelta nel popup Tracciato (null = non indicata). */
   readonly trackId: number | null;
   readonly isTrackReversed: boolean;
@@ -55,6 +59,9 @@ export const EMPTY_RACE_VALUES: RaceDraftValues = {
   totalLapsText: '',
   roundText: '',
   raceDate: '',
+  startTime: '',
+  endDate: '',
+  endTime: '',
   trackId: null,
   isTrackReversed: false,
   crewIdByPosition: Array.from({ length: RACE_RESULT_POSITIONS }, () => null),
@@ -82,6 +89,10 @@ export function toRaceDraftValues(race: SavedRace, decimalSeparator = ','): Race
     totalLapsText: race.totalLaps === null ? '' : String(race.totalLaps),
     roundText: String(race.round),
     raceDate: race.raceDate,
+    // Le gare salvate prima degli orari li ricevono vuoti: vanno aggiunti per salvare.
+    startTime: race.startTime ?? '',
+    endDate: race.endDate ?? '',
+    endTime: race.endTime ?? '',
     trackId: race.trackId,
     isTrackReversed: race.isTrackReversed,
     crewIdByPosition,
@@ -152,8 +163,8 @@ export interface RaceDraftCheck {
   readonly positionsWithoutCar: readonly number[];
   /** Il round scritto non è valido (vuoto non conta come errore visibile). */
   readonly isRoundInvalid: boolean;
-  /** Data successiva a oggi: le gare si registrano solo a corsa avvenuta. */
-  readonly isRaceDateInFuture: boolean;
+  /** Data e ora di fine non successive all'inizio. */
+  readonly isEndBeforeStart: boolean;
   /** Posizione ripetuta → posizione dove l'equipaggio compare per la prima volta. */
   readonly repeatedPositions: ReadonlyMap<number, number>;
   /** Posizioni con equipaggio ma senza giri: impediscono il salvataggio. */
@@ -169,13 +180,11 @@ export interface RaceDraftCheck {
 }
 
 /**
- * today: data odierna AAAA-MM-GG (parametro per poterla fissare nei test).
  * currentCarIdByCrewId: auto attuale di ogni equipaggio; senza (equipaggi non ancora letti) la vettura non si controlla.
  * driverSwapSheet: calcolo della scheda "Cambi pilota" (vedi computeDriverSwapSheet), se disponibile.
  */
 export function checkRaceDraft(
   values: RaceDraftValues,
-  today: string = todayIsoDate(),
   currentCarIdByCrewId?: ReadonlyMap<number, number | null>,
   driverSwapSheet?: DriverSwapSheet,
 ): RaceDraftCheck {
@@ -195,7 +204,9 @@ export function checkRaceDraft(
     ? resolveResultCars(toRaceResults(values), values.savedResults, currentCarIdByCrewId)
     : { carIdByPosition: new Map<number, number | null>(), positionsWithoutCar: [] };
   const isRoundInvalid = values.roundText !== '' && round === null;
-  const isRaceDateInFuture = isIsoDate(values.raceDate) && values.raceDate > today;
+  const hasSchedule = isIsoDate(values.raceDate) && isRaceTime(values.startTime) && isIsoDate(values.endDate) && isRaceTime(values.endTime);
+  const instants = hasSchedule ? raceInstants(values) : null;
+  const isEndBeforeStart = instants !== null && instants.endsAt <= instants.startsAt;
   const repeatedPositions = findRepeatedCrewPositions(toRaceResults(values));
   const positionsMissingLaps = findPositionsMissingLaps(values);
   const positionsWithInvalidGap = findPositionsWithInvalidGap(values);
@@ -208,11 +219,11 @@ export function checkRaceDraft(
     carIdByPosition,
     positionsWithoutCar,
     isRoundInvalid,
-    isRaceDateInFuture,
+    isEndBeforeStart,
     repeatedPositions,
     positionsMissingLaps,
     positionsWithInvalidGap,
-    hasInfoErrors: isNameInvalid || isTotalLapsInvalid || isRoundInvalid || isRaceDateInFuture,
+    hasInfoErrors: isNameInvalid || isTotalLapsInvalid || isRoundInvalid || isEndBeforeStart,
     hasResultsErrors:
       repeatedPositions.size > 0 || positionsWithoutCar.length > 0 || positionsOverTotalLaps.length > 0 || positionsWithInvalidGap.length > 0,
     hasDriverSwapErrors,
@@ -224,8 +235,8 @@ export function checkRaceDraft(
       values.championship !== '' &&
       (!isDurationRequired || values.duration !== '') &&
       round !== null &&
-      isIsoDate(values.raceDate) &&
-      !isRaceDateInFuture &&
+      hasSchedule &&
+      !isEndBeforeStart &&
       repeatedPositions.size === 0 &&
       positionsMissingLaps.length === 0 &&
       positionsWithInvalidGap.length === 0 &&
@@ -234,14 +245,10 @@ export function checkRaceDraft(
 }
 
 /**
- * Stessa convalida del server, con i valori del form; "oggi" è la data del computer.
+ * Stessa convalida del server, con i valori del form.
  * driverSwaps: righe compilate dei cambi pilota (vedi computeDriverSwapSheet).
  */
-export const validateRaceValues = (
-  values: RaceDraftValues,
-  today: string = todayIsoDate(),
-  driverSwaps: readonly DriverSwapEntry[] = [],
-): RaceDraftValidation =>
+export const validateRaceValues = (values: RaceDraftValues, driverSwaps: readonly DriverSwapEntry[] = []): RaceDraftValidation =>
   validateRaceDraft({
     name: values.name,
     championship: values.championship,
@@ -251,8 +258,11 @@ export const validateRaceValues = (
     trackId: values.trackId,
     isTrackReversed: values.isTrackReversed,
     raceDate: values.raceDate,
+    startTime: values.startTime,
+    endDate: values.endDate,
+    endTime: values.endTime,
     results: toRaceResults(values),
     driverSwaps,
-  }, { latestRaceDate: today });
+  });
 
 export type { RaceDraft };

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
-import { createTestApp, createTestEnv, getPath, readError, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestApp, createTestEnv, getPath, readError, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
 
 const DIRECTOR = 'token-director';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
@@ -14,7 +14,7 @@ describe('API gare e piste', () => {
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
 
-  const race = (overrides: Record<string, unknown> = {}) => ({
+  const race = (overrides: Record<string, unknown> = {}) => withSchedule({
     name: 'Gara di prova',
     championship: CHAMPIONSHIP,
     duration: '6 hours',
@@ -75,12 +75,11 @@ describe('API gare e piste', () => {
     await request('POST', '/races', race());
 
     const sameRound = await handleRequest(sendJson('POST', '/races', race({ raceDate: '2026-10-20' }), DIRECTOR), env);
-    // Prima del round già usato si controlla la data: nel futuro non è ammessa.
-    const futureRace = await request('POST', '/races', race({ round: 3, raceDate: '2099-01-01' }));
-    expect(futureRace).toMatchObject({ status: 422, body: { error: { code: 'invalid-race', details: { raceDate: 'future' } } } });
-    // Oggi invece sì, in qualunque fuso orario si trovi chi la registra.
-    const todayRace = await request('POST', '/races', race({ round: 4, raceDate: new Date().toISOString().slice(0, 10) }));
-    expect(todayRace.status).toBe(201);
+    // Le gare si inseriscono anche in anticipo, con gli orari obbligatori.
+    const futureRace = await request('POST', '/races', race({ round: 3, raceDate: '2099-01-01', results: [] }));
+    expect(futureRace).toMatchObject({ status: 201, body: { race: { raceDate: '2099-01-01', startTime: '21:00', endDate: '2099-01-01', endTime: '23:30' } } });
+    const withoutTimes = await request('POST', '/races', { ...race({ round: 4 }), startTime: undefined });
+    expect(withoutTimes).toMatchObject({ status: 422, body: { error: { details: { startTime: 'invalid' } } } });
     expect(sameRound.status).toBe(409);
     expect(await readError(sameRound)).toBe('duplicate-race-round');
 
@@ -238,5 +237,16 @@ describe('API gare e piste', () => {
     expect((await handleRequest(sendJson('POST', '/public/races', race()), env)).status).toBe(405);
     // Le API dell'app restano protette.
     expect((await handleRequest(getPath('/races'), env)).status).toBe(401);
+  });
+
+  it('le gare inserite in anticipo non compaiono sul sito finché non cominciano', async () => {
+    await request('POST', '/races', race());
+    await request('POST', '/races', race({ round: 2, name: 'Gara futura', raceDate: '2099-01-01', results: [] }));
+    const list = (await (await handleRequest(getPath('/public/races'), env)).json()) as { races: { name: string }[] };
+    expect(list.races.map((saved) => saved.name)).toEqual(['Gara di prova']);
+    expect((await handleRequest(getPath('/public/races/2'), env)).status).toBe(404);
+    expect((await handleRequest(getPath('/public/races/2/report.pdf'), env)).status).toBe(404);
+    // Nell'app invece si vedono tutte.
+    expect(((await request('GET', '/races')).body.races as unknown[]).length).toBe(2);
   });
 });

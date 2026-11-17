@@ -17,12 +17,14 @@ interface RaceRow {
   readonly is_track_reversed: number;
   readonly race_date: string;
   readonly updated_at: string;
-  readonly accepts_protests: number;
+  readonly start_time: string | null;
+  readonly end_date: string | null;
+  readonly end_time: string | null;
 }
 
 const RACE_SUMMARY_SELECT = `
   SELECT races.id, races.name, races.championship, races.duration, races.total_laps, races.round, races.track_id, tracks.name AS track_name, tracks.configuration AS track_configuration,
-         races.is_track_reversed, races.race_date, races.updated_at, races.accepts_protests
+         races.is_track_reversed, races.race_date, races.start_time, races.end_date, races.end_time, races.updated_at
   FROM races LEFT JOIN tracks ON tracks.id = races.track_id`;
 
 const NOW_TIMESTAMP = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
@@ -39,8 +41,10 @@ const toRaceSummary = (row: RaceRow): RaceSummary => ({
   trackConfiguration: row.track_configuration,
   isTrackReversed: row.is_track_reversed === 1,
   raceDate: row.race_date,
+  startTime: row.start_time,
+  endDate: row.end_date,
+  endTime: row.end_time,
   updatedAt: row.updated_at,
-  acceptsProtests: row.accepts_protests === 1,
 });
 
 /** Classifica (con la vettura di ogni riga) come un solo parametro JSON: D1 limita il numero di parametri per query. */
@@ -116,15 +120,6 @@ export async function listRaces(database: SqlDatabase): Promise<RaceSummary[]> {
   return results.map(toRaceSummary);
 }
 
-/** Apre o chiude le proteste della gara (non cambia l'ultima modifica della gara); false se la gara non esiste. */
-export async function setRaceAcceptsProtests(database: SqlDatabase, raceId: number, acceptsProtests: boolean): Promise<boolean> {
-  const row = await database
-    .prepare('UPDATE races SET accepts_protests = ? WHERE id = ? RETURNING id')
-    .bind(acceptsProtests ? 1 : 0, raceId)
-    .first<{ id: number }>();
-  return row !== null;
-}
-
 export async function findRaceSummaryById(database: SqlDatabase, raceId: number): Promise<RaceSummary | null> {
   const row = await database.prepare(`${RACE_SUMMARY_SELECT} WHERE races.id = ?`).bind(raceId).first<RaceRow>();
   return row ? toRaceSummary(row) : null;
@@ -178,10 +173,24 @@ export async function insertRace(
   const [insertedRace] = await database.batch<{ id: number }>([
     database
       .prepare(
-        `INSERT INTO races (name, championship, duration, total_laps, round, track_id, is_track_reversed, race_date, created_by_discord_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+        `INSERT INTO races (name, championship, duration, total_laps, round, track_id, is_track_reversed, race_date, start_time, end_date, end_time,
+           created_by_discord_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       )
-      .bind(race.name, race.championship, race.duration, race.totalLaps, race.round, race.trackId, race.isTrackReversed ? 1 : 0, race.raceDate, createdByDiscordId),
+      .bind(
+        race.name,
+        race.championship,
+        race.duration,
+        race.totalLaps,
+        race.round,
+        race.trackId,
+        race.isTrackReversed ? 1 : 0,
+        race.raceDate,
+        race.startTime,
+        race.endDate,
+        race.endTime,
+        createdByDiscordId,
+      ),
     // L'id della gara appena inserita si ritrova dalla coppia campionato + round, che è unica.
     database
       .prepare(
@@ -218,10 +227,23 @@ export async function updateRace(
     database
       .prepare(
         `UPDATE races SET name = ?, championship = ?, duration = ?, total_laps = ?, round = ?, track_id = ?, is_track_reversed = ?, race_date = ?,
-           updated_at = ${NOW_TIMESTAMP}
+           start_time = ?, end_date = ?, end_time = ?, updated_at = ${NOW_TIMESTAMP}
          WHERE id = ?`,
       )
-      .bind(race.name, race.championship, race.duration, race.totalLaps, race.round, race.trackId, race.isTrackReversed ? 1 : 0, race.raceDate, raceId),
+      .bind(
+        race.name,
+        race.championship,
+        race.duration,
+        race.totalLaps,
+        race.round,
+        race.trackId,
+        race.isTrackReversed ? 1 : 0,
+        race.raceDate,
+        race.startTime,
+        race.endDate,
+        race.endTime,
+        raceId,
+      ),
     database.prepare('DELETE FROM race_results WHERE race_id = ?').bind(raceId),
     database
       .prepare(

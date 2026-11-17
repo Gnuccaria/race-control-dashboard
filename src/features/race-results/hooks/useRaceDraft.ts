@@ -57,7 +57,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
 
   return {
     values,
-    check: checkRaceDraft(values, undefined, currentCarIdByCrewId, driverSwapSheet),
+    check: checkRaceDraft(values, currentCarIdByCrewId, driverSwapSheet),
     championshipCrews,
     swapCount,
     driverSwapSheet,
@@ -100,8 +100,22 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
       setValues((previousValues) => ({ ...previousValues, trackId, isTrackReversed: isReversed }));
     },
     changeRaceDate: (raceDate: string) => {
-      setValues((previousValues) => ({ ...previousValues, raceDate }));
+      // La data di fine segue quella di inizio finché non se ne sceglie una diversa (gare che finiscono lo stesso giorno).
+      setValues((previousValues) => ({
+        ...previousValues,
+        raceDate,
+        endDate: previousValues.endDate === '' || previousValues.endDate === previousValues.raceDate ? raceDate : previousValues.endDate,
+      }));
+    },    changeStartTime: (startTime: string) => {
+      setValues((previousValues) => ({ ...previousValues, startTime }));
     },
+    changeEndDate: (endDate: string) => {
+      setValues((previousValues) => ({ ...previousValues, endDate }));
+    },
+    changeEndTime: (endTime: string) => {
+      setValues((previousValues) => ({ ...previousValues, endTime }));
+    },
+
     /** Togliendo l'equipaggio da una posizione si svuotano anche i suoi giri. */
     changeCrewAtPosition: (position: number, crewId: number | null) => {
       setValues((previousValues) =>
@@ -165,7 +179,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
         return { ...previousValues, driverSwap: { rowsBySwap } };
       });
     },
-    validate: () => validateRaceValues(values, undefined, driverSwapSheet.entries),
+    validate: () => validateRaceValues(values, driverSwapSheet.entries),
   };
 }
 

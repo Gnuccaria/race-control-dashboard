@@ -3,6 +3,7 @@
  * (come shared/crewRules.ts per gli equipaggi).
  */
 import { type CrewChampionship, isCrewChampionship } from './crewRules';
+import { isRaceTime, raceInstants } from './raceSchedule';
 import { type DriverSwapEntry, driverSwapCount, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
 
 /** Righe dell'ordine di arrivo. */
@@ -129,8 +130,13 @@ export interface RaceDraft {
   readonly trackId: number | null;
   /** Pista percorsa al contrario (ammesso solo se la configurazione lo prevede). */
   readonly isTrackReversed: boolean;
-  /** AAAA-MM-GG */
+  /** Data di inizio, AAAA-MM-GG (anche futura: le gare si inseriscono in anticipo). */
   readonly raceDate: string;
+  /** Ora di inizio, data e ora di fine, in ora italiana (shared/raceSchedule.ts): HH:MM e AAAA-MM-GG. Obbligatorie;
+   * la fine dopo l'inizio. Da qui la finestra delle proteste (dall'inizio a 48 ore dopo la fine). */
+  readonly startTime: string;
+  readonly endDate: string;
+  readonly endTime: string;
   /** Solo le posizioni occupate, in ordine di posizione. */
   readonly results: readonly RaceResultEntry[];
   /** Righe dei cambi pilota (solo quelle compilate): vettura, Pit In, Pit Out, annullata e note. */
@@ -151,15 +157,11 @@ export interface RaceSummary {
   readonly trackConfiguration: string | null;
   readonly isTrackReversed: boolean;
   readonly raceDate: string;
+  /** Orari in ora italiana; null nelle gare salvate prima degli orari. */
+  readonly startTime: string | null;
+  readonly endDate: string | null;
+  readonly endTime: string | null;
   readonly updatedAt: string;
-  /** La gara compare nel menu "Gara" di "Invia protesta" sul sito (interruttore nel dettaglio della gara). */
-  readonly acceptsProtests: boolean;
-}
-
-/** Corpo della richiesta che apre o chiude le proteste di una gara; null se non valido. */
-export function readRaceProtestSetting(input: unknown): { readonly acceptsProtests: boolean } | null {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  return typeof candidate.acceptsProtests === 'boolean' ? { acceptsProtests: candidate.acceptsProtests } : null;
 }
 
 /** Gara completa, con l'ordine di arrivo. */
@@ -350,8 +352,11 @@ export interface RaceDraftIssues {
   readonly round?: 'invalid';
   /** reverse-unavailable = al contrario senza pista (il server lo usa anche per le piste che non lo prevedono). */
   readonly trackId?: 'invalid' | 'reverse-unavailable';
-  /** future = dopo la data di oggi: una gara si registra solo dopo che si è corsa. */
-  readonly raceDate?: 'invalid' | 'future';
+  readonly raceDate?: 'invalid';
+  readonly startTime?: 'invalid';
+  readonly endDate?: 'invalid';
+  /** before-start = la fine non è dopo l'inizio. */
+  readonly endTime?: 'invalid' | 'before-start';
   readonly results?: 'invalid' | 'repeated-crew';
   readonly driverSwaps?: 'invalid';
 }
@@ -382,13 +387,8 @@ function readResults(rawResults: unknown): RaceResultEntry[] | null {
   return results.sort((first, second) => first.position - second.position);
 }
 
-export interface RaceDraftValidationOptions {
-  /** Ultima data ammessa (AAAA-MM-GG), cioè "oggi": le date successive sono rifiutate. */
-  readonly latestRaceDate?: string;
-}
-
 /** Convalida dati di origine sconosciuta e li restituisce in forma canonica. */
-export function validateRaceDraft(input: unknown, options: RaceDraftValidationOptions = {}): RaceDraftValidation {
+export function validateRaceDraft(input: unknown): RaceDraftValidation {
   const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
 
   const championship = isCrewChampionship(candidate.championship) ? candidate.championship : null;
@@ -425,20 +425,39 @@ export function validateRaceDraft(input: unknown, options: RaceDraftValidationOp
   else if (candidate.isTrackReversed !== undefined && typeof candidate.isTrackReversed !== 'boolean') issues.trackId = 'invalid';
   else if (isTrackReversed && trackId === null) issues.trackId = 'reverse-unavailable';
   if (!raceDate) issues.raceDate = 'invalid';
-  // Le date AAAA-MM-GG si confrontano correttamente anche come testo.
-  else if (options.latestRaceDate !== undefined && raceDate > options.latestRaceDate) issues.raceDate = 'future';
+  const startTime = isRaceTime(candidate.startTime) ? candidate.startTime : null;
+  const endDate = isIsoDate(candidate.endDate) ? candidate.endDate : null;
+  const endTime = isRaceTime(candidate.endTime) ? candidate.endTime : null;
+  if (!startTime) issues.startTime = 'invalid';
+  if (!endDate) issues.endDate = 'invalid';
+  if (!endTime) issues.endTime = 'invalid';
+  else if (raceDate && startTime && endDate) {
+    const instants = raceInstants({ raceDate, startTime, endDate, endTime });
+    if (!instants || instants.endsAt <= instants.startsAt) issues.endTime = 'before-start';
+  }
   if (!results) issues.results = 'invalid';
   else if (findRepeatedCrewPositions(results).size > 0) issues.results = 'repeated-crew';
   if (!driverSwaps) issues.driverSwaps = 'invalid';
 
   if (!isTotalLapsMissing && totalLaps === null) issues.totalLaps = 'invalid';
   else if (totalLaps !== null && results?.some((result) => result.laps > totalLaps)) issues.totalLaps = 'exceeded';
-  if (!championship || round === null || !raceDate || !results || !driverSwaps || name === undefined || Object.keys(issues).length > 0) {
+  if (
+    !championship ||
+    round === null ||
+    !raceDate ||
+    !startTime ||
+    !endDate ||
+    !endTime ||
+    !results ||
+    !driverSwaps ||
+    name === undefined ||
+    Object.keys(issues).length > 0
+  ) {
     return { isValid: false, issues };
   }
   return {
     isValid: true,
-    race: { name, championship, duration, totalLaps, round, trackId, isTrackReversed, raceDate, results, driverSwaps },
+    race: { name, championship, duration, totalLaps, round, trackId, isTrackReversed, raceDate, startTime, endDate, endTime, results, driverSwaps },
   };
 }
 

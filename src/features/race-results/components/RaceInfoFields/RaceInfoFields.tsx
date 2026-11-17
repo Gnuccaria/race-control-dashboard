@@ -1,5 +1,5 @@
 import { CREW_CHAMPIONSHIPS, type SavedCrew } from '@shared/crewRules';
-import { RACE_NAME_MAX_LENGTH, raceDurationsFor, todayIsoDate } from '@shared/raceRules';
+import { RACE_NAME_MAX_LENGTH, raceDurationsFor } from '@shared/raceRules';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
@@ -101,22 +101,28 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
           )}
         </FormField>
 
-        <FormField
-          label={formTexts.raceDate}
-          hint={isReadOnly ? undefined : formTexts.raceDateHint}
-          errorMessage={!isReadOnly && check.isRaceDateInFuture ? formTexts.raceDateInFuture : undefined}
-        >
+        <FormField label={formTexts.raceDate} hint={isReadOnly ? undefined : formTexts.raceDateHint}>
           {({ isInvalid, ...inputAttributes }) => (
-            <Input
-              {...inputAttributes}
-              type="date"
-              // Il calendario non propone giorni futuri; una data scritta a mano la segnala il controllo.
-              max={todayIsoDate()}
-              readOnly={isReadOnly}
-              isInvalid={isInvalid}
-              value={values.raceDate}
-              onValueChange={draft.changeRaceDate}
-            />
+            <Input {...inputAttributes} type="date" readOnly={isReadOnly} isInvalid={isInvalid} value={values.raceDate} onValueChange={draft.changeRaceDate} />
+          )}
+        </FormField>
+      </div>
+
+      {/* Orari in ora italiana: da qui la finestra delle proteste (dall'inizio a 48 ore dopo la fine). */}
+      <div className={styles.fieldPair}>
+        <FormField label={formTexts.startTime} hint={isReadOnly ? undefined : formTexts.scheduleHint}>
+          {({ isInvalid, ...inputAttributes }) => (
+            <Input {...inputAttributes} type="time" step={60} readOnly={isReadOnly} isInvalid={isInvalid} value={values.startTime} onValueChange={draft.changeStartTime} />
+          )}
+        </FormField>
+        <FormField label={formTexts.endDate}>
+          {({ isInvalid, ...inputAttributes }) => (
+            <Input {...inputAttributes} type="date" min={values.raceDate || undefined} readOnly={isReadOnly} isInvalid={isInvalid} value={values.endDate} onValueChange={draft.changeEndDate} />
+          )}
+        </FormField>
+        <FormField label={formTexts.endTime} errorMessage={!isReadOnly && check.isEndBeforeStart ? formTexts.endBeforeStart : undefined}>
+          {({ isInvalid, ...inputAttributes }) => (
+            <Input {...inputAttributes} type="time" step={60} readOnly={isReadOnly} isInvalid={isInvalid} value={values.endTime} onValueChange={draft.changeEndTime} />
           )}
         </FormField>
       </div>

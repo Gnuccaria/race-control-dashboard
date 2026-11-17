@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
-import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
 
 const DIRECTOR = 'token-director';
 
@@ -13,7 +13,7 @@ describe('API penalità e cambi pilota', () => {
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
 
-  const race = (overrides: Record<string, unknown> = {}) => ({
+  const race = (overrides: Record<string, unknown> = {}) => withSchedule({
     championship: REQUIRED_DETAILS.championship,
     duration: '6 hours',
     round: 1,
