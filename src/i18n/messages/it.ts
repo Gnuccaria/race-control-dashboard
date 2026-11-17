@@ -932,6 +932,8 @@ export const it = {
     carsHint: 'Scegli le vetture dal catalogo delle auto: gli equipaggi del campionato possono usare solo queste.',
     noCars: 'Nessuna vettura ammessa.',
     carsPlaceholder: 'Scegli le vetture',
+    carsGroupFilter: 'Gruppo delle vetture',
+    carsAllGroups: 'Tutti i gruppi',
     carsInUse: (carNames: string) => `Usate da almeno un equipaggio, non si possono togliere: ${carNames}.`,
     carLocked: (carName: string) => `${carName} è usata da almeno un equipaggio del campionato: non si può togliere.`,
     create: 'Crea campionato',

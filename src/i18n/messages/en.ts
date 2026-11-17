@@ -872,6 +872,8 @@ export const en: Messages = {
     carsHint: "Choose the cars from the car catalogue: the championship's crews can only use these.",
     noCars: 'No eligible cars.',
     carsPlaceholder: 'Choose the cars',
+    carsGroupFilter: 'Car group',
+    carsAllGroups: 'All groups',
     carsInUse: (carNames: string) => `Used by at least one crew, they cannot be removed: ${carNames}.`,
     carLocked: (carName: string) => `${carName} is used by at least one crew of the championship: it cannot be removed.`,
     create: 'Create championship',

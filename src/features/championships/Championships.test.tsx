@@ -63,6 +63,14 @@ describe('Crea campionato', () => {
     expect(within(carPicker).getByText('Ferrari')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Ferrari' }));
     expect(within(carPicker).queryByText('Ferrari')).not.toBeInTheDocument();
+    // Il filtro Gruppo restringe l'elenco; le clip mostrano sempre tutte le vetture scelte.
+    await user.click(screen.getByRole('checkbox', { name: 'Porsche' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Gruppo delle vetture' }), 'Gr.3');
+    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.getAttribute('aria-label'))).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini']);
+    expect(within(carPicker).getByText('Porsche')).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Gruppo delle vetture' }), '');
+    await user.click(carPicker);
+    await user.click(screen.getByRole('checkbox', { name: 'Porsche' }));
     expect(screen.queryByRole('textbox', { name: 'Vetture, una per riga' })).not.toBeInTheDocument();
     await user.click(createButton);
 

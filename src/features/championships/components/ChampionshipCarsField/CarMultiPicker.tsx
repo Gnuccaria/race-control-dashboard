@@ -1,4 +1,4 @@
-import { type Car, formatCarName } from '@shared/carRules';
+import { type Car, CAR_GROUPS, type CarGroup, formatCarName } from '@shared/carRules';
 import { type CSSProperties, useId } from 'react';
 import styles from '@/features/race-results/penalties/components/CrewMultiPicker/CrewMultiPicker.module.css';
 
@@ -7,6 +7,8 @@ interface CarMultiPickerProps {
   readonly 'aria-describedby'?: string | undefined;
   /** Auto del catalogo, in ordine alfabetico. */
   readonly cars: readonly Car[];
+  /** Gruppo delle vetture mostrate nell'elenco ('' = tutti); le clip mostrano sempre tutte le scelte. */
+  readonly group: CarGroup | '';
   readonly selectedCarIds: readonly number[];
   /** Vetture che non si possono togliere (usate da almeno un equipaggio): la casella resta spuntata e bloccata. */
   readonly lockedCarIds: readonly number[];
@@ -27,6 +29,7 @@ export function CarMultiPicker({
   id,
   'aria-describedby': describedBy,
   cars,
+  group,
   selectedCarIds,
   lockedCarIds,
   onToggleCar,
@@ -39,6 +42,11 @@ export function CarMultiPicker({
   const popoverId = useId();
   const anchorName = `--car-multi-picker-${popoverId.replace(/[^a-zA-Z0-9]/g, '')}`;
   const selectedCars = cars.filter((car) => selectedCarIds.includes(car.id));
+  // Nell'elenco: solo il gruppo scelto, per gruppo (Gr.1 → Gr.4) e poi in ordine alfabetico.
+  const groupOrder = (car: Car) => (car.group ? CAR_GROUPS.indexOf(car.group) : CAR_GROUPS.length);
+  const optionCars = cars
+    .filter((car) => group === '' || car.group === group)
+    .sort((first, second) => groupOrder(first) - groupOrder(second) || formatCarName(first).localeCompare(formatCarName(second)));
 
   return (
     <div className={styles.crewMultiPicker}>
@@ -71,7 +79,7 @@ export function CarMultiPicker({
       <div id={popoverId} popover="auto" className={styles.dropdown} style={{ positionAnchor: anchorName } as CSSProperties}>
         <fieldset className={styles.options}>
           <legend className={styles.visuallyHidden}>{listLabel}</legend>
-          {cars.map((car) => {
+          {optionCars.map((car) => {
             const isLocked = lockedCarIds.includes(car.id) && selectedCarIds.includes(car.id);
             return (
               <label key={car.id} className={styles.option} title={isLocked ? lockedTitle(formatCarName(car)) : undefined}>

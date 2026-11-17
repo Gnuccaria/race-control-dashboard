@@ -914,6 +914,8 @@ export const de: Messages = {
     carsHint: 'Wähle die Autos aus dem Autokatalog: Die Crews der Meisterschaft können nur diese verwenden.',
     noCars: 'Keine zugelassenen Autos.',
     carsPlaceholder: 'Autos wählen',
+    carsGroupFilter: 'Gruppe der Autos',
+    carsAllGroups: 'Alle Gruppen',
     carsInUse: (carNames: string) => `Von mindestens einer Crew genutzt, nicht entfernbar: ${carNames}.`,
     carLocked: (carName: string) => `${carName} wird von mindestens einer Crew der Meisterschaft genutzt: nicht entfernbar.`,
     create: 'Meisterschaft erstellen',

@@ -5,7 +5,8 @@ export const TEST_CARS: Car[] = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissa
   id: index + 1,
   manufacturer,
   model: null,
-  group: null,
+  // Gruppi solo per i filtri: la Nissan è una Gr.4, la Porsche una Gr.1, le altre Gr.3.
+  group: manufacturer === 'Nissan' ? 'Gr.4' : manufacturer === 'Porsche' ? 'Gr.1' : 'Gr.3',
   horsepower: null,
   weightKg: null,
   drivetrain: null,

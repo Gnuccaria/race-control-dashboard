@@ -915,6 +915,8 @@ export const fr: Messages = {
     carsHint: 'Choisissez les voitures dans le catalogue : les équipages du championnat ne peuvent utiliser que celles-ci.',
     noCars: 'Aucune voiture admise.',
     carsPlaceholder: 'Choisir les voitures',
+    carsGroupFilter: 'Groupe des voitures',
+    carsAllGroups: 'Tous les groupes',
     carsInUse: (carNames: string) => `Utilisées par au moins un équipage, elles ne peuvent pas être retirées : ${carNames}.`,
     carLocked: (carName: string) => `${carName} est utilisée par au moins un équipage du championnat : elle ne peut pas être retirée.`,
     create: 'Créer le championnat',

@@ -76,3 +76,21 @@
 .addButton {
   justify-self: start;
 }
+
+/* Vetture ammesse e filtro per gruppo sulla stessa riga; su schermi stretti il filtro va sotto. */
+.carsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.carsRow:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (width < 40rem) {
+  .carsRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
