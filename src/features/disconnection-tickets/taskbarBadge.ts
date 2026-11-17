@@ -36,7 +36,7 @@ async function drawBadge(count: number): Promise<Uint8Array> {
  * Ogni sistema ignora la chiamata che non supporta. Restituisce la funzione che smette di aggiornarlo e lo toglie.
  */
 export function startTaskbarBadge(): () => void {
-  if (!isTauri()) return () => {};
+  if (!isTauri()) return () => undefined;
   let shownCount = 0;
   let isStopped = false;
   let pending = Promise.resolve();
@@ -45,8 +45,8 @@ export function startTaskbarBadge(): () => void {
     pending = pending.then(async () => {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       const appWindow = getCurrentWindow();
-      await appWindow.setOverlayIcon(count > 0 ? await drawBadge(count) : undefined).catch(() => {});
-      await appWindow.setBadgeCount(count > 0 ? count : undefined).catch(() => {});
+      await appWindow.setOverlayIcon(count > 0 ? await drawBadge(count) : undefined).catch(() => undefined);
+      await appWindow.setBadgeCount(count > 0 ? count : undefined).catch(() => undefined);
     }).catch((badgeError: unknown) => {
       console.warn('Impossibile aggiornare il pallino sull\'icona', badgeError);
     });

@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createMemoryRouter, type RouteObject } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import { LocaleDocumentSync } from '@/app/LocaleDocumentSync/LocaleDocumentSync';
 import { appRoutes } from '@/app/router';
 import { replaceAuthSessionForTests } from '@/features/auth/authSessionStore';
 
@@ -19,11 +20,19 @@ export function signInTestUser() {
   replaceAuthSessionForTests({ status: 'signed-in', user: TEST_USER });
 }
 
-/** Monta l'intera applicazione in memoria con un utente già autenticato, partendo dall'URL indicato. */
+/** Monta l'intera applicazione in memoria con un utente già autenticato, partendo dall'URL indicato (come App, con la lingua su <html>). */
 export function renderApp(initialPath = '/') {
   signInTestUser();
   const memoryRouter = createMemoryRouter(appRoutes, { initialEntries: [initialPath] });
-  return { memoryRouter, ...render(<RouterProvider router={memoryRouter} />) };
+  return {
+    memoryRouter,
+    ...render(
+      <>
+        <LocaleDocumentSync />
+        <RouterProvider router={memoryRouter} />
+      </>,
+    ),
+  };
 }
 
 /** Monta un singolo componente che usa Link o altri hook del router. */

@@ -7,33 +7,37 @@ import { useI18n } from '@/i18n/useI18n';
 import styles from './Protests.module.css';
 import { fetchProtestVideo } from './services/protestApi';
 
-type VideoState = { readonly status: 'loading' } | { readonly status: 'ready'; readonly url: string } | { readonly status: 'failed'; readonly errorKind: ServerErrorKind };
+type LoadedVideo = { readonly status: 'ready'; readonly url: string } | { readonly status: 'failed'; readonly errorKind: ServerErrorKind };
+type VideoState = { readonly status: 'loading' } | LoadedVideo;
 
 /** Video caricato dal sito: l'app lo scarica (con il token) e lo riproduce nel player; la memoria si libera all'uscita. */
 export function UploadedProtestVideo({ protestId, size }: { readonly protestId: number; readonly size: number }) {
   const { messages, locale } = useI18n();
   const texts = messages.protests.detail;
   const [attempt, setAttempt] = useState(0);
-  const [videoState, setVideoState] = useState<VideoState>({ status: 'loading' });
+  // Ogni risultato ricorda a quale richiesta (protesta e tentativo) appartiene: finché non arriva quello
+  // della richiesta corrente il video risulta in caricamento, senza azzerare lo stato dentro l'effetto.
+  const requestKey = `${protestId}:${attempt}`;
+  const [loadedVideo, setLoadedVideo] = useState<{ readonly requestKey: string; readonly video: LoadedVideo } | null>(null);
+  const videoState: VideoState = loadedVideo?.requestKey === requestKey ? loadedVideo.video : { status: 'loading' };
 
   useEffect(() => {
     let objectUrl: string | null = null;
     let isCurrent = true;
-    setVideoState({ status: 'loading' });
     void fetchProtestVideo(protestId).then((result) => {
       if (!isCurrent) return;
       if (!result.isSuccess) {
-        setVideoState({ status: 'failed', errorKind: result.errorKind });
+        setLoadedVideo({ requestKey, video: { status: 'failed', errorKind: result.errorKind } });
         return;
       }
       objectUrl = URL.createObjectURL(result.value);
-      setVideoState({ status: 'ready', url: objectUrl });
+      setLoadedVideo({ requestKey, video: { status: 'ready', url: objectUrl } });
     });
     return () => {
       isCurrent = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [protestId, attempt]);
+  }, [protestId, requestKey]);
 
   if (videoState.status === 'loading') {
     return (

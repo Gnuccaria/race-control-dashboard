@@ -35,7 +35,7 @@ export interface CsvRow {
 
 /** Lettore CSV (RFC 4180): virgolette, separatori e a capo dentro le virgolette, BOM di Excel, righe vuote ignorate. */
 export function parseCsv(csvText: string): CsvRow[] {
-  const text = csvText.replace(/^﻿/, '');
+  const text = csvText.replace(/^\uFEFF/, '');
   const delimiter = detectDelimiter(text.split(/\r?\n/, 1)[0] ?? '');
   const rows: CsvRow[] = [];
 

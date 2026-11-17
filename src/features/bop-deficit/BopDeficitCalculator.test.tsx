@@ -10,7 +10,7 @@ describe('<BopDeficitCalculator />', () => {
   it('parte senza penalità, come il foglio vuoto', () => {
     renderWithRouter(<BopDeficitCalculator />);
 
-    expect(getPenalty()).toHaveTextContent('0 s');
+    expect(getPenalty()).toHaveTextContent('0s');
     expect(screen.getByText(/in linea con il BoP/)).toBeInTheDocument();
   });
 
@@ -24,7 +24,7 @@ describe('<BopDeficitCalculator />', () => {
     await user.type(screen.getByLabelText('Potenza effettiva'), '505');
     await user.type(screen.getByLabelText('Effettuati'), '12');
 
-    expect(getPenalty()).toHaveTextContent('90 s');
+    expect(getPenalty()).toHaveTextContent('90s');
     expect(screen.getByText('Pari a')).toHaveTextContent('1 min 30 s');
   });
 });

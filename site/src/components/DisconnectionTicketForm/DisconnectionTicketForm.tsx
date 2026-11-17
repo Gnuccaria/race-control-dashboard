@@ -84,7 +84,7 @@ export function DisconnectionTicketForm({ crewState, onSent }: DisconnectionTick
           hint={crewState.status === 'ready' ? texts.crewHint : undefined}
           errorMessage={crewState.status === 'problem' ? texts.crewProblems[crewState.problem] : undefined}
         >
-          {({ isInvalid, ...inputAttributes }) => <Input {...inputAttributes} type="text" readOnly isInvalid={isInvalid} value={crewValue} onValueChange={() => {}} />}
+          {({ isInvalid, ...inputAttributes }) => <Input {...inputAttributes} type="text" readOnly isInvalid={isInvalid} value={crewValue} onValueChange={() => undefined} />}
         </FormField>
 
         <div className={styles.fieldRow}>

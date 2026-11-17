@@ -8,10 +8,10 @@ import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeade
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import { formatTimestamp } from '@/lib/dateFormatting';
+import { crewLabel } from './crewLabel';
 import styles from './Protests.module.css';
 import { fetchProtests } from './services/protestApi';
 
-export const crewLabel = (crew: Protest['crew']) => `#${crew.number} ${crew.name}`;
 
 function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
   const { locale, messages } = useI18n();

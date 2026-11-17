@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Altezza (in px) di un elemento, aggiornata quando cambia (ResizeObserver). Restituisce il ref da collegare
- * all'elemento e l'altezza, null finché l'elemento non c'è.
+ * Altezza (in px) di un elemento, aggiornata quando cambia (ResizeObserver). Restituisce la funzione da passare
+ * come ref all'elemento (attachElement) e l'altezza, null finché l'elemento non c'è. La chiave non si chiama "ref":
+ * il React Compiler tratterebbe tutto l'oggetto come un ref e vieterebbe di leggere height durante il render.
  */
 export function useElementHeight<ElementType extends HTMLElement>() {
   const [element, setElement] = useState<ElementType | null>(null);
@@ -17,5 +18,5 @@ export function useElementHeight<ElementType extends HTMLElement>() {
     return () => observer.disconnect();
   }, [element]);
 
-  return { ref: setElement, height };
+  return { attachElement: setElement, height };
 }

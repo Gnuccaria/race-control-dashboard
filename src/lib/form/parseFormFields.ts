@@ -29,8 +29,7 @@ export function parseFormFields<Schema extends FieldParserSchema>(
   const parsedValues: Partial<Record<keyof Schema, unknown>> = {};
   const fieldErrors: FieldErrors<Schema> = {};
 
-  for (const fieldName of Object.keys(fieldParsers) as Array<keyof Schema>) {
-    const { parse, errorKey } = fieldParsers[fieldName];
+  for (const [fieldName, { parse, errorKey }] of Object.entries(fieldParsers) as [keyof Schema, FieldParser<unknown>][]) {
     const parsedValue = parse(rawValues[fieldName]);
     if (parsedValue === null) fieldErrors[fieldName] = errorKey;
     else parsedValues[fieldName] = parsedValue;

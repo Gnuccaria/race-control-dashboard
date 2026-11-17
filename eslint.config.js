@@ -21,12 +21,23 @@ export default defineConfig([
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+    rules: {
+      // I testi francesi usano lo spazio fine insecabile prima di ? ! : ; anche nei template e nei commenti.
+      'no-irregular-whitespace': ['error', { skipStrings: true, skipTemplates: true, skipComments: true }],
+    },
   },
   {
     // Pagine del sito caricate su richiesta dal router: esportano anche loader e pagina d'errore.
     files: ['site/src/pages/**/*.tsx'],
     rules: {
       'react-refresh/only-export-components': ['warn', { allowExportNames: ['loader', 'shouldRevalidate', 'ErrorBoundary'] }],
+    },
+  },
+  {
+    // Test e loro strumenti: Fast Refresh non li riguarda.
+    files: ['**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ]);

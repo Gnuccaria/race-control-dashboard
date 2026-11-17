@@ -31,7 +31,7 @@ export interface RaceTableProps {
   readonly detailPath?: (race: RaceSummary) => string;
 }
 
-export const ALL_RACE_COLUMNS: readonly RaceSortColumn[] = ['championship', 'round', 'name', 'track', 'raceDate', 'updatedAt'];
+const ALL_RACE_COLUMNS: readonly RaceSortColumn[] = ['championship', 'round', 'name', 'track', 'raceDate', 'updatedAt'];
 
 /**
  * Tabella delle gare: testate ordinabili, clic destro per selezionare (come negli equipaggi, se previsto)

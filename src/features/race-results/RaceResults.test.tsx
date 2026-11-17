@@ -1,4 +1,5 @@
 import type { SavedCrew } from '@shared/crewRules';
+import type { SavedPenalty } from '@shared/penaltyRules';
 import type { RaceSummary, SavedRace } from '@shared/raceRules';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -97,6 +98,10 @@ describe('Gestisci ordini di arrivo: elenco', () => {
   });
 });
 
+/** Riga dell'ordine di arrivo: il nome della riga non comprende più il testo del menu dell'equipaggio, si parte da quello. */
+const resultRow = (position: number) =>
+  screen.getByRole('combobox', { name: `Equipaggio in posizione ${position}` }).closest('tr') as HTMLElement;
+
 describe('Nuova gara', () => {
   const pickCrew = async (user: ReturnType<typeof userEvent.setup>, position: number, crewName: string) => {
     await user.click(screen.getByRole('combobox', { name: `Equipaggio in posizione ${position}` }));
@@ -122,9 +127,11 @@ describe('Nuova gara', () => {
 
     // Il nome della gara è il primo campo ed è facoltativo.
     await user.type(screen.getByRole('textbox', { name: 'Nome della gara' }), '6 Ore di Alsazia');
-    expect(screen.queryByRole('combobox', { name: 'Durata' })).not.toBeInTheDocument();
+    // La durata c'è sempre, ma resta disattivata finché non si sceglie il campionato.
+    expect(screen.getByRole('combobox', { name: 'Durata' })).toBeDisabled();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
-    // Nel Cool1 FIE Championship la durata compare ed è obbligatoria.
+    // Nel Cool1 FIE Championship la durata è obbligatoria, tra 6 e 12 ore.
+    expect(screen.getByRole('combobox', { name: 'Durata' })).toBeEnabled();
     expect(within(screen.getByRole('combobox', { name: 'Durata' })).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Seleziona la durata',
       '6 ore',
@@ -170,19 +177,19 @@ describe('Nuova gara', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Dettagli' }));
     await user.click(screen.getByRole('combobox', { name: 'Equipaggio in posizione 1' }));
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Nessun equipaggio',
       '#7Alfa Racing',
       '#12Beta Corse',
     ]);
     await user.click(screen.getByRole('option', { name: /Beta Corse/ }));
     // La colonna Auto mostra l'auto attuale dell'equipaggio, che verrà salvata con la gara.
-    expect(screen.getByRole('row', { name: /Beta Corse/ })).toHaveTextContent('Audi');
+    expect(resultRow(1)).toHaveTextContent('Audi');
 
     await pickCrew(user, 2, 'Beta Corse');
     expect(screen.getByText('Già inserito in posizione 1.')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 2' })).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByRole('tab', { name: /Dettagli \(contiene errori\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Dettagli\s?\(contiene errori\)/ })).toBeInTheDocument();
     expect(saveButton).toBeDisabled();
 
     await pickCrew(user, 2, 'Nessun equipaggio');
@@ -206,7 +213,7 @@ describe('Nuova gara', () => {
     await pickCrew(user, 2, 'Alfa Racing');
     expect(screen.getByRole('button', { name: 'Svuota la posizione 2' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Svuota la posizione 2' }));
-    expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 2' })).toHaveTextContent('Nessun equipaggio');
+    expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 2' })).toHaveTextContent('Seleziona un equipaggio');
     expect(saveButton).toBeEnabled();
 
     // Distacco facoltativo dalla seconda posizione: minuti:secondi,millesimi; un formato sbagliato blocca il salvataggio.
@@ -248,9 +255,9 @@ describe('Nuova gara', () => {
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
     await user.click(screen.getByRole('tab', { name: 'Dettagli' }));
     await pickCrew(user, 1, 'Senza Auto');
-    expect(screen.getByRole('row', { name: /Senza Auto/ })).toHaveTextContent('Senza auto');
+    expect(resultRow(1)).toHaveTextContent('Senza auto');
     expect(screen.getByRole('alert')).toHaveTextContent("1 equipaggio non ha un'auto: assegnala in Gestisci equipaggio, poi torna qui.");
-    expect(screen.getByRole('tab', { name: /Dettagli \(contiene errori\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Dettagli\s?\(contiene errori\)/ })).toBeInTheDocument();
   });
 
   it('mostra l’errore del server vicino al pulsante', async () => {
@@ -289,8 +296,12 @@ describe('Dettaglio gara', () => {
   });
 
   it('mostra i dati in sola lettura e li salva dopo "Modifica"', async () => {
+    // Il server risponde con la gara salvata: classifica (con le vetture) e cambi pilota restano quelli di prima.
     vi.mocked(updateRace).mockImplementation((_raceId, race) =>
-      Promise.resolve({ isSuccess: true, value: { ...savedRace, ...race, updatedAt: '2026-11-14T10:00:00Z' } }),
+      Promise.resolve({
+        isSuccess: true,
+        value: { ...savedRace, ...race, results: savedRace.results, driverSwaps: savedRace.driverSwaps, updatedAt: '2026-11-14T10:00:00Z' },
+      }),
     );
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/1`);
@@ -306,7 +317,7 @@ describe('Dettaglio gara', () => {
     expect(screen.queryByRole('button', { name: 'Svuota la posizione 1' })).not.toBeInTheDocument();
     // I campi in sola lettura non si raggiungono né col Tab né col clic.
     expect(screen.getByRole('textbox', { name: 'Giri completati in posizione 1' })).toHaveAttribute('tabindex', '-1');
-    expect(screen.getByRole('row', { name: /Alfa Racing/ })).toHaveTextContent('Ferrari');
+    expect(resultRow(1)).toHaveTextContent('Ferrari');
 
     await user.click(screen.getByRole('button', { name: 'Modifica' }));
     await user.click(screen.getByRole('tab', { name: 'Anagrafica' }));
@@ -322,7 +333,14 @@ describe('Dettaglio gara', () => {
         duration: '6 hours',
         results: savedRace.results.map(({ position, crewId, laps, gapMs }) => ({ position, crewId, laps, gapMs })),
         // I cambi pilota salvati tornano al server così come sono.
-        driverSwaps: savedRace.driverSwaps.map(({ penaltyMs: _penaltyMs, ...row }) => row),
+        driverSwaps: savedRace.driverSwaps.map(({ swap, crewId, pitInMs, pitOutMs, isCancelled, notes }) => ({
+          swap,
+          crewId,
+          pitInMs,
+          pitOutMs,
+          isCancelled,
+          notes,
+        })),
       }),
     );
     expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();
@@ -402,13 +420,16 @@ describe('Dettaglio gara', () => {
   });
 
   it('Penalità: elenco con "Aggiungi penalità", eliminazione multipla e dettaglio modificabile', async () => {
-    const penalty = (id: number, crewIds: number[], violation: string) => ({
+    const penalty = (id: number, crewIds: number[], violation: string): SavedPenalty => ({
       id,
       raceId: 1,
       // La prima vettura ha +5 secondi, le altre nessuna decisione.
       crews: crewIds.map((crewId, index) => ({ crewId, decision: index === 0 ? ('time-5' as const) : null, reprimandNumber: null })),
+      // Penalità salvate prima del numero dell'articolo: la violazione è un testo libero.
       violation,
+      document: 'code-of-conduct',
       reason: 'Spinta al via.',
+      english: null,
       updatedAt: '2026-11-14T10:00:00Z',
     });
     vi.mocked(fetchPenalties).mockResolvedValue({ isSuccess: true, value: [penalty(1, [1, 2], 'Contatto in curva 1'), penalty(2, [2], 'Track limits')] });
@@ -441,7 +462,16 @@ describe('Penalità', () => {
   it('aggiunge una penalità: vetture come clip, violazione, decisione e motivazione', async () => {
     vi.mocked(createPenalty).mockResolvedValue({
       isSuccess: true,
-      value: { id: 1, raceId: 1, crews: [{ crewId: 2, decision: 'reprimand', reprimandNumber: 3 }], violation: 'Contatto', reason: '', updatedAt: '2026-11-14T10:00:00Z' },
+      value: {
+        id: 1,
+        raceId: 1,
+        crews: [{ crewId: 2, decision: 'reprimand', reprimandNumber: 3 }],
+        violation: '2.5.1',
+        document: 'code-of-conduct',
+        reason: '',
+        english: null,
+        updatedAt: '2026-11-14T10:00:00Z',
+      },
     });
     vi.mocked(fetchReprimandCounts).mockResolvedValue({ isSuccess: true, value: new Map([[2, 2]]) });
     const user = userEvent.setup();
@@ -455,7 +485,10 @@ describe('Penalità', () => {
     await user.click(screen.getByRole('checkbox', { name: '#12 Beta Corse' }));
     await user.keyboard('{Escape}');
     expect(screen.getByRole('button', { name: /Vetture coinvolte/ })).toHaveTextContent('#12');
-    await user.type(screen.getByRole('textbox', { name: 'Violazione' }), 'Contatto');
+    // Violazione: solo il numero dell'articolo (cifre e punti), con accanto il documento.
+    await user.type(screen.getByRole('textbox', { name: 'Violazione' }), 'art 2.5.1');
+    expect(screen.getByRole('textbox', { name: 'Violazione' })).toHaveValue('2.5.1');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Documento' }), 'Codice di Condotta');
     // Ogni vettura coinvolta ha la sua decisione, facoltativa; "Nessuna azione ulteriore" non è nel menu.
     const decision = screen.getByRole('combobox', { name: 'Decisione per la vettura #12' });
     expect(decision).toHaveValue('none');
@@ -467,19 +500,44 @@ describe('Penalità', () => {
     expect(screen.getByRole('textbox', { name: 'Motivazione' })).toHaveAttribute('rows', '5');
     await user.click(addButton);
 
-    expect(createPenalty).toHaveBeenCalledWith(1, { crews: [{ crewId: 2, decision: 'reprimand' }], violation: 'Contatto', reason: '' });
+    expect(createPenalty).toHaveBeenCalledWith(1, {
+      crews: [{ crewId: 2, decision: 'reprimand' }],
+      violation: '2.5.1',
+      document: 'code-of-conduct',
+      reason: '',
+    });
     // Si torna alla gara con la scheda Penalità aperta.
     expect(await screen.findByRole('tab', { name: 'Penalità', selected: true })).toBeInTheDocument();
   });
 
   it('il dettaglio è in sola lettura finché non si preme "Modifica"', async () => {
-    const savedPenalty = { id: 4, raceId: 1, crews: [{ crewId: 1, decision: 'time-10' as const, reprimandNumber: null }], violation: 'Track limits', reason: '', updatedAt: '2026-11-14T10:00:00Z' };
+    const savedPenalty: SavedPenalty = {
+      id: 4,
+      raceId: 1,
+      crews: [{ crewId: 1, decision: 'time-10', reprimandNumber: null }],
+      violation: '2.4',
+      document: 'code-of-conduct',
+      reason: '',
+      english: null,
+      updatedAt: '2026-11-14T10:00:00Z',
+    };
     vi.mocked(fetchPenalty).mockResolvedValue({ isSuccess: true, value: savedPenalty });
-    vi.mocked(updatePenalty).mockImplementation((_raceId, _penaltyId, draft) => Promise.resolve({ isSuccess: true, value: { ...savedPenalty, ...draft } }));
+    vi.mocked(updatePenalty).mockImplementation((_raceId, _penaltyId, draft) =>
+      Promise.resolve({
+        isSuccess: true,
+        value: {
+          ...savedPenalty,
+          crews: draft.crews.map((crewDecision) => ({ ...crewDecision, reprimandNumber: null })),
+          violation: draft.violation,
+          document: draft.document,
+          reason: draft.reason,
+        },
+      }),
+    );
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/1/penalita/4`);
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Track limits' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Art. 2.4 – Codice di Condotta' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Violazione' })).toHaveAttribute('readonly');
     expect(screen.getByRole('button', { name: /Vetture coinvolte/ })).toBeDisabled();
 
@@ -487,7 +545,12 @@ describe('Penalità', () => {
     await user.click(screen.getByRole('button', { name: 'Modifica' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Decisione per la vettura #7' }), '+20 secondi');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
-    expect(updatePenalty).toHaveBeenCalledWith(1, 4, { crews: [{ crewId: 1, decision: 'time-20' }], violation: 'Track limits', reason: '' });
+    expect(updatePenalty).toHaveBeenCalledWith(1, 4, {
+      crews: [{ crewId: 1, decision: 'time-20' }],
+      violation: '2.4',
+      document: 'code-of-conduct',
+      reason: '',
+    });
     expect(fetchReprimandCounts).toHaveBeenCalledWith(1, 4);
     expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();
   });

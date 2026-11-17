@@ -30,28 +30,42 @@ export function Component() {
   const auth = useSiteAuth();
   const { protestId = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [protest, setProtest] = useState<SiteProtest | 'missing' | null>(null);
+  const [loadedResult, setProtest] = useState<SiteProtest | 'missing' | null>(null);
+  // Un indirizzo con un numero non valido non si chiede nemmeno al server: la protesta non esiste.
+  const isValidProtestId = /^\d{1,9}$/.test(protestId);
+  const protest = isValidProtestId ? loadedResult : 'missing';
   const userId = auth.status === 'signed-in' ? auth.profile.id : null;
   const videoParam = searchParams.get('video');
   const [initialVideoProblem] = useState(() => VIDEO_PROBLEMS.find((problem) => problem === videoParam) ?? null);
 
-  const load = useCallback(async () => {
-    if (!/^\d{1,9}$/.test(protestId)) {
-      setProtest('missing');
-      return;
-    }
+  /** Legge la protesta dal server; null se non c'è niente da mostrare (numero non valido o sessione scaduta). */
+  const readProtest = useCallback(async (): Promise<SiteProtest | 'missing' | null> => {
+    if (!/^\d{1,9}$/.test(protestId)) return null;
     const accessToken = await getFreshSiteAccessToken();
     const result = accessToken ? await fetchMyProtest(accessToken, Number(protestId)) : null;
     if (!result || (!result.isSuccess && result.problem === 'signed-out')) {
       endExpiredSiteSession();
-      return;
+      return null;
     }
-    setProtest(result.isSuccess ? result.value : 'missing');
+    return result.isSuccess ? result.value : 'missing';
   }, [protestId]);
 
+  const reload = () => {
+    void readProtest().then((nextProtest) => {
+      if (nextProtest) setProtest(nextProtest);
+    });
+  };
+
   useEffect(() => {
-    if (userId) void load();
-  }, [userId, load]);
+    if (!userId) return;
+    let isCurrent = true;
+    void readProtest().then((nextProtest) => {
+      if (isCurrent && nextProtest) setProtest(nextProtest);
+    });
+    return () => {
+      isCurrent = false;
+    };
+  }, [userId, readProtest]);
 
   const formatDateTime = (isoTimestamp: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(isoTimestamp));
   const loadedProtest = protest !== null && protest !== 'missing' ? protest : null;
@@ -112,7 +126,7 @@ export function Component() {
           <Panel title={siteTexts.protest.form.descriptionLabel}>
             <p className={loadedProtest.description ? styles.description : styles.missingText}>{loadedProtest.description || texts.noDescription}</p>
           </Panel>
-          <ProtestVideoSection protest={loadedProtest} initialVideoProblem={initialVideoProblem} onChanged={() => void load()} />
+          <ProtestVideoSection protest={loadedProtest} initialVideoProblem={initialVideoProblem} onChanged={reload} />
         </>
       )}
     </div>

@@ -106,7 +106,7 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
           hint={formState.status === 'ready' ? crewTexts.crewHint : undefined}
           errorMessage={formState.status === 'problem' ? crewTexts.crewProblems[formState.problem] : undefined}
         >
-          {({ isInvalid, ...inputAttributes }) => <Input {...inputAttributes} type="text" readOnly isInvalid={isInvalid} value={crewValue} onValueChange={() => {}} />}
+          {({ isInvalid, ...inputAttributes }) => <Input {...inputAttributes} type="text" readOnly isInvalid={isInvalid} value={crewValue} onValueChange={() => undefined} />}
         </FormField>
 
         <div className={styles.fieldRow}>

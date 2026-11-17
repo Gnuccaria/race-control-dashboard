@@ -1,6 +1,7 @@
 import type { SavedCrew } from '@shared/crewRules';
 import { type ReactNode, useId, useState } from 'react';
-import { getTabPanelProps, Tabs } from '@/components/ui/Tabs/Tabs';
+import { Tabs } from '@/components/ui/Tabs/Tabs';
+import { getTabPanelProps } from '@/components/ui/Tabs/tabPanelProps';
 import type { ServerQueryState } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
@@ -10,14 +11,10 @@ import { RaceInfoFields } from '../RaceInfoFields/RaceInfoFields';
 import { RaceResultsTable } from '../RaceResultsTable/RaceResultsTable';
 import styles from './RaceForm.module.css';
 
-export type RaceFormTab = 'info' | 'results' | 'driverSwaps' | 'penalties';
+import { type RaceFormTab, RESULTS_TABS } from './raceFormTabs';
 
-/**
- * Schede di "Gestisci ordini di arrivo" (dettaglio e creazione). I Cambi pilota hanno uno strumento a parte,
- * "Gestisci cambi pilota" dei Commissari Sportivi, che mostra solo quella scheda.
- */
-export const RESULTS_TABS: readonly RaceFormTab[] = ['info', 'results', 'penalties'];
-export const DRIVER_SWAP_TABS: readonly RaceFormTab[] = ['driverSwaps'];
+export type { RaceFormTab } from './raceFormTabs';
+
 
 interface RaceFormProps {
   readonly draft: RaceDraftState;

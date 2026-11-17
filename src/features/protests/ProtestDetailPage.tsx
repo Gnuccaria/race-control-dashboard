@@ -7,7 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import { formatTimestamp } from '@/lib/dateFormatting';
-import { crewLabel } from './ManageProtestsPage';
+import { crewLabel } from './crewLabel';
 import { UploadedProtestVideo, YoutubeProtestVideo } from './ProtestVideo';
 import { ProtestReviewPanel } from './ProtestReviewPanel';
 import styles from './Protests.module.css';

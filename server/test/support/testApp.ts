@@ -31,7 +31,7 @@ export function createTestApp(membershipByToken: Record<string, MembershipCheck>
   return createApp((accessToken) => Promise.resolve(membershipByToken[accessToken] ?? { status: 'invalid-token' }));
 }
 
-export const authorizationHeader = (accessToken?: string) => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
+export const authorizationHeader = (accessToken?: string): Record<string, string> => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
 
 export function sendJson(method: 'POST' | 'PUT' | 'DELETE', path: string, body: unknown, accessToken?: string) {
   return new Request(`https://race-control-api.test${path}`, {

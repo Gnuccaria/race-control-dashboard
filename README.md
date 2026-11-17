@@ -68,7 +68,7 @@ L'interfaccia funziona anche in un normale browser, utile per lavorare solo sul 
 
 ```bash
 npm run dev        # http://localhost:5173
-npm run test       # Vitest (logica + componenti)
+npm run test       # Vitest (logica + componenti di app e sito; i test del server si lanciano da server/)
 npm run lint       # ESLint, incluse le regole del React Compiler
 npm run build      # type-check + build del frontend in dist/
 ```

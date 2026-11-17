@@ -14,9 +14,16 @@ import {
   translateTrackTerm,
 } from './trackSelection';
 
+/** Pista di prova per posizione (fallisce subito se l'elenco cambia). */
+function trackAt(index: number) {
+  const track = TEST_TRACKS[index];
+  if (!track) throw new Error(`Manca la pista di prova ${index}`);
+  return track;
+}
+
 describe('scelta del tracciato', () => {
   it('elenca continenti, tracciati del continente e configurazioni del tracciato', () => {
-    expect(listContinents([...TEST_TRACKS, { ...TEST_TRACKS[0]!, id: 9, continent: null }])).toEqual(['Asia', 'Europe - Middle East', NO_CONTINENT]);
+    expect(listContinents([...TEST_TRACKS, { ...trackAt(0), id: 9, continent: null }])).toEqual(['Asia', 'Europe - Middle East', NO_CONTINENT]);
     expect(listTrackNames(TEST_TRACKS, 'Europe - Middle East')).toEqual(['Alsace', 'Monza']);
     expect(listConfigurations(TEST_TRACKS, 'Europe - Middle East', 'Monza').map((track) => track.configuration)).toEqual(['Full Course', 'No Chicane']);
   });
@@ -40,10 +47,10 @@ describe('scelta del tracciato', () => {
 
   it('scrive "Tracciato - Configurazione" tradotto e, se scelto, "al contrario"', () => {
     const texts = { configurations: { 'Full Course': 'Completo', Village: 'Villaggio' }, reversedSuffix: 'al contrario' };
-    expect(formatTrackChoice(TEST_TRACKS[0]!, true, texts)).toBe('Alsace - Villaggio al contrario');
-    expect(formatTrackChoice(TEST_TRACKS[1]!, false, texts)).toBe('Monza - Completo');
+    expect(formatTrackChoice(trackAt(0), true, texts)).toBe('Alsace - Villaggio al contrario');
+    expect(formatTrackChoice(trackAt(1), false, texts)).toBe('Monza - Completo');
     // Configurazione assente dal dizionario: resta in inglese.
-    expect(formatTrackChoice(TEST_TRACKS[2]!, false, texts)).toBe('Monza - No Chicane');
+    expect(formatTrackChoice(trackAt(2), false, texts)).toBe('Monza - No Chicane');
     expect(formatTrackChoice({ name: 'Broad Bean Raceway', configuration: null }, false, texts)).toBe('Broad Bean Raceway');
   });
 

@@ -105,6 +105,7 @@ describe('Aggiungi equipaggio', () => {
       carId: testCarId('Porsche'),
       championship: 'Cool1 FIE Championship',
       color: '#E60000',
+      discordChannelId: null,
     });
     expect(screen.getByRole('textbox', { name: 'Nome equipaggio' })).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Crea equipaggio' })).toBeDisabled();

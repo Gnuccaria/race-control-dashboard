@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
-const MIGRATIONS_DIRECTORY = join(import.meta.dirname, '../../migrations');
+const MIGRATIONS_DIRECTORY = join(import.meta.dirname, '../migrations');
 
 describe('migrazione 0014: decisione per vettura', () => {
   it('porta la decisione sulle vetture penalizzate e lascia senza decisione "Nessuna azione ulteriore"', () => {

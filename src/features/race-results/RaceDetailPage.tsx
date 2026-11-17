@@ -7,7 +7,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { formatIsoDate } from '@/lib/dateFormatting';
 import styles from './RacePage.module.css';
 import { RaceEditor } from './components/RaceEditor/RaceEditor';
-import { DRIVER_SWAP_TABS, RESULTS_TABS } from './components/RaceForm/RaceForm';
+import { DRIVER_SWAP_TABS, RESULTS_TABS } from './components/RaceForm/raceFormTabs';
 import type { NewRaceLocationState } from './hooks/useCreateRace';
 import { fetchRace } from './services/raceApi';
 

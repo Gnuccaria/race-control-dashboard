@@ -20,12 +20,13 @@ export const countLabel = (count: number, singular: string, plural: string): str
 
 export function exitWithError(message: string): never {
   console.error(`\n✖ ${message}\n`);
-  process.exit(1);
+  // I tipi dei Workers ridefiniscono process: exit qui non risulta 'never'.
+  return process.exit(1) as never;
 }
 
 /** Legge percorso del file e opzioni; usage = esempio di comando mostrato se manca il file. */
 export function readImportCommandLine(usage: string): ImportCommandLine {
-  const commandLineArguments = process.argv.slice(2);
+  const commandLineArguments: string[] = process.argv.slice(2);
   const csvPath = commandLineArguments.find((argument) => !argument.startsWith('--'));
   if (!csvPath) exitWithError(`Indica il file CSV, es.: ${usage} [--dry-run]`);
   return { csvPath, isDryRun: commandLineArguments.includes('--dry-run') };

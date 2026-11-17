@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useRef } from 'react';
 import styles from './Tabs.module.css';
+import { getTabElementIds } from './tabPanelProps';
 
 export interface TabDefinition<TabId extends string> {
   readonly id: TabId;
@@ -19,16 +20,6 @@ interface TabsProps<TabId extends string> {
   readonly errorsLabel: string;
 }
 
-const tabElementId = (idPrefix: string, tabId: string) => `${idPrefix}-tab-${tabId}`;
-const panelElementId = (idPrefix: string, tabId: string) => `${idPrefix}-panel-${tabId}`;
-
-/** Attributi del pannello di una scheda: resta montato (i campi non perdono i valori), ma nascosto. */
-export const getTabPanelProps = (idPrefix: string, tabId: string, selectedTabId: string) => ({
-  id: panelElementId(idPrefix, tabId),
-  role: 'tabpanel' as const,
-  'aria-labelledby': tabElementId(idPrefix, tabId),
-  hidden: tabId !== selectedTabId,
-});
 
 /**
  * Schede secondo il pattern ARIA: una sola scheda raggiungibile con Tab, frecce sinistra/destra
@@ -41,7 +32,7 @@ export function Tabs<TabId extends string>({ idPrefix, label, tabs, selectedTabI
     const nextTab = tabs[(tabIndex + tabs.length) % tabs.length];
     if (!nextTab) return;
     onSelectTab(nextTab.id);
-    tabListRef.current?.querySelector<HTMLButtonElement>(`#${CSS.escape(tabElementId(idPrefix, nextTab.id))}`)?.focus();
+    tabListRef.current?.querySelector<HTMLButtonElement>(`#${CSS.escape(getTabElementIds(idPrefix, nextTab.id).tabId)}`)?.focus();
   };
 
   const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLDivElement>) => {
@@ -65,11 +56,11 @@ export function Tabs<TabId extends string>({ idPrefix, label, tabs, selectedTabI
         return (
           <button
             key={tab.id}
-            id={tabElementId(idPrefix, tab.id)}
+            id={getTabElementIds(idPrefix, tab.id).tabId}
             type="button"
             role="tab"
             aria-selected={isSelected}
-            aria-controls={panelElementId(idPrefix, tab.id)}
+            aria-controls={getTabElementIds(idPrefix, tab.id).panelId}
             tabIndex={isSelected ? 0 : -1}
             className={styles.tab}
             onClick={() => {

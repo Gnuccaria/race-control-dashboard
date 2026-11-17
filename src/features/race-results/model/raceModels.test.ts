@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeDriverSwapSheet,
   type DriverSwapRowValues,
+  type DriverSwapValues,
   EMPTY_DRIVER_SWAP_ROW,
   EMPTY_DRIVER_SWAP_VALUES,
   invalidCellKey,
@@ -28,7 +29,7 @@ import {
   toggleRaceSort,
 } from './raceList';
 
-const CHAMPIONSHIP = 'Cool1 FIE Championship';
+const CHAMPIONSHIP = 'Cool1 FIE Championship' as const;
 
 const summary = (id: number, round: number, raceDate: string, trackName: string | null = null): RaceSummary => ({
   id,
@@ -123,7 +124,7 @@ describe('form della gara', () => {
     const cars = new Map<number, number | null>([[7, 3], [9, null]]);
     expect(checkRaceDraft(completeValues, undefined, cars)).toMatchObject({ positionsWithoutCar: [3], hasResultsErrors: true, isComplete: false });
     // L'equipaggio 9 era già in P3 con un'auto salvata: la riga invariata la tiene.
-    const saved = checkRaceDraft({ ...completeValues, savedResults: [{ position: 3, crewId: 9, laps: 24, carId: 5 }] }, undefined, cars);
+    const saved = checkRaceDraft({ ...completeValues, savedResults: [{ position: 3, crewId: 9, laps: 24, gapMs: null, carId: 5 }] }, undefined, cars);
     expect([...saved.carIdByPosition]).toEqual([[1, 3], [3, 5]]);
     expect(saved.isComplete).toBe(true);
   });
@@ -215,7 +216,7 @@ describe('cambi pilota nel form', () => {
   });
 
   it('calcola penalità e totali, segnala i tempi non validi e prepara le righe compilate da salvare', () => {
-    const values = {
+    const values: DriverSwapValues = {
       rowsBySwap: [
         { 1: row('1:00:00', '0:10:00'), 2: row('1:00:10', '0:10:05') },
         { 1: row('2:00:00', '1:10:00'), 2: row('2:00:04', '1:10:00', { isCancelled: true }), 3: row('abc', ''), 4: row('', '', { notes: ' Ritirata ' }) },

@@ -1,9 +1,16 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { planCrewImport } from '../src/import/crewCsvImport';
 import { buildCarSyncSql, type ExistingCar, parseCsvNumber, planCarImport } from '../src/import/carCsvImport';
 import { buildTrackSyncSql, type ExistingTrack, planTrackImport } from '../src/import/trackCsvImport';
 import { createMigratedSqliteDatabase } from './support/inMemorySqlDatabase';
+
+/** Piano di sincronizzazione atteso: fallisce il test se l'importazione non ne ha prodotto uno. */
+function requirePlan<Plan>(plan: Plan | null | undefined): Plan {
+  if (plan === null || plan === undefined) throw new Error('Piano di sincronizzazione mancante');
+  return plan;
+}
 
 const existingCar = (id: number, manufacturer: string, usageCount = 0, model: string | null = null): ExistingCar => ({
   id,
@@ -75,7 +82,7 @@ describe('importazione delle auto', () => {
       .prepare('SELECT id, manufacturer, model, horsepower, weight_kg AS weightKg, limiter, ballast_kg AS ballastKg, (SELECT COUNT(*) FROM crews WHERE crews.car_id = cars.id) AS usageCount FROM cars')
       .all() as unknown as ExistingCar[];
     const { sync } = planCarImport("Costruttore;Modello;PS\nFerrari;296 GT3;600\nMcLaren;720S GT3;\nAston Martin;Vantage AMR GT3 'Evo';", existing);
-    database.exec(buildCarSyncSql(sync!));
+    database.exec(buildCarSyncSql(requirePlan(sync)));
 
     const cars = database.prepare('SELECT id, manufacturer, model, horsepower FROM cars ORDER BY manufacturer').all().map((row) => ({ ...row }));
     expect(cars).toEqual([
@@ -141,7 +148,7 @@ describe('importazione delle piste', () => {
     database.exec("INSERT INTO tracks (id, name, name_key) VALUES (1, 'Imola', 'imola|'); INSERT INTO races (championship, round, track_id, race_date, created_by_discord_id) VALUES ('Cool1 FIE Championship', 1, 1, '2026-10-01', 't');");
     const existing = [existingTrack(1, 'Imola', 1)];
     const { sync } = planTrackImport("continent;track_name;configuration;length_meters;has_reverse_layout\nEurope - Middle East;Imola;Full Course;4909;false\nEurope - Middle East;Circuit de l'Eau;A;1000;true", existing);
-    database.exec(buildTrackSyncSql(sync!));
+    database.exec(buildTrackSyncSql(requirePlan(sync)));
     expect(database.prepare('SELECT id, name, name_key, configuration, length_meters, has_reverse_layout FROM tracks ORDER BY id').all().map((row) => ({ ...row }))).toEqual([
       { id: 1, name: 'Imola', name_key: 'imola|full course', configuration: 'Full Course', length_meters: 4909, has_reverse_layout: 0 },
       { id: 2, name: "Circuit de l'Eau", name_key: "circuit de l'eau|a", configuration: 'A', length_meters: 1000, has_reverse_layout: 1 },
@@ -151,7 +158,7 @@ describe('importazione delle piste', () => {
 });
 
 describe('file pronti in server/data', () => {
-  const readDataFile = (fileName: string) => readFileSync(new URL(`../data/${fileName}`, import.meta.url), 'utf8');
+  const readDataFile = (fileName: string) => readFileSync(join(import.meta.dirname, '../data', fileName), 'utf8');
 
   it('crews.csv: i 15 equipaggi FIE, riconosciuti dalle intestazioni in inglese', () => {
     const { crews, problems } = planCrewImport(readDataFile('crews.csv'), []);

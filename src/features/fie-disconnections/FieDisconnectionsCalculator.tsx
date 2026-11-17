@@ -53,7 +53,7 @@ export function FieDisconnectionsCalculator() {
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<ResultFeedback | null>(null);
-  const trackPanel = useElementHeight<HTMLDivElement>();
+  const { attachElement: attachTrackPanel, height: trackPanelHeight } = useElementHeight<HTMLDivElement>();
 
   useEffect(() => ticketStore.startPolling(), []);
 
@@ -114,7 +114,7 @@ export function FieDisconnectionsCalculator() {
             disconnectedOnLapField={bindField('disconnectedOnLap')}
             gapField={bindField('gapSeconds')}
           />
-          <div ref={trackPanel.ref} className={styles.trackPanel}>
+          <div ref={attachTrackPanel} className={styles.trackPanel}>
             <TrackSettingsPanel
             driveThroughField={bindField('driveThroughSeconds')}
             stintTotalLapsField={bindField('stintTotalLaps')}
@@ -134,7 +134,7 @@ export function FieDisconnectionsCalculator() {
             tickets={ticketState.tickets}
             selectedTicketId={selectedTicketId}
             hasLoadError={ticketState.status === 'error'}
-            height={trackPanel.height}
+            height={trackPanelHeight}
             onSelect={selectTicket}
           />
           <div className={styles.resultActions}>
