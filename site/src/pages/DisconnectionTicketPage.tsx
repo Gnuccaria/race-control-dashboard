@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { DiscordSignInButton } from '@/components/ui/DiscordSignInButton/DiscordSignInButton';
 import { useI18n } from '@/i18n/useI18n';
@@ -9,12 +10,14 @@ import { DisconnectionTicketForm, type TicketCrewState } from '../components/Dis
 import { MyTicketList } from '../components/MyTicketList/MyTicketList';
 import { DISCONNECTION_TICKET_PATH, disconnectionTicketPath } from '../sitePaths';
 import { refreshSiteTickets } from '../tickets/siteTicketStore';
+import { useTicketAvailability } from '../tickets/useTicketAvailability';
 import styles from './HomePage.module.css';
 import pageStyles from './SitePage.module.css';
 
 /**
  * Crea ticket di disconnessione: dopo l'accesso con Discord il modulo (equipaggio letto dal ruolo Discord) e,
- * sotto, i ticket già mandati con il loro stato.
+ * sotto, i ticket già mandati con il loro stato. Con l'invio chiuso dalla Direzione Gara il modulo non c'è
+ * (lo dice un avviso), ma i ticket già mandati restano visibili.
  */
 export function Component() {
   const { messages } = useI18n();
@@ -23,6 +26,7 @@ export function Component() {
   const navigate = useNavigate();
   const [crewState, setCrewState] = useState<TicketCrewState>({ status: 'loading' });
   const userId = auth.status === 'signed-in' ? auth.profile.id : null;
+  const areTicketsOpen = useTicketAvailability();
 
   useEffect(() => {
     if (!userId) return;
@@ -71,13 +75,17 @@ export function Component() {
       )}
       {auth.status === 'signed-in' && (
         <>
-          <DisconnectionTicketForm
-            crewState={crewState}
-            onSent={(ticketId) => {
-              void refreshSiteTickets(auth.profile.id);
-              void navigate(`${disconnectionTicketPath(ticketId)}?inviato=1`);
-            }}
-          />
+          {areTicketsOpen === false ? (
+            <InlineAlert>{siteTexts.disconnectionTicket.closedNotice}</InlineAlert>
+          ) : (
+            <DisconnectionTicketForm
+              crewState={crewState}
+              onSent={(ticketId) => {
+                void refreshSiteTickets(auth.profile.id);
+                void navigate(`${disconnectionTicketPath(ticketId)}?inviato=1`);
+              }}
+            />
+          )}
           <MyTicketList userId={auth.profile.id} />
         </>
       )}

@@ -11,6 +11,17 @@ export const TICKET_LAP_MAX = 999;
 /** Ticket aperti che la stessa persona può avere in attesa: evita invii a raffica. */
 export const MAX_OPEN_TICKETS_PER_USER = 3;
 
+/** Invio dei ticket dal sito aperto o chiuso (interruttore della Direzione Gara nel Calcolatore disconnessioni). */
+export interface TicketAvailability {
+  readonly isOpen: boolean;
+}
+
+/** Corpo della richiesta che apre o chiude l'invio; null se non valido. */
+export function readTicketAvailability(input: unknown): TicketAvailability | null {
+  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  return typeof candidate.isOpen === 'boolean' ? { isOpen: candidate.isOpen } : null;
+}
+
 /** In P1 il distacco è dalla P2, dalla P2 in giù è dal leader (P1). */
 export const isLeaderPosition = (position: number): boolean => position === TICKET_POSITION_MIN;
 

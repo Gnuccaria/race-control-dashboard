@@ -138,6 +138,34 @@ describe('ticket di disconnessione', () => {
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez')).toMatchObject({ status: 422, body: { error: { code: 'crew-not-found' } } });
   });
 
+  it('la Direzione Gara apre e chiude l’invio dei ticket dal sito; chiuso, il sito non può inviarne', async () => {
+    const availability = (method: 'GET' | 'PUT', token: string, body?: unknown) =>
+      handleRequest(method === 'GET' ? getPath('/disconnection-tickets/availability', token) : sendJson('PUT', '/disconnection-tickets/availability', body, token), env);
+    const publicAvailability = async () => (await handleRequest(new Request(`${SITE}/public/disconnection-tickets/availability`), env)).json();
+
+    // Parte aperto.
+    expect(await publicAvailability()).toEqual({ isOpen: true });
+    expect(await (await availability('GET', 'token-race-control')).json()).toEqual({ isOpen: true });
+
+    const closed = await availability('PUT', 'token-race-control', { isOpen: false });
+    expect(closed.status).toBe(200);
+    expect(await closed.json()).toEqual({ isOpen: false });
+    expect(await publicAvailability()).toEqual({ isOpen: false });
+    expect(await env.CREWS_DB.prepare("SELECT updated_by_discord_id AS updatedBy FROM app_settings WHERE key = 'disconnection_tickets_open'").first()).toEqual({
+      updatedBy: 'discord-43',
+    });
+    expect(await submit(report())).toMatchObject({ status: 409, body: { error: { code: 'tickets-closed' } } });
+
+    expect(await (await availability('PUT', 'token-race-control', { isOpen: true })).json()).toEqual({ isOpen: true });
+    expect((await submit(report())).status).toBe(201);
+
+    // Solo la Direzione Gara, e solo con un valore valido.
+    expect((await availability('PUT', 'token-steward', { isOpen: false })).status).toBe(403);
+    expect((await availability('GET', 'token-organization')).status).toBe(403);
+    expect((await availability('PUT', 'token-race-control', { isOpen: 'no' })).status).toBe(422);
+    expect((await handleRequest(new Request(`${SITE}/disconnection-tickets/availability`, { method: 'POST' }), env)).status).toBe(405);
+  });
+
   it('spiega perché non trova l’equipaggio', async () => {
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-no-crew')).toMatchObject({ status: 422, body: { error: { code: 'no-crew-role' } } });
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-two-crews')).toMatchObject({ status: 422, body: { error: { code: 'multiple-crew-roles' } } });

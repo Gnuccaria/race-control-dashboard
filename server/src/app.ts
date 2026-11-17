@@ -54,7 +54,8 @@ const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
  *   GET /public/races/:id/report.pdf (referto di gara in PDF)
  *   POST /public/discord/session · /refresh · /sign-out   GET /public/discord/me   (accesso al sito con Discord)
  *   GET /public/disconnection-tickets/crew · /mine · /:id   POST /public/disconnection-tickets   (ticket dal sito)
- *   GET /disconnection-tickets   POST /disconnection-tickets/:id/result   (ticket nell'app, Direzione Gara)
+ *   GET /disconnection-tickets   POST /disconnection-tickets/:id/result   GET|PUT /disconnection-tickets/availability   (app, Direzione Gara)
+ *   GET /public/disconnection-tickets/availability   (sito: invio dei ticket aperto o chiuso)
  *   GET /public/protests/form · /mine · /:id · /:id/video   POST /public/protests   PUT /public/protests/:id/video · /:id/youtube   (proteste dal sito)
  *   GET /protests · /protests/:id · /protests/:id/video   PUT /protests/:id/review   (proteste nell'app, Commissari Sportivi)
  * La verifica Discord e le chiamate a Discord dell'accesso al sito sono iniettabili per i test.
@@ -75,6 +76,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
     '/public/discord/sign-out': { method: 'POST', handler: siteAuthHandlers.signOut },
     '/public/disconnection-tickets/crew': { method: 'GET', handler: ticketHandlers.getMyCrew },
     '/public/disconnection-tickets/mine': { method: 'GET', handler: ticketHandlers.listMyTickets },
+    '/public/disconnection-tickets/availability': { method: 'GET', handler: ticketHandlers.getPublicAvailability },
     '/public/disconnection-tickets': { method: 'POST', handler: ticketHandlers.submitTicket },
     '/disconnection-tickets': { method: 'GET', handler: ticketHandlers.listOpenTickets },
     '/public/protests/form': { method: 'GET', handler: protestHandlers.getForm },
@@ -103,6 +105,12 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
   async function route(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === '/health') return request.method === 'GET' ? jsonResponse(200, { status: 'ok' }) : methodNotAllowed();
+
+    if (pathname === '/disconnection-tickets/availability') {
+      if (request.method === 'GET') return ticketHandlers.getAvailability(request, env);
+      if (request.method === 'PUT') return ticketHandlers.saveAvailability(request, env);
+      return methodNotAllowed();
+    }
 
     const siteAuthRoute = siteAuthRoutes[pathname];
     if (siteAuthRoute) return request.method === siteAuthRoute.method ? siteAuthRoute.handler(request, env) : methodNotAllowed();

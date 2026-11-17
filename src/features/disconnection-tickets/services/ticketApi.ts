@@ -1,5 +1,19 @@
-import { type DisconnectionTicket, isTicketDiscordMessage, type TicketDiscordMessage, type TicketResultDetails } from '@shared/disconnectionTicketRules';
+import {
+  type DisconnectionTicket,
+  isTicketDiscordMessage,
+  type TicketAvailability,
+  type TicketDiscordMessage,
+  type TicketResultDetails,
+} from '@shared/disconnectionTicketRules';
 import { requestServerApi } from '@/services/serverApi';
+
+/** Il sito accetta i ticket di disconnessione? */
+export const fetchTicketAvailability = () =>
+  requestServerApi({ method: 'GET', path: '/disconnection-tickets/availability' }, (responseBody) => responseBody as TicketAvailability);
+
+/** Apre o chiude l'invio dei ticket dal sito; restituisce lo stato salvato. */
+export const saveTicketAvailability = (availability: TicketAvailability) =>
+  requestServerApi({ method: 'PUT', path: '/disconnection-tickets/availability', body: availability }, (responseBody) => responseBody as TicketAvailability);
 
 /** Ticket di disconnessione ancora da gestire, dal più vecchio. */
 export const fetchOpenTickets = () =>

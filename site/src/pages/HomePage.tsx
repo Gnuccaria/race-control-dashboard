@@ -12,6 +12,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { signInWithDiscord, useSiteAuth } from '../auth/siteAuthStore';
 import { ProtestIcon } from '@/features/protests/ProtestIcon';
 import { DISCONNECTION_TICKET_PATH, PROTEST_PATH, RACES_PATH } from '../sitePaths';
+import { useTicketAvailability } from '../tickets/useTicketAvailability';
 import styles from './HomePage.module.css';
 import pageStyles from './SitePage.module.css';
 
@@ -31,6 +32,8 @@ interface CardTexts {
  * - Sessioni di gara: Sessione di qualifica (in costruzione) e Sessioni di gara (l'elenco delle gare), per tutti.
  * - Ticketing: Invia ticket di disconnessione e Invia protesta, solo dopo l'accesso con Discord. Prima
  *   dell'accesso queste card non si aprono: ricordano di accedere e offrono il pulsante di Discord.
+ *   La card dei ticket si apre solo se la Direzione Gara ha aperto l'invio (interruttore nel Calcolatore
+ *   disconnessioni); con l'invio chiuso è disattivata e lo dice.
  */
 export function Component() {
   const { messages } = useI18n();
@@ -41,6 +44,7 @@ export function Component() {
   const [lockedPath, setLockedPath] = useState<string | null>(null);
   const reminderId = useId();
   const isSignedIn = auth.status === 'signed-in';
+  const areTicketsOpen = useTicketAvailability();
 
   const signedInCard = (path: string, Icon: ComponentType, texts: CardTexts) =>
     isSignedIn ? (
@@ -98,7 +102,20 @@ export function Component() {
             {siteTexts.sections.ticketing}
           </h2>
           <ul className={sectionStyles.toolCardList}>
-            <li className={sectionStyles.toolCardItem}>{signedInCard(DISCONNECTION_TICKET_PATH, FieDisconnectionsIcon, cardTexts.disconnectionTicket)}</li>
+            <li className={sectionStyles.toolCardItem}>
+              {areTicketsOpen === false ? (
+                <div className={cardStyles.toolCard} aria-disabled="true" data-under-construction>
+                  <ToolCardContent
+                    Icon={FieDisconnectionsIcon}
+                    name={cardTexts.disconnectionTicket.name}
+                    description={siteTexts.disconnectionTicket.closedNotice}
+                    statusLabel={siteTexts.disconnectionTicket.closedLabel}
+                  />
+                </div>
+              ) : (
+                signedInCard(DISCONNECTION_TICKET_PATH, FieDisconnectionsIcon, cardTexts.disconnectionTicket)
+              )}
+            </li>
             <li className={sectionStyles.toolCardItem}>{signedInCard(PROTEST_PATH, ProtestIcon, cardTexts.protest)}</li>
           </ul>
           {!isSignedIn && lockedPath !== null && (

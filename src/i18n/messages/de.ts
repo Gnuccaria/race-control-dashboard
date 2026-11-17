@@ -335,6 +335,12 @@ export const de: Messages = {
     },
   },
   disconnectionTickets: {
+    availability: {
+      label: 'Tickets von der Website',
+      openDescription: 'Offen: Fahrer können Verbindungsabbruch-Tickets über die Website senden.',
+      closedDescription: 'Geschlossen: Auf der Website ist die Ticket-Karte deaktiviert und Einsendungen werden abgelehnt.',
+      loading: 'Status der Website-Tickets wird gelesen…',
+    },
     bellLabel: (count: number) => (count === 0 ? 'Benachrichtigungen' : count === 1 ? 'Benachrichtigungen: 1 neu' : `Benachrichtigungen: ${count} neu`),
     panelTitle: 'Disconnect-Tickets',
     empty: 'Keine Tickets zu bearbeiten.',
@@ -476,6 +482,8 @@ export const de: Messages = {
     signInCallback: { title: 'Mit Discord anmelden', inProgress: 'Anmeldung läuft…', failedTitle: 'Anmeldung fehlgeschlagen', retry: 'Erneut versuchen' },
     disconnectionTicket: {
       description: 'Melde der Rennleitung einen Verbindungsabbruch während des Rennens: Sie bearbeitet ihn im Disconnect-Rechner.',
+      closedLabel: 'Senden geschlossen',
+      closedNotice: 'Das Senden von Verbindungsabbruch-Tickets ist geschlossen: Die Rennleitung öffnet es während der Rennen. Bereits gesendete Tickets bleiben unten aufgeführt.',
       form: {
         title: 'Angaben zum Verbindungsabbruch',
         description: 'Alle Felder sind Pflichtfelder.',
@@ -500,7 +508,7 @@ export const de: Messages = {
         confirmDescription: 'Die Daten sind endgültig: Nach dem Senden können sie nicht mehr geändert werden.',
         confirm: 'Bestätigen',
         cancel: 'Abbrechen',
-        errors: { 'signed-out': 'Deine Anmeldung ist abgelaufen: Melde dich erneut mit Discord an und sende das Ticket.', 'not-guild-member': 'Dieses Discord-Konto ist kein Mitglied des Liga-Servers.', 'invalid': 'Einige Angaben sind ungültig: Prüfe sie und versuche es erneut.', 'too-many-tickets': 'Du hast bereits 3 offene Tickets: Warte, bis die Rennleitung sie bearbeitet.', 'unavailable': 'Senden fehlgeschlagen: Versuche es gleich noch einmal.', 'no-crew-role': 'Du hast auf dem Discord-Server keine Teamrolle (z. B. „#16 Vez Team Lime“): Bitte die Rennleitung, sie dir zuzuweisen.', 'multiple-crew-roles': 'Du hast auf dem Discord-Server mehrere Teamrollen: Bitte die Rennleitung, nur eine zu behalten.', 'crew-not-found': 'Deine Teamrolle passt zu keinem Team der Meisterschaften: Gib der Rennleitung Bescheid.', 'bot-unavailable': 'Die Rollen des Discord-Servers können gerade nicht gelesen werden: Versuche es gleich noch einmal.', 'not-found': 'Ticket nicht gefunden.' },
+        errors: { 'signed-out': 'Deine Anmeldung ist abgelaufen: Melde dich erneut mit Discord an und sende das Ticket.', 'not-guild-member': 'Dieses Discord-Konto ist kein Mitglied des Liga-Servers.', 'invalid': 'Einige Angaben sind ungültig: Prüfe sie und versuche es erneut.', 'closed': 'Die Rennleitung hat das Senden von Verbindungsabbruch-Tickets geschlossen.', 'too-many-tickets': 'Du hast bereits 3 offene Tickets: Warte, bis die Rennleitung sie bearbeitet.', 'unavailable': 'Senden fehlgeschlagen: Versuche es gleich noch einmal.', 'no-crew-role': 'Du hast auf dem Discord-Server keine Teamrolle (z. B. „#16 Vez Team Lime“): Bitte die Rennleitung, sie dir zuzuweisen.', 'multiple-crew-roles': 'Du hast auf dem Discord-Server mehrere Teamrollen: Bitte die Rennleitung, nur eine zu behalten.', 'crew-not-found': 'Deine Teamrolle passt zu keinem Team der Meisterschaften: Gib der Rennleitung Bescheid.', 'bot-unavailable': 'Die Rollen des Discord-Servers können gerade nicht gelesen werden: Versuche es gleich noch einmal.', 'not-found': 'Ticket nicht gefunden.' },
       },
     },
     protest: {

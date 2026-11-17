@@ -334,6 +334,12 @@ export const en: Messages = {
     },
   },
   disconnectionTickets: {
+    availability: {
+      label: 'Tickets from the site',
+      openDescription: 'Open: drivers can send disconnection tickets from the site.',
+      closedDescription: 'Closed: the ticket card on the site is disabled and submissions are rejected.',
+      loading: 'Reading the site ticket status…',
+    },
     bellLabel: (count: number) => (count === 0 ? 'Notifications' : count === 1 ? 'Notifications: 1 new' : `Notifications: ${count} new`),
     panelTitle: 'Disconnection tickets',
     empty: 'No tickets to handle.',
@@ -436,6 +442,8 @@ export const en: Messages = {
     signInCallback: { title: 'Sign in with Discord', inProgress: 'Signing in…', failedTitle: 'Sign-in failed', retry: 'Try again' },
     disconnectionTicket: {
       description: 'Report a disconnection that happened during a race to Race Control: it will be handled in the disconnection calculator.',
+      closedLabel: 'Submissions closed',
+      closedNotice: 'Disconnection ticket submissions are closed: Race Control opens them during races. Tickets already sent stay listed below.',
       form: {
         title: 'Disconnection details',
         description: 'All fields are required.',
@@ -460,7 +468,7 @@ export const en: Messages = {
         confirmDescription: 'The data is final: it cannot be changed after sending.',
         confirm: 'Confirm',
         cancel: 'Cancel',
-        errors: { 'signed-out': 'Your sign-in has expired: sign in with Discord again and send the ticket.', 'not-guild-member': 'This Discord account is not a member of the league\'s server.', 'invalid': 'Some data is not valid: check it and try again.', 'too-many-tickets': 'You already have 3 pending tickets: wait for Race Control to handle them.', 'unavailable': 'Sending failed: try again shortly.', 'no-crew-role': 'You do not have a crew role on the Discord server (e.g. “#16 Vez Team Lime”): ask Race Control to assign it.', 'multiple-crew-roles': 'You have more than one crew role on the Discord server: ask Race Control to keep only one.', 'crew-not-found': 'Your crew role does not match any championship crew: let Race Control know.', 'bot-unavailable': 'Unable to read the Discord server roles right now: try again shortly.', 'not-found': 'Ticket not found.' },
+        errors: { 'signed-out': 'Your sign-in has expired: sign in with Discord again and send the ticket.', 'not-guild-member': 'This Discord account is not a member of the league\'s server.', 'invalid': 'Some data is not valid: check it and try again.', 'closed': 'Race Control has closed disconnection ticket submissions.', 'too-many-tickets': 'You already have 3 pending tickets: wait for Race Control to handle them.', 'unavailable': 'Sending failed: try again shortly.', 'no-crew-role': 'You do not have a crew role on the Discord server (e.g. “#16 Vez Team Lime”): ask Race Control to assign it.', 'multiple-crew-roles': 'You have more than one crew role on the Discord server: ask Race Control to keep only one.', 'crew-not-found': 'Your crew role does not match any championship crew: let Race Control know.', 'bot-unavailable': 'Unable to read the Discord server roles right now: try again shortly.', 'not-found': 'Ticket not found.' },
       },
     },
     protest: {

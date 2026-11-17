@@ -336,6 +336,12 @@ export const fr: Messages = {
     },
   },
   disconnectionTickets: {
+    availability: {
+      label: 'Tickets depuis le site',
+      openDescription: 'Ouvert : les pilotes peuvent envoyer des tickets de déconnexion depuis le site.',
+      closedDescription: 'Fermé : sur le site, la carte des tickets est désactivée et les envois sont refusés.',
+      loading: 'Lecture de l’état des tickets du site…',
+    },
     bellLabel: (count: number) => (count === 0 ? 'Notifications' : count === 1 ? 'Notifications : 1 nouvelle' : `Notifications : ${count} nouvelles`),
     panelTitle: 'Tickets de déconnexion',
     empty: 'Aucun ticket à traiter.',
@@ -475,6 +481,8 @@ export const fr: Messages = {
     signInCallback: { title: 'Connexion avec Discord', inProgress: 'Connexion en cours…', failedTitle: 'Connexion échouée', retry: 'Réessayer' },
     disconnectionTicket: {
       description: 'Signalez à la direction de course une déconnexion survenue en course : elle la traitera dans le calculateur de déconnexions.',
+      closedLabel: 'Envoi fermé',
+      closedNotice: 'L’envoi des tickets de déconnexion est fermé : la direction de course l’ouvre pendant les courses. Les tickets déjà envoyés restent ci-dessous.',
       form: {
         title: 'Détails de la déconnexion',
         description: 'Tous les champs sont obligatoires.',
@@ -499,7 +507,7 @@ export const fr: Messages = {
         confirmDescription: 'Les données sont définitives : elles ne pourront plus être modifiées après l’envoi.',
         confirm: 'Confirmer',
         cancel: 'Annuler',
-        errors: { 'signed-out': 'Votre connexion a expiré : reconnectez-vous avec Discord et envoyez le ticket.', 'not-guild-member': 'Ce compte Discord n’est pas membre du serveur de la ligue.', 'invalid': 'Certaines données ne sont pas valides : vérifiez-les et réessayez.', 'too-many-tickets': 'Vous avez déjà 3 tickets en attente : attendez que la direction de course les traite.', 'unavailable': 'L’envoi a échoué : réessayez dans un instant.', 'no-crew-role': 'Vous n’avez pas de rôle d’équipage sur le serveur Discord (p. ex. « #16 Vez Team Lime ») : demandez à la direction de course de vous l’attribuer.', 'multiple-crew-roles': 'Vous avez plusieurs rôles d’équipage sur le serveur Discord : demandez à la direction de course de n’en garder qu’un.', 'crew-not-found': 'Votre rôle d’équipage ne correspond à aucun équipage des championnats : prévenez la direction de course.', 'bot-unavailable': 'Impossible de lire les rôles du serveur Discord pour le moment : réessayez dans un instant.', 'not-found': 'Ticket introuvable.' },
+        errors: { 'signed-out': 'Votre connexion a expiré : reconnectez-vous avec Discord et envoyez le ticket.', 'not-guild-member': 'Ce compte Discord n’est pas membre du serveur de la ligue.', 'invalid': 'Certaines données ne sont pas valides : vérifiez-les et réessayez.', 'closed': 'La direction de course a fermé l’envoi des tickets de déconnexion.', 'too-many-tickets': 'Vous avez déjà 3 tickets en attente : attendez que la direction de course les traite.', 'unavailable': 'L’envoi a échoué : réessayez dans un instant.', 'no-crew-role': 'Vous n’avez pas de rôle d’équipage sur le serveur Discord (p. ex. « #16 Vez Team Lime ») : demandez à la direction de course de vous l’attribuer.', 'multiple-crew-roles': 'Vous avez plusieurs rôles d’équipage sur le serveur Discord : demandez à la direction de course de n’en garder qu’un.', 'crew-not-found': 'Votre rôle d’équipage ne correspond à aucun équipage des championnats : prévenez la direction de course.', 'bot-unavailable': 'Impossible de lire les rôles du serveur Discord pour le moment : réessayez dans un instant.', 'not-found': 'Ticket introuvable.' },
       },
     },
     protest: {

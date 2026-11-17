@@ -5,6 +5,7 @@ import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
 import { ToolLayout } from '@/components/layout/ToolLayout/ToolLayout';
 import { Button } from '@/components/ui/Button/Button';
 import { UsageGuide } from '@/components/ui/UsageGuide/UsageGuide';
+import { TicketAvailabilitySwitch } from '@/features/disconnection-tickets/components/TicketAvailabilitySwitch/TicketAvailabilitySwitch';
 import { TicketQueue } from '@/features/disconnection-tickets/components/TicketQueue/TicketQueue';
 import { submitTicketResult } from '@/features/disconnection-tickets/services/ticketApi';
 import { ticketStore, useTicketState } from '@/features/disconnection-tickets/ticketStore';
@@ -130,6 +131,7 @@ export function FieDisconnectionsCalculator() {
       results={
         <>
           <WaitingTimeBoard waitingTime={waitingTime} />
+          <TicketAvailabilitySwitch />
           <TicketQueue
             tickets={ticketState.tickets}
             selectedTicketId={selectedTicketId}

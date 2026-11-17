@@ -1,5 +1,6 @@
 import {
   MAX_OPEN_TICKETS_PER_USER,
+  readTicketAvailability as readTicketAvailabilityBody,
   readTicketResultDetails,
   type TicketCrewProblem,
   validateDisconnectionTicketDraft,
@@ -9,6 +10,7 @@ import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
 import { authorizeSiteMember, type DiscordFetch } from '../siteAuth/siteDiscordAuth';
+import { readTicketAvailability, saveTicketAvailability } from './ticketAvailability';
 import { findTicketCrewFromRoles } from './ticketCrewFromRoles';
 import { postTicketResultToDiscord } from './ticketResultNotice';
 import {
@@ -31,13 +33,35 @@ const crewProblemResponse = (problem: TicketCrewProblem) =>
  *   POST /public/disconnection-tickets        invio dal sito; l'equipaggio lo ricava il server dal ruolo
  *   GET  /public/disconnection-tickets/mine   ticket di chi è entrato e del suo equipaggio (stesso ruolo), con i risultati (sito)
  *   GET  /public/disconnection-tickets/:id    uno di quei ticket (sito)
+ *   GET  /public/disconnection-tickets/availability   { isOpen }: il sito accetta i ticket? (pubblico, anche senza accesso)
+ *   GET  /disconnection-tickets/availability  { isOpen } (app, ruolo Direttore Gara)
+ *   PUT  /disconnection-tickets/availability  { isOpen }: apre o chiude l'invio dal sito (app, ruolo Direttore Gara)
  *   GET  /disconnection-tickets               ticket da gestire (app, ruolo Direttore Gara)
  *   POST /disconnection-tickets/:id/result    { details }: chiude il ticket con il dettaglio del calcolo (app) e il bot
  *                                             scrive il risultato nel canale Discord dell'equipaggio → { discordMessage }
- * Sul sito basta far parte del server Discord della lega e avere il ruolo del proprio equipaggio.
+ * Sul sito basta far parte del server Discord della lega e avere il ruolo del proprio equipaggio; con l'invio chiuso
+ * POST /public/disconnection-tickets risponde 409 tickets-closed (i ticket già mandati restano visibili).
  */
 export function createTicketHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord, discordFetch: DiscordFetch = fetch) {
   return {
+    async getPublicAvailability(_request: Request, env: Env): Promise<Response> {
+      return jsonResponse(200, await readTicketAvailability(env.CREWS_DB));
+    },
+
+    async getAvailability(request: Request, env: Env): Promise<Response> {
+      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
+      if (authorization instanceof Response) return authorization;
+      return jsonResponse(200, await readTicketAvailability(env.CREWS_DB));
+    },
+
+    async saveAvailability(request: Request, env: Env): Promise<Response> {
+      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
+      if (authorization instanceof Response) return authorization;
+      const availability = readTicketAvailabilityBody(await readJsonBody(request).catch(() => null));
+      if (!availability) return errorResponse(422, 'invalid-request');
+      return jsonResponse(200, await saveTicketAvailability(env.CREWS_DB, availability, authorization.discordUserId));
+    },
+
     async getMyCrew(request: Request, env: Env): Promise<Response> {
       const member = await authorizeSiteMember(discordFetch, env, request);
       if (member instanceof Response) return member;
@@ -49,6 +73,7 @@ export function createTicketHandlers(checkMembership: MembershipChecker = checkM
       const member = await authorizeSiteMember(discordFetch, env, request);
       if (member instanceof Response) return member;
 
+      if (!(await readTicketAvailability(env.CREWS_DB)).isOpen) return errorResponse(409, 'tickets-closed');
       const validation = validateDisconnectionTicketDraft(await readJsonBody(request));
       if (!validation.isValid) return errorResponse(422, 'invalid-ticket', validation.issues);
       const lookup = await findTicketCrewFromRoles(discordFetch, env, env.CREWS_DB, member.roleIds);
