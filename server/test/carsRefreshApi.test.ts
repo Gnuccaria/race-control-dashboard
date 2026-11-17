@@ -95,15 +95,15 @@ describe('POST /cars/refresh', () => {
     ]);
     expect(preview.unmatchedOfficial).toEqual([{ officialId: 'car3', group: 'Gr.3', name: "BMW M3 GT '11" }]);
     expect(preview.unmatchedBop.map((car) => car.key)).toEqual(["Gr.2|Audi|RS 5 Turbo DTM '19", "Gr.3|BMW|M3 GT3 '11", 'Gr.4|Audi|TT Cup Gr.4']);
-    // Le auto della migrazione (solo costruttore): Audi, Mercedes e Porsche si ritrovano dal nome, le altre si eliminano.
-    expect(preview.updated.map((change) => change.name)).toEqual(["Audi R8 LMS Evo '19", "BMW M3 GT '11", "Porsche 919 Hybrid '16"]);
-    expect(preview.inserted).toEqual(["Mercedes-AMG GT3 '20"]);
-    expect(preview.deleted).toEqual(['Ferrari', 'Lamborghini', 'Nissan']);
+    // Le auto si ritrovano solo dall'id del catalogo ufficiale: quelle della migrazione (senza id, non usate) si eliminano.
+    expect(preview.updated).toEqual([]);
+    expect(preview.inserted).toEqual(["Porsche 919 Hybrid '16", "Audi R8 LMS Evo '19", "BMW M3 GT '11", "Mercedes-AMG GT3 '20"]);
+    expect(preview.deleted).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche']);
     // Niente salvato.
     expect((await listCars()).map((car) => car.manufacturer)).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche']);
   });
 
-  it('salva tenendo gli id (e quindi equipaggi e gare collegati); le auto usate non nei siti restano', async () => {
+  it('salva le vetture dei siti; le auto usate che non vi sono restano', async () => {
     const handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }));
     // Un equipaggio usa la Ferrari (id 3), che nei siti non c'è: resta.
     await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 1, ...crewDetails(3) }, 'token-organization'), env);
@@ -111,9 +111,13 @@ describe('POST /cars/refresh', () => {
     expect(status).toBe(200);
     expect(body.preview.kept).toEqual(['Ferrari']);
     const cars = await listCars();
-    expect(cars.find((car) => car.id === 1)).toMatchObject({ manufacturer: 'Audi', model: "R8 LMS Evo '19", group: 'Gr.3', limiter: 79, ballastKg: 5 });
+    expect(cars.find((car) => car.model === "R8 LMS Evo '19")).toMatchObject({ manufacturer: 'Audi', group: 'Gr.3', limiter: 79, ballastKg: 5 });
     expect(cars.find((car) => car.id === 3)).toMatchObject({ manufacturer: 'Ferrari', model: null });
     expect(cars.map((car) => car.manufacturer).sort()).toEqual(['Audi', 'BMW', 'Ferrari', 'Mercedes-AMG', 'Porsche']);
+    // Le vetture salvate tengono il loro id negli aggiornamenti successivi (un equipaggio può usarle).
+    const audiId = cars.find((car) => car.model === "R8 LMS Evo '19")?.id;
+    await call({ apply: true });
+    expect((await listCars()).find((car) => car.model === "R8 LMS Evo '19")?.id).toBe(audiId);
     // Un secondo aggiornamento ritrova tutte le auto dall'id del catalogo: nessun cambiamento.
     const again = await call({});
     expect(again.body.preview).toMatchObject({ inserted: [], updated: [], deleted: [], kept: ['Ferrari'] });

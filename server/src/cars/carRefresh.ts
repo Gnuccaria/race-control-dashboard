@@ -82,37 +82,17 @@ export type CarRefreshPlan = CatalogSyncPlan<RefreshedCar, StoredCar> & {
 };
 
 /**
- * Confronto con le auto salvate, senza perdere i collegamenti con equipaggi e gare: un'auto si ritrova dall'id del
- * catalogo ufficiale; quelle di prima (senza id) prima dal nome uguale, poi dal nome più corto ("Ferrari 296 GT3" =
- * "Ferrari 296 GT3 '23", se è l'unica così). Le auto non più nei siti si eliminano, tranne quelle usate, che restano:
- * se il loro nome serve a una vettura dei siti diventano "… (vecchia)", perché due auto non possono avere lo stesso nome.
+ * Confronto con le auto salvate, senza perdere i collegamenti con equipaggi e gare: un'auto si ritrova sempre dall'id
+ * del catalogo ufficiale (source_id). Le auto non più nei siti (o salvate senza id) si eliminano, tranne quelle usate,
+ * che restano: se il loro nome serve a una vettura dei siti diventano "… (vecchia)", perché due auto non possono avere
+ * lo stesso nome.
  */
 export function planCarRefresh(cars: readonly RefreshedCar[], stored: readonly StoredCar[]): CarRefreshPlan {
-  const namesOf = (car: RefreshedCar) => [compactName(car.fullName), compactName(formatCarName(car))];
-  // Prima passata: le auto di prima con lo stesso nome di una sola vettura dei siti (non ancora presa).
-  const claimed = new Set(stored.flatMap((car) => (car.sourceId ? [car.sourceId] : [])));
-  const exactKeyByStoredId = new Map<number, string>();
-  for (const storedCar of stored) {
-    if (storedCar.sourceId) continue;
-    const storedName = compactName(formatCarName(storedCar));
-    const exact = cars.filter((car) => !claimed.has(car.officialId) && namesOf(car).includes(storedName));
-    if (exact.length === 1 && exact[0]) {
-      claimed.add(exact[0].officialId);
-      exactKeyByStoredId.set(storedCar.id, `source:${exact[0].officialId}`);
-    }
-  }
   const plan = planCatalogSync(
     cars,
     stored,
     (car) => `source:${car.officialId}`,
-    (car) => (car.sourceId ? `source:${car.sourceId}` : (exactKeyByStoredId.get(car.id) ?? `stored:${car.id}`)),
-    // Seconda passata: nome più corto, se il candidato è unico.
-    (storedCar, unmatched) => {
-      if (storedCar.sourceId) return undefined;
-      const storedName = compactName(formatCarName(storedCar));
-      const candidates = unmatched.filter((car) => namesOf(car).some((name) => name.startsWith(storedName)));
-      return candidates.length === 1 ? candidates[0] : undefined;
-    },
+    (car) => (car.sourceId ? `source:${car.sourceId}` : `stored:${car.id}`),
   );
 
   const takenNames = new Set([...plan.inserts, ...plan.updates.map(({ draft }) => draft)].map(nameIndexKey));
