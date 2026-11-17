@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 import { createHashRouter, type RouteObject } from 'react-router';
 import { HomePage } from '@/features/home/HomePage';
-import { SectionPage } from '@/features/home/SectionPage';
 import { getToolRoutePath, type ToolSection, TOOL_SECTIONS } from '@/features/tools/toolCatalog';
 import { AppLayout } from './AppLayout/AppLayout';
 import { NotFoundPage } from './NotFoundPage/NotFoundPage';
@@ -26,21 +25,6 @@ function guardedLoader(section: ToolSection, loadPage: PageLoader): PageLoader {
   };
 }
 
-/** Una pagina per ogni sezione (le sue card), riservata come i suoi strumenti. */
-const sectionRoutes: RouteObject[] = TOOL_SECTIONS.map((section) => {
-  const Page = () => <SectionPage section={section} />;
-  return {
-    path: section.pathSegment,
-    Component: section.requiredAccess
-      ? () => (
-          <RequireAccess access={section.requiredAccess ?? 'organization'}>
-            <Page />
-          </RequireAccess>
-        )
-      : Page,
-  };
-});
-
 /** Una rotta per ogni strumento disponibile e per le sue pagine interne, caricate solo quando vengono aperte. */
 const toolRoutes: RouteObject[] = TOOL_SECTIONS.flatMap((section) =>
   section.tools.flatMap((tool): RouteObject[] => {
@@ -58,7 +42,7 @@ export const appRoutes: RouteObject[] = [
     path: '/',
     Component: AppLayout,
     ErrorBoundary: RouteErrorPage,
-    children: [{ index: true, Component: HomePage }, ...sectionRoutes, ...toolRoutes, { path: '*', Component: NotFoundPage }],
+    children: [{ index: true, Component: HomePage }, ...toolRoutes, { path: '*', Component: NotFoundPage }],
   },
 ];
 

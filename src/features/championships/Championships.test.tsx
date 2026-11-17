@@ -4,10 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '@/test/renderWithRouter';
 import { testCarId } from '@/test/testCars';
+import { fetchCrews } from '@/features/crews/services/crewApi';
 import { createChampionship, deleteChampionships, fetchChampionship, fetchChampionships, updateChampionship } from './services/championshipApi';
 
 vi.mock('@/features/auth/services/desktopBridge');
 vi.mock('@/features/auth/services/discordApi');
+vi.mock('@/features/crews/services/crewApi');
 
 const [JAPAN, FIE] = TEST_CHAMPIONSHIPS as [(typeof TEST_CHAMPIONSHIPS)[number], (typeof TEST_CHAMPIONSHIPS)[number]];
 
@@ -16,7 +18,7 @@ describe('Crea campionato', () => {
     vi.mocked(createChampionship).mockReset();
   });
 
-  it('nome, durate con lo stint (fino a tre) e vetture ammesse, da menu o una per riga; poi salva', async () => {
+  it('nome, durate con lo stint (fino a tre) e vetture ammesse con le caselle; poi salva', async () => {
     vi.mocked(createChampionship).mockResolvedValue({
       isSuccess: true,
       value: { id: 3, name: 'GT3 Sprint', durations: [{ hours: 2, stintMinutes: 60 }], carIds: [1, 3], createdAt: '2026-11-17T00:00:00Z' },
@@ -30,6 +32,9 @@ describe('Crea campionato', () => {
     // Durata: ore e minuti dello stint; accanto quanti stint e cambi pilota ne vengono.
     await user.type(screen.getByRole('textbox', { name: 'Ore di gara della durata 1' }), '2');
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }), '45');
+    expect(screen.getByText('Stint da 60 a 180 minuti.')).toBeInTheDocument();
+    await user.clear(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }));
+    await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }), '70');
     expect(screen.getByText('La gara deve dividersi in stint interi.')).toBeInTheDocument();
     await user.clear(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }));
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }), '60');
@@ -41,25 +46,24 @@ describe('Crea campionato', () => {
     await user.click(addDuration);
     expect(screen.queryByRole('button', { name: 'Aggiungi una durata' })).not.toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Ore di gara della durata 2' }), '2');
-    await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 2' }), '30');
+    expect(screen.getByText('Indica sia le ore sia lo stint.')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 2' }), '120');
     expect(screen.getByText('Durata già inserita.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Togli la durata 3' }));
     await user.click(screen.getByRole('button', { name: 'Togli la durata 2' }));
+    // La terza riga, lasciata vuota, non conta e non blocca la creazione.
 
     // Vetture: senza nessuna non si crea.
     expect(createButton).toBeDisabled();
-    const carSelect = screen.getByRole('combobox', { name: 'Scegli una vettura' });
-    await within(carSelect).findByRole('option', { name: 'Audi' });
-    await user.selectOptions(carSelect, 'Audi');
-    await user.click(screen.getByRole('button', { name: 'Aggiungi vettura' }));
-    // Una per riga: quelle riconosciute si aggiungono, le altre restano da correggere.
-    await user.type(screen.getByRole('textbox', { name: 'Vetture, una per riga' }), 'ferrari{enter}Lancia{enter}audi');
-    await user.click(screen.getByRole('button', { name: 'Aggiungi le vetture scritte' }));
-    expect(screen.getByText('Non trovate nel catalogo: Lancia. Correggile e riprova.')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Vetture, una per riga' })).toHaveValue('Lancia');
-    const carList = within(screen.getByRole('list', { name: 'Vetture ammesse' }));
-    expect(carList.getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Audi', 'Ferrari']);
-    await user.click(screen.getByRole('button', { name: 'Togli Ferrari' }));
+    // Vetture: caselle di spunta nell'elenco a discesa, scelte mostrate come clip nel campo.
+    const carPicker = screen.getByRole('button', { name: 'Vetture ammesse' });
+    await user.click(carPicker);
+    await user.click(await screen.findByRole('checkbox', { name: 'Audi' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Ferrari' }));
+    expect(within(carPicker).getByText('Audi')).toBeInTheDocument();
+    expect(within(carPicker).getByText('Ferrari')).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Ferrari' }));
+    expect(within(carPicker).queryByText('Ferrari')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Vetture, una per riga' })).not.toBeInTheDocument();
     await user.click(createButton);
 
     expect(await screen.findByText('Campionato «GT3 Sprint» creato.')).toBeInTheDocument();
@@ -75,8 +79,8 @@ describe('Crea campionato', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Nome del campionato' }), 'Cool1 FIE Championship');
     await user.type(screen.getByRole('textbox', { name: 'Ore di gara della durata 1' }), '6');
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }), '60');
-    await user.type(screen.getByRole('textbox', { name: 'Vetture, una per riga' }), 'BMW');
-    await user.click(screen.getByRole('button', { name: 'Aggiungi le vetture scritte' }));
+    await user.click(screen.getByRole('button', { name: 'Vetture ammesse' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'BMW' }));
     await user.click(screen.getByRole('button', { name: 'Crea campionato' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un campionato con questo nome.');
@@ -123,7 +127,12 @@ describe('Gestisci campionato', () => {
   });
 
   it('il dettaglio si apre in sola lettura e si modifica dopo "Modifica"', async () => {
-    vi.mocked(fetchChampionship).mockResolvedValue({ isSuccess: true, value: JAPAN });
+    vi.mocked(fetchChampionship).mockResolvedValue({ isSuccess: true, value: { ...JAPAN, carIds: [testCarId('Nissan'), testCarId('Audi')] } });
+    // La Nissan è l'auto di un equipaggio dell'All Japan GT: non si può togliere.
+    vi.mocked(fetchCrews).mockResolvedValue({
+      isSuccess: true,
+      value: [{ id: 1, name: 'Apex', number: 12, championships: [{ championship: JAPAN.name, carId: testCarId('Nissan') }], color: '#E10600', createdAt: '' }],
+    });
     vi.mocked(updateChampionship).mockImplementation((_id, draft) => Promise.resolve({ isSuccess: true, value: { ...JAPAN, ...draft } }));
     const user = userEvent.setup();
     renderApp('/campionati/gestisci-campionati');
@@ -133,7 +142,7 @@ describe('Gestisci campionato', () => {
     expect(nameInput).toHaveAttribute('readonly');
     expect(screen.getByRole('textbox', { name: 'Ore di gara della durata 1' })).toHaveValue('3');
     expect(screen.getByText('2 stint · 1 cambio pilota')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Togli Nissan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vetture ammesse' })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Modifica' }));
     await user.clear(nameInput);
@@ -141,6 +150,10 @@ describe('Gestisci campionato', () => {
     await user.click(screen.getByRole('button', { name: 'Aggiungi una durata' }));
     await user.type(screen.getByRole('textbox', { name: 'Ore di gara della durata 2' }), '6');
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 2' }), '120');
+    await user.click(screen.getByRole('button', { name: 'Vetture ammesse' }));
+    expect(screen.getByRole('checkbox', { name: 'Nissan' })).toBeDisabled();
+    expect(screen.getByText('Usate da almeno un equipaggio, non si possono togliere: Nissan.')).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Audi' }));
     await user.click(screen.getByRole('button', { name: 'Salva' }));
 
     expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();

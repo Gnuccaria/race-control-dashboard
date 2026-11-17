@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { matchCarLines } from './carRules';
 import { driverSwapCountFor, findChampionship, findDurationIssue, stintCount, validateChampionshipDraft } from './championshipRules';
 import { TEST_CHAMPIONSHIPS } from './testChampionships';
 
@@ -26,14 +25,16 @@ describe('regole campionato', () => {
     expect(validateChampionshipDraft({ ...COMPLETE, carIds: [0] })).toMatchObject({ issues: { carIds: 'invalid' } });
   });
 
-  it('una durata: ore intere 1–24, stint in minuti che divide la gara, al massimo 24 stint', () => {
+  it('una durata: ore intere 1–24, stint da 60 a 180 minuti che divide la gara, al massimo 12 stint', () => {
     expect(findDurationIssue(6, 60)).toBeNull();
+    expect(findDurationIssue(24, 120)).toBeNull();
     expect(findDurationIssue(0, 60)).toBe('hours');
     expect(findDurationIssue(25, 60)).toBe('hours');
-    expect(findDurationIssue(1.5, 30)).toBe('hours');
-    expect(findDurationIssue(6, 0)).toBe('stint');
-    expect(findDurationIssue(6, 7)).toBe('not-divisor');
-    expect(findDurationIssue(6, 10)).toBe('too-many-stints');
+    expect(findDurationIssue(1.5, 60)).toBe('hours');
+    expect(findDurationIssue(6, 59)).toBe('stint');
+    expect(findDurationIssue(6, 181)).toBe('stint');
+    expect(findDurationIssue(6, 70)).toBe('not-divisor');
+    expect(findDurationIssue(13, 60)).toBe('too-many-stints');
   });
 
   it('i cambi pilota sono uno in meno degli stint', () => {
@@ -41,18 +42,11 @@ describe('regole campionato', () => {
     expect(driverSwapCountFor({ hours: 6, stintMinutes: 60 })).toBe(5);
     expect(driverSwapCountFor({ hours: 3, stintMinutes: 90 })).toBe(1);
     expect(driverSwapCountFor({ hours: 3, stintMinutes: 180 })).toBe(0);
+    expect(driverSwapCountFor({ hours: 12, stintMinutes: 60 })).toBe(11);
   });
 
   it('trova un campionato senza badare a maiuscole e spazi', () => {
     expect(findChampionship(TEST_CHAMPIONSHIPS, ' cool1  FIE championship')?.id).toBe(1);
     expect(findChampionship(TEST_CHAMPIONSHIPS, 'Altro')).toBeUndefined();
-  });
-
-  it('riconosce le vetture scritte una per riga', () => {
-    const cars = [
-      { id: 1, manufacturer: 'Porsche', model: '911 GT3 R' },
-      { id: 2, manufacturer: 'Ferrari', model: null },
-    ];
-    expect(matchCarLines('porsche  911 gt3 r\n\n Ferrari \nLancia\nFerrari', cars)).toEqual({ carIds: [1, 2], unknownLines: ['Lancia'] });
   });
 });

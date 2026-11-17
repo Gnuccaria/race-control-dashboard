@@ -44,24 +44,6 @@ describe('applicazione', () => {
     expect(main.queryByRole('link', { name: /Crea pattern meteo/ })).not.toBeInTheDocument();
   });
 
-  it('il menu laterale porta alle sezioni e ai loro strumenti', async () => {
-    const user = userEvent.setup();
-    renderApp('/');
-
-    const sideMenu = within(screen.getByRole('navigation', { name: "Sezioni dell'app" }));
-    expect(sideMenu.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
-    expect(sideMenu.getByRole('link', { name: 'Gestisci gare' })).toHaveAttribute('href', '/campionati/gare');
-
-    await user.click(sideMenu.getByRole('link', { name: 'Gestione equipaggi' }));
-    const main = within(screen.getByRole('main'));
-    expect(main.getByRole('heading', { level: 2, name: 'Gestione equipaggi' })).toBeInTheDocument();
-    expect(main.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/equipaggi/crea-equipaggio', '/equipaggi/gestisci-equipaggi']);
-    expect(sideMenu.getByRole('link', { name: 'Gestione equipaggi' })).toHaveAttribute('aria-current', 'page');
-
-    await user.click(sideMenu.getByRole('link', { name: 'Crea campionato' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Crea campionato' })).toBeInTheDocument();
-  });
-
   it.each([
     ['/strumenti/deficit-bop', 'Calcolatore deficit BoP'],
     ['/strumenti/gestisci-disconnessioni', 'Gestisci disconnessioni'],

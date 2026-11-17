@@ -30,6 +30,9 @@ export function ChampionshipDurationsField({ draft, isReadOnly }: ChampionshipDu
           const position = index + 1;
           const issue = isReadOnly ? null : findRowIssue(row, rows);
           const isComplete = row.hours !== '' && row.stintMinutes !== '' && findRowIssue(row, rows) === null;
+          // "Manca un valore" solo per il campo vuoto; gli altri problemi sul campo che li causa.
+          const isHoursInvalid = issue === 'hours' || issue === 'repeated' || (issue === 'incomplete' && row.hours === '');
+          const isStintInvalid = issue === 'stint' || issue === 'not-divisor' || issue === 'too-many-stints' || (issue === 'incomplete' && row.stintMinutes === '');
           const duration = { hours: Number(row.hours), stintMinutes: Number(row.stintMinutes) };
           return (
             <li key={row.rowId} className={styles.durationRow}>
@@ -40,7 +43,7 @@ export function ChampionshipDurationsField({ draft, isReadOnly }: ChampionshipDu
                   inputMode="numeric"
                   aria-label={texts.hoursOf(position)}
                   readOnly={isReadOnly}
-                  isInvalid={issue === 'hours' || issue === 'repeated'}
+                  isInvalid={isHoursInvalid}
                   value={row.hours}
                   onValueChange={(value) => draft.changeHours(row.rowId, value)}
                 />
@@ -52,7 +55,7 @@ export function ChampionshipDurationsField({ draft, isReadOnly }: ChampionshipDu
                   inputMode="numeric"
                   aria-label={texts.stintOf(position)}
                   readOnly={isReadOnly}
-                  isInvalid={issue !== null && issue !== 'hours' && issue !== 'repeated'}
+                  isInvalid={isStintInvalid}
                   value={row.stintMinutes}
                   onValueChange={(value) => draft.changeStintMinutes(row.rowId, value)}
                 />

@@ -79,8 +79,7 @@ export async function insertChampionship(database: SqlDatabase, championship: Ch
 
 /**
  * Aggiorna il campionato in un'unica transazione: un nome nuovo passa a gare, equipaggi e proteste collegati;
- * durate e vetture ammesse si sostituiscono. Gli equipaggi con un'auto non più ammessa restano nel campionato
- * senza auto (da completare in "Gestisci equipaggio").
+ * durate e vetture ammesse si sostituiscono (le vetture usate dagli equipaggi le controlla prima il gestore).
  */
 export async function updateChampionship(database: SqlDatabase, previous: Championship, championship: ChampionshipDraft): Promise<Championship | null> {
   const { name } = championship;
@@ -94,11 +93,17 @@ export async function updateChampionship(database: SqlDatabase, previous: Champi
     database.prepare(insertDurationsSql('?')).bind(previous.id, JSON.stringify(championship.durations)),
     database.prepare('DELETE FROM car_championships WHERE championship IN (?, ?)').bind(previous.name, name),
     database.prepare(INSERT_CARS_SQL).bind(name, carIdsJson),
-    database
-      .prepare('UPDATE crew_championships SET car_id = NULL WHERE championship = ? AND car_id IS NOT NULL AND car_id NOT IN (SELECT value FROM json_each(?))')
-      .bind(name, carIdsJson),
   ]);
   return findChampionshipById(database, previous.id);
+}
+
+/** Quali di queste vetture sono usate da almeno un equipaggio nel campionato (non si possono togliere). */
+export async function findCarsUsedByCrews(database: SqlDatabase, name: string, carIds: readonly number[]): Promise<number[]> {
+  const { results } = await database
+    .prepare('SELECT DISTINCT car_id FROM crew_championships WHERE championship = ? AND car_id IN (SELECT value FROM json_each(?)) ORDER BY car_id')
+    .bind(name, JSON.stringify(carIds))
+    .all<{ car_id: number }>();
+  return results.map((row) => row.car_id);
 }
 
 /** Quante gare ha il campionato (con gare non si può eliminare). */

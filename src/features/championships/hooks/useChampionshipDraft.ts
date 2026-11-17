@@ -40,15 +40,19 @@ export function toChampionshipValues(saved?: ChampionshipDraft): ChampionshipVal
   };
 }
 
+const isEmptyRow = (row: DurationRow) => row.hours === '' && row.stintMinutes === '';
+
+/** Le righe delle durate lasciate del tutto vuote non contano (es. dopo "Aggiungi una durata" senza compilarla). */
 const toDraftInput = (values: ChampionshipValues) => ({
   name: values.name,
-  durations: values.durations.map((row) => ({ hours: toNumber(row.hours), stintMinutes: toNumber(row.stintMinutes) })),
+  durations: values.durations.filter((row) => !isEmptyRow(row)).map((row) => ({ hours: toNumber(row.hours), stintMinutes: toNumber(row.stintMinutes) })),
   carIds: values.carIds,
 });
 
-/** Problema di una riga, solo quando è compilata per intero (mentre si scrive non si disturba). */
-export function findRowIssue(row: DurationRow, rows: readonly DurationRow[]): ChampionshipDurationIssue | 'repeated' | null {
-  if (row.hours === '' || row.stintMinutes === '') return null;
+/** Problema di una riga: vuota va bene (non conta); compilata a metà manca l'altro valore. */
+export function findRowIssue(row: DurationRow, rows: readonly DurationRow[]): ChampionshipDurationIssue | 'repeated' | 'incomplete' | null {
+  if (isEmptyRow(row)) return null;
+  if (row.hours === '' || row.stintMinutes === '') return 'incomplete';
   const issue = findDurationIssue(Number(row.hours), Number(row.stintMinutes));
   if (issue) return issue;
   const firstWithSameHours = rows.find((candidate) => candidate.hours === row.hours);
@@ -87,7 +91,7 @@ export function useChampionshipDraft(saved?: ChampionshipDraft) {
     removeDuration: (rowId: number) => {
       setValues((previous) => ({ ...previous, durations: previous.durations.filter((row) => row.rowId !== rowId) }));
     },
-    /** Aggiunge le vetture non ancora presenti, nell'ordine dato. */
+    /** Aggiunge le vetture non ancora presenti. */
     addCars: (carIds: readonly number[]) => {
       setValues((previous) => ({ ...previous, carIds: [...previous.carIds, ...carIds.filter((carId) => !previous.carIds.includes(carId))] }));
     },

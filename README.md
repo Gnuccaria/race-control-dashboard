@@ -22,7 +22,7 @@ Con **Ricorda l'accesso** l'app ti riconosce al prossimo avvio e ricontrolla ogn
 
 ## L'app
 
-La home accoglie con un saluto e mostra le card degli strumenti, divise per sezione. Il **menu laterale**, in tutte le pagine, porta alla home, a ogni sezione e ai suoi strumenti; la voce della pagina aperta è evidenziata. Nelle finestre strette il menu si apre con il pulsante **Menu**.
+La home accoglie con un saluto e mostra le card degli strumenti, divise per sezione; da ogni strumento "Tutti gli strumenti" riporta alla home.
 
 In tutte le tabelle valgono le stesse regole:
 
@@ -32,11 +32,11 @@ In tutte le tabelle valgono le stesse regole:
 
 ### Gestione campionati
 
-- **Crea campionato**: il **nome** (unico) e le **durate di gara**, da una a tre, in ore intere. Per ogni durata si indica anche la **durata dello stint** in minuti, da cui vengono gli stint e i cambi pilota attesi: una gara di 6 ore con stint da 60 minuti ha 6 stint e 5 cambi pilota. Poi le **vetture ammesse**, scelte dal catalogo delle auto: una alla volta con il menu e **Aggiungi vettura**, oppure scritte una per riga e aggiunte insieme con **Aggiungi le vetture scritte** (le righe che non corrispondono a un'auto del catalogo restano nel campo, da correggere). La **X** toglie una durata o una vettura.
+- **Crea campionato**: il **nome** (unico) e le **durate di gara**, da una a tre, in ore intere. Per ogni durata si indica anche la **durata dello stint**, da 60 a 180 minuti, da cui vengono gli stint (al massimo 12, e la gara deve dividersi in stint interi) e i cambi pilota attesi: una gara di 6 ore con stint da 60 minuti ha 6 stint e 5 cambi pilota. La **X** toglie una durata; una riga lasciata vuota non conta. Poi le **vetture ammesse**: il campo apre l'elenco delle auto del catalogo con una casella di spunta per ognuna, e le vetture scelte compaiono nel campo come clip.
 - **Gestisci campionato**: tabella dei campionati con durate, stint e numero di vetture ammesse. Nel dettaglio si modificano tutti i dati:
   - un nuovo nome passa anche alle gare e agli equipaggi del campionato;
   - una durata già usata da qualche gara non si può togliere né cambiarne lo stint;
-  - se si toglie una vettura, gli equipaggi che la usavano restano nel campionato senza auto, da completare.
+  - una vettura usata da almeno un equipaggio del campionato non si può togliere (la sua casella resta spuntata e bloccata).
 
   Con il clic destro si eliminano i campionati selezionati. Gli equipaggi collegati perdono quel campionato e chi non ne ha altri resta con "Nessuno". Un campionato con gare salvate non si può eliminare: prima vanno eliminate le sue gare.
 - **Gestisci gare**: tabella delle gare (campionato, round, nome, tracciato, data, ultima modifica), con filtri per campionato, tracciato e intervallo di date. **Crea gara** apre un form a due schede:
@@ -114,6 +114,16 @@ npm run tracks:import -- data/tracks.csv --dry-run
 - **Piste**: una riga per configurazione, con continente, lunghezza e versione al contrario.
 
 Le righe non più nel file vengono eliminate, tranne quelle ancora usate da un equipaggio o da una gara.
+
+## Svuotare il database
+
+Dalla cartella `server`, questo comando cancella **tutti i dati** online (equipaggi, gare, campionati, auto, piste, ticket, proteste, impostazioni) e lascia le tabelle vuote. Non si può annullare; i video delle proteste restano nel loro archivio finché non scadono.
+
+```bash
+npx wrangler d1 execute race-control --remote --file scripts/clear-all-data.sql
+```
+
+Dopo, campionati, auto e piste vanno ricreati: le auto e le piste con l'importazione da CSV, i campionati dall'app.
 
 ## Installazione e pubblicazione
 

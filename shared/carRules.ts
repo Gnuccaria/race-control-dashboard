@@ -92,21 +92,3 @@ export function validateCarDraft(input: unknown): CarDraftValidation {
   return { isValid: true, car: { manufacturer, model: model === '' ? null : model, ...numbers } };
 }
 
-/**
- * Vetture scritte una per riga ("Porsche 911 GT3 R", senza badare a maiuscole e spazi) → id del catalogo.
- * Le righe vuote si saltano; quelle che non corrispondono a nessuna auto tornano in unknownLines.
- */
-export function matchCarLines(text: string, cars: readonly Pick<Car, 'id' | 'manufacturer' | 'model'>[]): { carIds: number[]; unknownLines: string[] } {
-  const normalize = (value: string) => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
-  const carIdByName = new Map(cars.map((car) => [normalize(formatCarName(car)), car.id]));
-  const carIds: number[] = [];
-  const unknownLines: string[] = [];
-  for (const line of text.split(/\r?\n/)) {
-    const key = normalize(line);
-    if (key === '') continue;
-    const carId = carIdByName.get(key);
-    if (carId === undefined) unknownLines.push(line.trim());
-    else if (!carIds.includes(carId)) carIds.push(carId);
-  }
-  return { carIds, unknownLines };
-}

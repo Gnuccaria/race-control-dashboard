@@ -10,10 +10,12 @@ import styles from './ChampionshipFields.module.css';
 interface ChampionshipFieldsProps {
   readonly draft: ChampionshipDraftState;
   readonly isReadOnly?: boolean;
+  /** Vetture usate da almeno un equipaggio del campionato (solo nel dettaglio): non si possono togliere. */
+  readonly lockedCarIds?: readonly number[];
 }
 
 /** Nome, durate (con lo stint) e vetture ammesse: in "Crea campionato" e nel dettaglio. */
-export function ChampionshipFields({ draft, isReadOnly = false }: ChampionshipFieldsProps) {
+export function ChampionshipFields({ draft, isReadOnly = false, lockedCarIds = [] }: ChampionshipFieldsProps) {
   const { messages } = useI18n();
   const texts = messages.championships;
   const nameError = !isReadOnly && draft.visibleNameIssue && draft.visibleNameIssue !== 'required' ? texts.nameIssues[draft.visibleNameIssue] : undefined;
@@ -35,7 +37,7 @@ export function ChampionshipFields({ draft, isReadOnly = false }: ChampionshipFi
         )}
       </FormField>
       <ChampionshipDurationsField draft={draft} isReadOnly={isReadOnly} />
-      <ChampionshipCarsField draft={draft} isReadOnly={isReadOnly} />
+      <ChampionshipCarsField draft={draft} isReadOnly={isReadOnly} lockedCarIds={lockedCarIds} />
     </div>
   );
 }

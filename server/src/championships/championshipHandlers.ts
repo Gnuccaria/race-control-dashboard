@@ -9,6 +9,7 @@ import { readJsonBody } from '../http/readJsonBody';
 import {
   countChampionshipRaces,
   deleteChampionships,
+  findCarsUsedByCrews,
   findChampionshipById,
   insertChampionship,
   isChampionshipNameTaken,
@@ -70,7 +71,8 @@ export function createChampionshipHandlers(checkMembership: MembershipChecker = 
 
     /**
      * PUT /championships/:id — il nome resta unico e passa a gare ed equipaggi collegati. Una durata usata da qualche
-     * gara non si può togliere né cambiare di stint (cambierebbero i cambi pilota già salvati).
+     * gara non si può togliere né cambiare di stint (cambierebbero i cambi pilota già salvati); una vettura usata
+     * da almeno un equipaggio del campionato non si può togliere.
      */
     async updateChampionship(request: Request, env: Env, championshipId: number): Promise<Response> {
       const authorization = await authorizeRequest(request, env, checkMembership);
@@ -88,6 +90,9 @@ export function createChampionshipHandlers(checkMembership: MembershipChecker = 
         return !after || (before !== undefined && before.stintMinutes !== after.stintMinutes);
       });
       if (changedUsedHours.length > 0) return errorResponse(409, 'championship-duration-in-use', { hours: changedUsedHours.sort((first, second) => first - second) });
+      const removedCarIds = previous.carIds.filter((carId) => !reading.championship.carIds.includes(carId));
+      const usedCarIds = removedCarIds.length > 0 ? await findCarsUsedByCrews(env.CREWS_DB, previous.name, removedCarIds) : [];
+      if (usedCarIds.length > 0) return errorResponse(409, 'championship-car-in-use', { carIds: usedCarIds });
 
       try {
         const savedChampionship = await updateChampionship(env.CREWS_DB, previous, reading.championship);

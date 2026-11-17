@@ -47,9 +47,12 @@
   gap: var(--space-3);
 }
 
+/* Il riepilogo (o l'errore) sta in basso come i campi ed è alto quanto loro: il testo è centrato sulla riga dei campi, non sulle etichette. */
 .durationRow > .rowSummary,
 .durationRow > .rowError {
-  align-self: center;
+  display: flex;
+  align-items: center;
+  min-block-size: var(--control-height);
 }
 
 @media (width < 40rem) {
@@ -72,35 +75,4 @@
 
 .addButton {
   justify-self: start;
-}
-
-.carList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.carItem {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding-block: var(--space-1);
-  padding-inline: var(--space-3) var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface-sunken);
-}
-
-.carItem:not(:has(button)) {
-  padding-inline-end: var(--space-3);
-}
-
-.addCarRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
 }

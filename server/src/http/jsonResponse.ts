@@ -35,6 +35,7 @@ export type ApiErrorCode =
   | 'duplicate-championship-name'
   | 'championship-duration-in-use'
   | 'championship-has-races'
+  | 'championship-car-in-use'
   | 'invalid-track'
   | 'duplicate-track'
   | 'not-found'

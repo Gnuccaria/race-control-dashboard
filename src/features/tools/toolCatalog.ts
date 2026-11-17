@@ -45,7 +45,7 @@ export interface ToolDefinition {
 
 export interface ToolSection {
   readonly id: string;
-  /** Primo segmento dell'URL della sezione e dei suoi strumenti, es. "campionati" (la pagina della sezione è /campionati). */
+  /** Primo segmento dell'URL degli strumenti della sezione, es. "campionati". */
   readonly pathSegment: string;
   /** Chiave del titolo tradotto in messages.home.sections. */
   readonly messageKey: keyof Messages['home']['sections'];
@@ -58,7 +58,7 @@ export interface ToolSection {
 export const canUseSection = (section: ToolSection, access: AppAccess): boolean => !section.requiredAccess || access[section.requiredAccess];
 
 /**
- * Unica fonte di verità di sezioni e strumenti: da qui derivano le card della home, il menu laterale e le rotte.
+ * Unica fonte di verità di sezioni e strumenti: da qui derivano le card della home e le rotte.
  * Per aggiungere uno strumento basta aggiungere una voce nella sezione giusta; con
  * availability: { status: 'under-construction' } la card compare disattivata con "In costruzione".
  */
@@ -276,6 +276,3 @@ export const getToolRoutePath = (section: ToolSection, tool: ToolDefinition): st
 
 /** URL da usare nei link. */
 export const getToolHref = (section: ToolSection, tool: ToolDefinition): string => `/${getToolRoutePath(section, tool)}`;
-
-/** URL della pagina di una sezione (le sue card), es. "/campionati". */
-export const getSectionHref = (section: ToolSection): string => `/${section.pathSegment}`;

@@ -53,7 +53,9 @@ describe('API campionati', () => {
     expect(duplicate.status).toBe(409);
     expect(duplicate.body.error.code).toBe('duplicate-championship-name');
     const invalid = await request('POST', '/championships', { name: '', durations: [{ hours: 2, stintMinutes: 45 }], carIds: [] });
-    expect(invalid.body).toEqual({ error: { code: 'invalid-championship', details: { name: 'required', durations: 'not-divisor', carIds: 'required' } } });
+    expect(invalid.body).toEqual({ error: { code: 'invalid-championship', details: { name: 'required', durations: 'stint', carIds: 'required' } } });
+    const notDivisor = await request('POST', '/championships', { ...SPRINT, durations: [{ hours: 2, stintMinutes: 70 }] });
+    expect(notDivisor.body.error.details).toEqual({ durations: 'not-divisor' });
     const unknownCar = await request('POST', '/championships', { ...SPRINT, name: 'Altro', carIds: [99] });
     expect(unknownCar.body).toEqual({ error: { code: 'invalid-championship', details: { carIds: 'unknown-car' } } });
     expect((await request('GET', '/championships/99')).status).toBe(404);
@@ -74,17 +76,21 @@ describe('API campionati', () => {
     expect((await request('POST', '/races', { ...race, driverSwaps: twoSwaps.slice(0, 1) })).status).toBe(201);
   });
 
-  it('rinominare un campionato aggiorna gare ed equipaggi; togliere una vettura lascia l\'equipaggio senza auto', async () => {
+  it('rinominare un campionato aggiorna gare ed equipaggi; una vettura usata da un equipaggio non si toglie', async () => {
     await request('POST', '/championships', SPRINT);
     await request('POST', '/crews', { name: 'Alfa', number: 1, ...crewDetails(3, 'GT3 Sprint Cup') });
     const race = withSchedule({ championship: 'GT3 Sprint Cup', duration: 2, round: 1, trackId: null, raceDate: '2026-11-08', results: [{ position: 1, crewId: 1, laps: 10 }] });
     expect((await request('POST', '/races', race)).status).toBe(201);
 
-    const renamed = await request('PUT', '/championships/3', { ...SPRINT, name: 'GT3 Endurance Cup', carIds: [1] });
+    // L'auto 3 è dell'equipaggio Alfa: non si toglie; l'auto 1 sì.
+    const carInUse = await request('PUT', '/championships/3', { ...SPRINT, carIds: [1] });
+    expect(carInUse.status).toBe(409);
+    expect(carInUse.body.error).toEqual({ code: 'championship-car-in-use', details: { carIds: [3] } });
+    const renamed = await request('PUT', '/championships/3', { ...SPRINT, name: 'GT3 Endurance Cup', carIds: [3] });
     expect(renamed.status).toBe(200);
-    expect(renamed.body.championship).toMatchObject({ name: 'GT3 Endurance Cup', carIds: [1] });
+    expect(renamed.body.championship).toMatchObject({ name: 'GT3 Endurance Cup', carIds: [3] });
     expect((await request('GET', '/races/1')).body.race).toMatchObject({ championship: 'GT3 Endurance Cup' });
-    expect((await request('GET', '/crews/1')).body.crew).toMatchObject({ championships: [{ championship: 'GT3 Endurance Cup', carId: null }] });
+    expect((await request('GET', '/crews/1')).body.crew).toMatchObject({ championships: [{ championship: 'GT3 Endurance Cup', carId: 3 }] });
 
     expect((await request('PUT', '/championships/3', { ...SPRINT, name: FIE })).body.error.code).toBe('duplicate-championship-name');
     expect((await request('PUT', '/championships/99', SPRINT)).status).toBe(404);
@@ -98,7 +104,7 @@ describe('API campionati', () => {
     const removed = await request('PUT', '/championships/3', { ...SPRINT, durations: [{ hours: 4, stintMinutes: 60 }] });
     expect(removed.status).toBe(409);
     expect(removed.body.error).toEqual({ code: 'championship-duration-in-use', details: { hours: [2] } });
-    expect((await request('PUT', '/championships/3', { ...SPRINT, durations: [{ hours: 2, stintMinutes: 30 }] })).status).toBe(409);
+    expect((await request('PUT', '/championships/3', { ...SPRINT, durations: [{ hours: 2, stintMinutes: 120 }] })).status).toBe(409);
     expect((await request('PUT', '/championships/3', { ...SPRINT, durations: [{ hours: 2, stintMinutes: 60 }, { hours: 6, stintMinutes: 120 }] })).status).toBe(200);
   });
 

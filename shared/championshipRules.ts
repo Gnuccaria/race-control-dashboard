@@ -9,9 +9,11 @@ export const CHAMPIONSHIP_NAME_MAX_LENGTH = 48;
 export const CHAMPIONSHIP_DURATIONS_MAX = 3;
 export const RACE_HOURS_MIN = 1;
 export const RACE_HOURS_MAX = 24;
-export const STINT_MINUTES_MIN = 1;
-/** Al massimo 24 stint per gara, quindi 23 cambi pilota. */
-export const RACE_STINTS_MAX = 24;
+/** Uno stint dura da 60 a 180 minuti. */
+export const STINT_MINUTES_MIN = 60;
+export const STINT_MINUTES_MAX = 180;
+/** Al massimo 12 stint per gara, quindi 11 cambi pilota. */
+export const RACE_STINTS_MAX = 12;
 
 /** Una durata di gara del campionato: 6 ore con stint da 60 minuti = 6 stint = 5 cambi pilota. */
 export interface ChampionshipDuration {
@@ -79,8 +81,8 @@ export function findChampionshipNameIssue(rawName: string): ChampionshipNameIssu
 }
 
 /**
- * Problema di una durata: hours = ore non intere o fuori da 1–24; stint = minuti non interi o non positivi;
- * not-divisor = la gara non si divide in stint interi; too-many-stints = più di 24 stint.
+ * Problema di una durata: hours = ore non intere o fuori da 1–24; stint = minuti non interi o fuori da 60–180;
+ * not-divisor = la gara non si divide in stint interi; too-many-stints = più di 12 stint.
  */
 export type ChampionshipDurationIssue = 'hours' | 'stint' | 'not-divisor' | 'too-many-stints';
 
@@ -88,7 +90,7 @@ const isInteger = (value: unknown): value is number => typeof value === 'number'
 
 export function findDurationIssue(hours: unknown, stintMinutes: unknown): ChampionshipDurationIssue | null {
   if (!isInteger(hours) || hours < RACE_HOURS_MIN || hours > RACE_HOURS_MAX) return 'hours';
-  if (!isInteger(stintMinutes) || stintMinutes < STINT_MINUTES_MIN) return 'stint';
+  if (!isInteger(stintMinutes) || stintMinutes < STINT_MINUTES_MIN || stintMinutes > STINT_MINUTES_MAX) return 'stint';
   if ((hours * 60) % stintMinutes !== 0) return 'not-divisor';
   if ((hours * 60) / stintMinutes > RACE_STINTS_MAX) return 'too-many-stints';
   return null;
