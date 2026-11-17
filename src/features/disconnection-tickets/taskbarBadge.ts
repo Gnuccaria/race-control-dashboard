@@ -1,4 +1,6 @@
 import { isTauri } from '@tauri-apps/api/core';
+import type { AppAccess } from '@/features/auth/model/discordProfile';
+import { protestStore, unseenProtests } from '@/features/protests/protestStore';
 import { ticketStore, unseenTickets } from './ticketStore';
 
 /** Lato dell'immagine del pallino: Windows la mostra a 16 px, il doppio resta nitido sugli schermi ad alta densità. */
@@ -35,7 +37,7 @@ async function drawBadge(count: number): Promise<Uint8Array> {
  * su Windows un pallino rosso sovrapposto all'icona ("9+" da 10 in su), su macOS e Linux il contatore del sistema.
  * Ogni sistema ignora la chiamata che non supporta. Restituisce la funzione che smette di aggiornarlo e lo toglie.
  */
-export function startTaskbarBadge(): () => void {
+export function startTaskbarBadge(access: Pick<AppAccess, 'raceControl' | 'stewards'>): () => void {
   if (!isTauri()) return () => undefined;
   let shownCount = 0;
   let isStopped = false;
@@ -54,17 +56,20 @@ export function startTaskbarBadge(): () => void {
 
   const update = () => {
     if (isStopped) return;
-    const count = unseenTickets(ticketStore.getState()).length;
+    const count =
+      (access.raceControl ? unseenTickets(ticketStore.getState()).length : 0) + (access.stewards ? unseenProtests(protestStore.getState()).length : 0);
     if (count === shownCount) return;
     shownCount = count;
     show(count);
   };
 
-  const unsubscribe = ticketStore.subscribe(update);
+  const unsubscribeTickets = ticketStore.subscribe(update);
+  const unsubscribeProtests = protestStore.subscribe(update);
   update();
   return () => {
     isStopped = true;
-    unsubscribe();
+    unsubscribeTickets();
+    unsubscribeProtests();
     if (shownCount > 0) show(0);
     shownCount = 0;
   };

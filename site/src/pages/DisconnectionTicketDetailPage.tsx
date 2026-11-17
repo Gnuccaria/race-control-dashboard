@@ -37,7 +37,7 @@ export function Component() {
   useEffect(() => (userId ? startSiteTicketPolling(userId) : undefined), [userId]);
 
   // Il ticket arriva dall'elenco aggiornato ogni 30 secondi; se non c'è (ticket vecchio) si legge da solo.
-  const listedTicket = ticketState.tickets.find((ticket) => ticket.id === ticketId) ?? null;
+  const listedTicket = ticketState.items.find((ticket) => ticket.id === ticketId) ?? null;
   useEffect(() => {
     if (!userId || listedTicket || ticketState.status !== 'ready') return;
     let isCurrent = true;

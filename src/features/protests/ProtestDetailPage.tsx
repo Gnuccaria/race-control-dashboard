@@ -10,6 +10,7 @@ import { formatTimestamp } from '@/lib/dateFormatting';
 import { crewLabel } from './crewLabel';
 import { UploadedProtestVideo, YoutubeProtestVideo } from './ProtestVideo';
 import { ProtestReviewPanel } from './ProtestReviewPanel';
+import { protestStore } from './protestStore';
 import styles from './Protests.module.css';
 import { fetchProtest } from './services/protestApi';
 
@@ -88,7 +89,14 @@ export function ProtestDetailPage() {
               )}
             </div>
           </Panel>
-          <ProtestReviewPanel protest={protest} onSaved={replaceValue} />
+          <ProtestReviewPanel
+            protest={protest}
+            onSaved={(savedProtest) => {
+              replaceValue(savedProtest);
+              // La protesta respinta esce subito dalla campanella, senza aspettare la prossima lettura.
+              void protestStore.refresh();
+            }}
+          />
         </>
       )}
     </div>

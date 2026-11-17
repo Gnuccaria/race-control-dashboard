@@ -11,7 +11,7 @@ import styles from './MyTicketList.module.css';
 export function MyTicketList({ userId }: { readonly userId: string }) {
   const { messages } = useI18n();
   const texts = messages.site.myTickets;
-  const { tickets } = useSiteTickets();
+  const { items: tickets } = useSiteTickets();
 
   useEffect(() => startSiteTicketPolling(userId), [userId]);
 

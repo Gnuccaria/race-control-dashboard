@@ -5,39 +5,44 @@ import type { ServerApiResult } from '@/services/serverApi';
  * Ticket di disconnessione da gestire, condivisi da campanella e calcolatore. Si rileggono dal server ogni
  * 20 secondi finché qualcuno li guarda (campanella sempre presente nella barra in alto) e quando la finestra
  * torna in primo piano. I ticket con numero oltre l'ultimo visto sono le notifiche nuove.
+ * La stessa logica serve alle proteste dei Commissari (protestStore), con un'altra chiave per i "visti".
  */
 
 export const TICKET_POLL_INTERVAL_MS = 20_000;
 const SEEN_STORAGE_KEY = 'disconnection-tickets:seen-up-to';
 
-export interface TicketState {
-  readonly tickets: readonly DisconnectionTicket[];
+export interface TicketState<Item = DisconnectionTicket> {
+  readonly tickets: readonly Item[];
   readonly status: 'idle' | 'ready' | 'error';
   /** Numero dell'ultimo ticket già visto nella tendina delle notifiche. */
   readonly seenUpToId: number;
 }
 
-type TicketFetcher = () => Promise<ServerApiResult<DisconnectionTicket[]>>;
+type TicketFetcher<Item> = () => Promise<ServerApiResult<Item[]>>;
 
 interface SeenStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 }
 
-export function createTicketStore(fetchTickets: TicketFetcher, storage: SeenStorage | null) {
+export function createTicketStore<Item extends { readonly id: number } = DisconnectionTicket>(
+  fetchTickets: TicketFetcher<Item>,
+  storage: SeenStorage | null,
+  seenStorageKey = SEEN_STORAGE_KEY,
+) {
   const readSeen = () => {
     try {
-      return Number(storage?.getItem(SEEN_STORAGE_KEY) ?? 0) || 0;
+      return Number(storage?.getItem(seenStorageKey) ?? 0) || 0;
     } catch {
       return 0;
     }
   };
-  let state: TicketState = { tickets: [], status: 'idle', seenUpToId: readSeen() };
+  let state: TicketState<Item> = { tickets: [], status: 'idle', seenUpToId: readSeen() };
   const listeners = new Set<() => void>();
   let pollerCount = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
 
-  const setState = (nextState: TicketState) => {
+  const setState = (nextState: TicketState<Item>) => {
     state = nextState;
     for (const listener of listeners) listener();
   };
@@ -80,7 +85,7 @@ export function createTicketStore(fetchTickets: TicketFetcher, storage: SeenStor
       const seenUpToId = Math.max(state.seenUpToId, ...state.tickets.map((ticket) => ticket.id));
       if (seenUpToId === state.seenUpToId) return;
       try {
-        storage?.setItem(SEEN_STORAGE_KEY, String(seenUpToId));
+        storage?.setItem(seenStorageKey, String(seenUpToId));
       } catch {
         // Archiviazione non disponibile: le notifiche si azzerano solo per questa sessione.
       }
@@ -93,4 +98,5 @@ export function createTicketStore(fetchTickets: TicketFetcher, storage: SeenStor
   };
 }
 
-export const unseenTickets = (state: TicketState) => state.tickets.filter((ticket) => ticket.id > state.seenUpToId);
+export const unseenTickets = <Item extends { readonly id: number }>(state: TicketState<Item>) =>
+  state.tickets.filter((ticket) => ticket.id > state.seenUpToId);

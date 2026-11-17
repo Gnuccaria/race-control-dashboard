@@ -32,6 +32,8 @@ HTMLDialogElement.prototype.close ??= function close(this: HTMLDialogElement) {
 const popoverStyle = document.createElement('style');
 popoverStyle.textContent = '[popover] { display: block; }';
 document.head.append(popoverStyle);
+HTMLElement.prototype.showPopover ??= () => undefined;
+HTMLElement.prototype.hidePopover ??= () => undefined;
 
 // Le auto arrivano dal server: nei test l'elenco è sempre quello della migrazione.
 vi.mock('@/features/cars/carApi', () => ({

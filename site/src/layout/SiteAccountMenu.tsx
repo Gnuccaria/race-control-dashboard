@@ -5,6 +5,7 @@ import menuStyles from '@/features/user/components/PreferencesMenu/PreferencesMe
 import { PreferencesMenu } from '@/features/user/components/PreferencesMenu/PreferencesMenu';
 import { useI18n } from '@/i18n/useI18n';
 import { signInWithDiscord, signOutOfSite, useSiteAuth } from '../auth/siteAuthStore';
+import { clearSiteProtests } from '../protests/siteProtestStore';
 import { clearSiteTickets } from '../tickets/siteTicketStore';
 import { SiteNotificationBell } from './SiteNotificationBell';
 import styles from './SiteAccountMenu.module.css';
@@ -43,6 +44,7 @@ export function SiteAccountMenu() {
               variant="danger"
               onClick={() => {
                 clearSiteTickets();
+                clearSiteProtests();
                 void signOutOfSite();
               }}
             >

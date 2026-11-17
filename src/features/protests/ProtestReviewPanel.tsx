@@ -1,4 +1,4 @@
-import { type Protest, PROTEST_REJECTION_REASON_MAX_LENGTH } from '@shared/protestRules';
+import { canReviewProtest, type Protest, PROTEST_REJECTION_REASON_MAX_LENGTH } from '@shared/protestRules';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog/ConfirmDialog';
 import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
@@ -21,31 +21,42 @@ interface ProtestReviewPanelProps {
 
 /**
  * Esito della protesta: l'interruttore "Respingi protesta" e, se acceso, la motivazione facoltativa.
- * "Salva" chiede conferma; salvata, l'equipaggio vede l'esito nella pagina della protesta sul sito.
+ * "Salva" chiede conferma; il rifiuto è definitivo: da quel momento il pannello è in sola lettura e l'equipaggio
+ * vede l'esito (e una notifica) sul sito.
  */
 export function ProtestReviewPanel({ protest, onSaved }: ProtestReviewPanelProps) {
   const { messages } = useI18n();
   const texts = messages.protests.detail.review;
-  const savedIsRejected = protest.status === 'rejected';
-  const savedReason = protest.rejectionReason ?? '';
-  const [isRejected, setIsRejected] = useState(savedIsRejected);
-  const [reason, setReason] = useState(savedReason);
+  const [isRejected, setIsRejected] = useState(false);
+  const [reason, setReason] = useState('');
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: 'idle' });
-  const hasChanges = isRejected !== savedIsRejected || (isRejected && reason.trim() !== savedReason);
 
   const save = async () => {
     setIsConfirmOpen(false);
     setSaveState({ status: 'saving' });
-    const result = await saveProtestReview(protest.id, { isRejected, reason: isRejected ? reason : '' });
+    const result = await saveProtestReview(protest.id, { isRejected: true, reason });
     if (!result.isSuccess) {
       setSaveState({ status: 'failed', errorKind: result.errorKind });
       return;
     }
-    setReason(result.value.rejectionReason ?? '');
     setSaveState({ status: 'saved' });
     onSaved(result.value);
   };
+
+  if (!canReviewProtest(protest.status)) {
+    return (
+      <Panel title={texts.title}>
+        <div className={styles.reviewForm}>
+          {saveState.status === 'saved' && <InlineAlert tone="success">{texts.saved}</InlineAlert>}
+          <p>{texts.finalDecision}</p>
+          <FormField label={texts.reason}>
+            {(textareaAttributes) => <Textarea {...textareaAttributes} rows={3} readOnly value={protest.rejectionReason || texts.noReason} onValueChange={() => undefined} />}
+          </FormField>
+        </div>
+      </Panel>
+    );
+  }
 
   return (
     <Panel title={texts.title} description={texts.description}>
@@ -54,7 +65,7 @@ export function ProtestReviewPanel({ protest, onSaved }: ProtestReviewPanelProps
         noValidate
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
-          if (hasChanges && saveState.status !== 'saving') setIsConfirmOpen(true);
+          if (isRejected && saveState.status !== 'saving') setIsConfirmOpen(true);
         }}
       >
         <Switch
@@ -86,18 +97,18 @@ export function ProtestReviewPanel({ protest, onSaved }: ProtestReviewPanelProps
         {saveState.status === 'saved' && <InlineAlert tone="success">{texts.saved}</InlineAlert>}
         {saveState.status === 'failed' && <InlineAlert>{messages.serverErrors[saveState.errorKind]}</InlineAlert>}
         <div className={styles.reviewActions}>
-          <Button type="submit" variant="confirm" disabled={!hasChanges || saveState.status === 'saving'}>
+          <Button type="submit" variant="confirm" disabled={!isRejected || saveState.status === 'saving'}>
             {saveState.status === 'saving' ? texts.saving : texts.save}
           </Button>
         </div>
       </form>
       <ConfirmDialog
         isOpen={isConfirmOpen}
-        title={isRejected ? texts.confirmRejectTitle : texts.confirmReopenTitle}
-        description={isRejected ? texts.confirmRejectDescription : texts.confirmReopenDescription}
+        title={texts.confirmRejectTitle}
+        description={texts.confirmRejectDescription}
         confirmLabel={texts.confirm}
         cancelLabel={texts.cancel}
-        confirmVariant={isRejected ? 'danger' : 'confirm'}
+        confirmVariant="danger"
         onConfirm={() => void save()}
         onCancel={() => setIsConfirmOpen(false)}
       />

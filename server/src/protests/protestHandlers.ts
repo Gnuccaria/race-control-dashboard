@@ -69,7 +69,7 @@ async function videoResponse(bucket: VideoBucket | undefined, video: { readonly 
  *   GET  /protests                      tutte le proteste (app, Commissari Sportivi)
  *   GET  /protests/:id                  una protesta (app)
  *   GET  /protests/:id/video            il suo video (app)
- *   PUT  /protests/:id/review           { isRejected, reason }: esito della protesta (app)
+ *   PUT  /protests/:id/review           { isRejected: true, reason }: respinge la protesta, definitivo (app; 409 se già respinta)
  */
 export function createProtestHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord, discordFetch: DiscordFetch = fetch) {
   /** Chi ha mandato la protesta, entro 24 ore dall'invio: può ancora aggiungere un video o il link YouTube. */
@@ -195,6 +195,7 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       const review = validateProtestReview(await readJsonBody(request, MAX_PROTEST_BODY_BYTES).catch(() => null));
       if (!review) return errorResponse(422, 'invalid-protest', { review: 'invalid' });
       const protest = await reviewProtest(env.CREWS_DB, protestId, review, authorization.discordUserId);
+      if (protest === 'already-rejected') return errorResponse(409, 'protest-already-rejected');
       return protest ? jsonResponse(200, { protest }) : errorResponse(404, 'not-found');
     },
   };

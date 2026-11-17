@@ -14,6 +14,7 @@ export type ApiErrorCode =
   | 'invalid-ticket'
   | 'too-many-tickets'
   | 'ticket-already-resolved'
+  | 'protest-already-rejected'
   | 'no-crew-role'
   | 'multiple-crew-roles'
   | 'crew-not-found'

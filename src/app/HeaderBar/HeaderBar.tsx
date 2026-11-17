@@ -9,9 +9,9 @@ export function HeaderBar() {
   const currentUser = useCurrentUser();
   return (
     <BrandHeader name={APP_NAME}>
-      {/* Campanella dei ticket di disconnessione accanto al profilo: solo per la Direzione Gara, che li gestisce. */}
+      {/* Campanella accanto al profilo: ticket di disconnessione per la Direzione Gara, proteste per i Commissari Sportivi. */}
       <div className={styles.headerActions}>
-        {currentUser.access.raceControl && <NotificationBell />}
+        {(currentUser.access.raceControl || currentUser.access.stewards) && <NotificationBell access={currentUser.access} />}
         <UserMenu />
       </div>
     </BrandHeader>

@@ -4,7 +4,7 @@ import { createApp } from '../src/app';
 import type { Env, VideoBucket } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { createTestEnv, getPath, MEMBERSHIPS, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestEnv, getPath, MEMBERSHIPS, readError, REQUIRED_DETAILS, sendJson } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
 const VEZ_ROLE = '1571641908688588963';
@@ -282,12 +282,23 @@ describe('proteste', () => {
     const stored = await env.CREWS_DB.prepare('SELECT reviewed_by_discord_id AS reviewedBy FROM protests').first();
     expect(stored).toEqual({ reviewedBy: 'discord-42' });
 
-    expect(await (await review(1, { isRejected: true, reason: '' })).json()).toMatchObject({ protest: { status: 'rejected', rejectionReason: '' } });
-    expect(await (await review(1, { isRejected: false, reason: 'ignorata' })).json()).toMatchObject({ protest: { status: 'open', rejectionReason: null } });
+    // Il rifiuto è definitivo: né un secondo rifiuto né il ritorno in esame.
+    const again = await review(1, { isRejected: true, reason: 'Cambio idea' });
+    expect(again.status).toBe(409);
+    expect(await readError(again)).toBe('protest-already-rejected');
+    expect((await review(1, { isRejected: false, reason: '' })).status).toBe(422);
+    expect(await siteRequest('GET', '/public/protests/1', 'site-vez-2')).toMatchObject({
+      body: { protest: { status: 'rejected', rejectionReason: 'Contatto di gara: nessuna azione.' } },
+    });
+  });
+
+  it('il rifiuto si convalida prima di salvarlo e solo i Commissari possono darlo', async () => {
+    await submit(protest());
     expect((await review(1, { isRejected: true, reason: 'x'.repeat(501) })).status).toBe(422);
     expect((await review(1, { reason: 'manca lo stato' })).status).toBe(422);
     expect((await review(9, { isRejected: true, reason: '' })).status).toBe(404);
     expect((await review(1, { isRejected: true, reason: '' }, 'token-no-role')).status).toBe(403);
+    expect(await (await review(1, { isRejected: true, reason: '' })).json()).toMatchObject({ protest: { status: 'rejected', rejectionReason: '' } });
   });
 });
 

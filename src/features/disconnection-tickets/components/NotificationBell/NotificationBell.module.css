@@ -71,6 +71,13 @@
   align-content: start;
 }
 
+/* Una sezione per ruolo (ticket, proteste), con il suo titolo. */
+.panelSection {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
 .panelTitle {
   margin: 0;
   font-weight: var(--font-weight-semibold);

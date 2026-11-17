@@ -195,16 +195,22 @@ export interface SiteProtest extends Protest {
   readonly canAddYoutube: boolean;
 }
 
-/** Esito salvato dai Commissari: respinta (con la motivazione facoltativa) oppure di nuovo in esame. */
+/**
+ * Esito salvato dai Commissari: l'unico esito è il rifiuto (con la motivazione facoltativa) ed è definitivo,
+ * una protesta respinta non torna più in esame (il server rifiuta un secondo esito con 409).
+ */
 export interface ProtestReview {
-  readonly isRejected: boolean;
+  readonly isRejected: true;
   readonly reason: string;
 }
 
+/** Il rifiuto si può salvare solo su una protesta ancora in esame. */
+export const canReviewProtest = (status: ProtestStatus): boolean => status === 'open';
+
 export function validateProtestReview(input: unknown): ProtestReview | null {
   const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  if (typeof candidate.isRejected !== 'boolean') return null;
+  if (candidate.isRejected !== true) return null;
   const reason = typeof candidate.reason === 'string' ? normalizeProtestDescription(candidate.reason).trim() : '';
   if (reason.length > PROTEST_REJECTION_REASON_MAX_LENGTH) return null;
-  return { isRejected: candidate.isRejected, reason: candidate.isRejected ? reason : '' };
+  return { isRejected: true, reason };
 }

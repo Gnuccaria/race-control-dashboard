@@ -28,6 +28,7 @@ const ERROR_KIND_BY_SERVER_CODE: Record<string, ServerErrorKind> = {
   'not-found': 'not-found',
   'invalid-ticket': 'invalid-ticket',
   'ticket-already-resolved': 'ticket-already-resolved',
+  'protest-already-rejected': 'protest-already-rejected',
   'video-expired': 'video-expired',
   'invalid-protest': 'invalid-protest',
 };

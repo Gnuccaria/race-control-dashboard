@@ -118,16 +118,27 @@ export async function findVisibleProtestVideo(
 }
 
 /** Salva l'esito: respinta con la motivazione, oppure di nuovo in esame. null se la protesta non esiste. */
-export async function reviewProtest(database: SqlDatabase, protestId: number, review: ProtestReview, reviewedByDiscordId: string): Promise<Protest | null> {
+/**
+ * Respinge la protesta, solo se è ancora in esame (il rifiuto è definitivo): 'already-rejected' se era già respinta,
+ * null se non esiste.
+ */
+export async function reviewProtest(
+  database: SqlDatabase,
+  protestId: number,
+  review: ProtestReview,
+  reviewedByDiscordId: string,
+): Promise<Protest | 'already-rejected' | null> {
   const row = await database
     .prepare(
-      `UPDATE protests SET status = ?, rejection_reason = ?, reviewed_by_discord_id = ?,
+      `UPDATE protests SET status = 'rejected', rejection_reason = ?, reviewed_by_discord_id = ?,
          reviewed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-       WHERE id = ? RETURNING ${PROTEST_COLUMNS}`,
+       WHERE id = ? AND status = 'open' RETURNING ${PROTEST_COLUMNS}`,
     )
-    .bind(review.isRejected ? 'rejected' : 'open', review.isRejected ? review.reason : null, reviewedByDiscordId, protestId)
+    .bind(review.reason, reviewedByDiscordId, protestId)
     .first<ProtestRow>();
-  return row ? toProtest(row) : null;
+  if (row) return toProtest(row);
+  const existing = await database.prepare('SELECT id FROM protests WHERE id = ?').bind(protestId).first<{ id: number }>();
+  return existing ? 'already-rejected' : null;
 }
 
 /** Aggiunge il link YouTube, solo se non ce n'era già uno; false altrimenti. */
