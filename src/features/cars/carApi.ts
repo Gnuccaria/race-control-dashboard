@@ -7,7 +7,8 @@ export const fetchCars = () =>
 
 /**
  * Aggiornamento dai siti (catalogo ufficiale di GT7 e BoP Midspeed di gt-engine.com): il server li scarica e risponde
- * con l'anteprima; con apply: true salva anche e restituisce le vetture aggiornate.
+ * con l'anteprima; con apply: true salva anche e restituisce le vetture aggiornate. refetch: false riusa i dati già
+ * scaricati dall'ultimo "Aggiorna dati" (ricalcolo dell'anteprima e invio).
  */
-export const refreshCars = (matches: readonly CarSourceMatch[], apply: boolean) =>
-  requestServerApi({ method: 'POST', path: '/cars/refresh', body: { matches, apply } }, (responseBody) => responseBody as { preview: CarRefreshPreview; cars?: Car[] });
+export const refreshCars = (matches: readonly CarSourceMatch[], apply: boolean, refetch: boolean) =>
+  requestServerApi({ method: 'POST', path: '/cars/refresh', body: { matches, apply, refetch } }, (responseBody) => responseBody as { preview: CarRefreshPreview; cars?: Car[] });

@@ -133,6 +133,26 @@ describe('POST /cars/refresh', () => {
     expect((await call({ matches: [{ officialId: 'nope', bopKey: null }] })).status).toBe(400);
   });
 
+  it('ricalcolo e salvataggio con refetch: false riusano i dati scaricati, senza riscaricare i siti', async () => {
+    const requested: string[] = [];
+    const sites = fakeSites();
+    const countingSites: SourceFetch = (url, init) => {
+      requested.push(url);
+      return sites(url, init);
+    };
+    await call({}, 'token-organization', countingSites);
+    expect(requested).toHaveLength(8);
+    const match = { officialId: 'car3', bopKey: "Gr.3|BMW|M3 GT3 '11" };
+    // Ora i siti non risponderebbero più: non servono.
+    const offline = fakeSites(Object.fromEntries(requested.map((url) => [url, null])));
+    const saved = await call({ matches: [match], apply: true, refetch: false }, 'token-organization', offline);
+    expect(saved.status).toBe(200);
+    expect(saved.body.preview.cars.find((car) => car.model === "M3 GT '11")).toMatchObject({ bopHorsepower: 455 });
+    // Senza dati salvati (o con refetch) si scarica di nuovo.
+    expect((await call({ refetch: true }, 'token-organization', offline)).status).toBe(502);
+    expect((await call({ refetch: 'sì' })).status).toBe(400);
+  });
+
   it('se un sito non risponde o è cambiato non salva nulla e lo dice', async () => {
     const unreachable = await call({ apply: true }, 'token-organization', fakeSites({ [bopPageUrl('Gr.2')]: null }));
     expect(unreachable).toEqual({ status: 502, body: { error: { code: 'car-source-unreachable', details: { source: 'bop' } } } });

@@ -19,7 +19,8 @@ type RefreshState =
   | { readonly status: 'saved'; readonly preview: CarRefreshPreview }
   | { readonly status: 'failed'; readonly errorKind: ServerErrorKind; readonly preview: CarRefreshPreview | null };
 
-type RefreshAction = { readonly apply: boolean; readonly matches: readonly CarSourceMatch[] } | { readonly close: true };
+/** refetch: true solo per "Aggiorna dati" (riscarica i siti); ricalcolo e invio riusano i dati dell'anteprima. */
+type RefreshAction = { readonly apply: boolean; readonly refetch: boolean; readonly matches: readonly CarSourceMatch[] } | { readonly close: true };
 
 interface CarRefreshPanelProps {
   /** Dopo il salvataggio: la pagina rilegge le vetture. */
@@ -42,7 +43,7 @@ export function CarRefreshPanel({ onSaved }: CarRefreshPanelProps) {
   const [state, dispatch, isWorking] = useActionState<RefreshState, RefreshAction>(async (previousState, action) => {
     if ('close' in action) return { status: 'idle' };
     const currentPreview = 'preview' in previousState ? previousState.preview : null;
-    const result = await refreshCars(action.matches, action.apply);
+    const result = await refreshCars(action.matches, action.apply, action.refetch);
     if (!result.isSuccess) return { status: 'failed', errorKind: result.errorKind, preview: currentPreview };
     if (action.apply) {
       onSaved();
@@ -142,7 +143,7 @@ export function CarRefreshPanel({ onSaved }: CarRefreshPanelProps) {
                 {texts.close}
               </Button>
               {!isPreviewCurrent && (
-                <Button disabled={isWorking} onClick={() => run({ apply: false, matches })}>
+                <Button disabled={isWorking} onClick={() => run({ apply: false, refetch: false, matches })}>
                   {isWorking ? texts.loading : texts.recalculate}
                 </Button>
               )}
@@ -153,7 +154,7 @@ export function CarRefreshPanel({ onSaved }: CarRefreshPanelProps) {
           </>
         ) : (
           <div className={styles.actions}>
-            <Button disabled={isWorking} onClick={() => run({ apply: false, matches })}>
+            <Button disabled={isWorking} onClick={() => run({ apply: false, refetch: true, matches })}>
               {isWorking ? texts.loading : texts.start}
             </Button>
           </div>
@@ -168,7 +169,7 @@ export function CarRefreshPanel({ onSaved }: CarRefreshPanelProps) {
         confirmVariant="confirm"
         onConfirm={() => {
           setIsConfirmOpen(false);
-          run({ apply: true, matches });
+          run({ apply: true, refetch: false, matches });
         }}
         onCancel={() => setIsConfirmOpen(false)}
       />

@@ -88,7 +88,7 @@ describe('Gestisci vetture', () => {
     expect(await screen.findByText("Anteprima dell'aggiornamento (BoP versione 1.72)")).toBeInTheDocument();
     expect(screen.getByText('1 vettura nuova')).toBeInTheDocument();
     expect(screen.getByText('Non più nei siti ma usate da equipaggi o gare, restano: Ferrari')).toBeInTheDocument();
-    expect(refreshCars).toHaveBeenLastCalledWith([], false);
+    expect(refreshCars).toHaveBeenLastCalledWith([], false, true);
 
     // Nel menu solo le vetture di gt-engine dello stesso gruppo, più "Nessuna".
     const matchSelect = screen.getByRole('combobox', { name: "Vettura di gt-engine per BMW M3 GT '11" });
@@ -97,13 +97,14 @@ describe('Gestisci vetture', () => {
     // Con una scelta nuova si ricalcola prima di poter inviare.
     expect(screen.getByRole('button', { name: 'Invia al server' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: "Ricalcola l'anteprima" }));
-    expect(refreshCars).toHaveBeenLastCalledWith([{ officialId: 'car3', bopKey: "Gr.3|BMW|M3 GT3 '11" }], false);
+    // Il ricalcolo e l'invio riusano i dati già scaricati (refetch: false).
+    expect(refreshCars).toHaveBeenLastCalledWith([{ officialId: 'car3', bopKey: "Gr.3|BMW|M3 GT3 '11" }], false, false);
 
     await user.click(await screen.findByRole('button', { name: 'Invia al server' }));
     const dialog = screen.getByRole('dialog', { name: "Inviare l'aggiornamento al server?" });
     await user.click(within(dialog).getByRole('button', { name: 'Invia al server' }));
     expect(await screen.findByText('Vetture aggiornate: 1 nuove, 1 cambiate, 1 eliminate.')).toBeInTheDocument();
-    expect(refreshCars).toHaveBeenLastCalledWith([{ officialId: 'car3', bopKey: "Gr.3|BMW|M3 GT3 '11" }], true);
+    expect(refreshCars).toHaveBeenLastCalledWith([{ officialId: 'car3', bopKey: "Gr.3|BMW|M3 GT3 '11" }], true, false);
   });
 
   it('se un sito non risponde lo dice', async () => {
