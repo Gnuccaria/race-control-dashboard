@@ -7,6 +7,7 @@ import { CrewEditor } from './components/CrewEditor/CrewEditor';
 import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { fetchCrew } from './services/crewApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 const CREW_ID_PATTERN = /^\d{1,9}$/;
 
@@ -33,7 +34,7 @@ export function CrewDetailPage() {
       {queryState.status === 'loading' && <LoadingStatus>{messages.crews.detail.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
         <LoadError
-          message={messages.serverErrors[queryState.errorKind]}
+          message={serverErrorText(messages, queryState.errorKind)}
           retryLabel={messages.crews.list.retry}
           onRetry={reload}
         />

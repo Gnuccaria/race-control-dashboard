@@ -16,6 +16,7 @@ import { useI18n } from '@/i18n/useI18n';
 import type { ServerErrorKind } from '@/services/serverApi';
 import styles from './Protests.module.css';
 import { saveProtestReview } from './services/protestApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 type SaveState = { readonly status: 'idle' } | { readonly status: 'saving' } | { readonly status: 'saved' } | { readonly status: 'failed'; readonly errorKind: ServerErrorKind };
 
@@ -155,7 +156,7 @@ export function ProtestReviewPanel({ protest, onSaved }: ProtestReviewPanelProps
             <PenaltyFields draft={penaltyDraft} crews={crews} isReadOnly={false} areCrewsFixed crewsHint={texts.penaltyCrewsHint} reasonHint={texts.penaltyReasonHint} />
           </section>
         )}
-        {saveState.status === 'failed' && <InlineAlert>{messages.serverErrors[saveState.errorKind]}</InlineAlert>}
+        {saveState.status === 'failed' && <InlineAlert>{serverErrorText(messages, saveState.errorKind)}</InlineAlert>}
         <div className={styles.reviewActions}>
           <Button type="submit" variant="confirm" disabled={!canSave}>
             {saveState.status === 'saving' ? texts.saving : texts.save}

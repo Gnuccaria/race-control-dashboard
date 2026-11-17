@@ -10,6 +10,7 @@ import { findChampionshipCrews } from '../../model/raceDraft';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
 import { CrewResultPicker } from '../CrewResultPicker/CrewResultPicker';
 import styles from './RaceResultsTable.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 const POSITIONS = Array.from({ length: RACE_RESULT_POSITIONS }, (_, index) => index + 1);
 
@@ -33,7 +34,7 @@ export function RaceResultsTable({ draft, crewsQuery, isReadOnly }: RaceResultsT
   const { carNameById } = useCarCatalog();
 
   if (crewsQuery.status === 'loading') return <p className={styles.notice}>{formTexts.loadingCrews}</p>;
-  if (crewsQuery.status === 'failed') return <p className={styles.notice}>{messages.serverErrors[crewsQuery.errorKind]}</p>;
+  if (crewsQuery.status === 'failed') return <p className={styles.notice}>{serverErrorText(messages, crewsQuery.errorKind)}</p>;
 
   const allCrews = crewsQuery.value;
   const championshipCrews = findChampionshipCrews(allCrews, values.championship);

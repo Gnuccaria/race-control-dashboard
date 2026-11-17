@@ -4,6 +4,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { useCreateCrew } from '../../hooks/useCreateCrew';
 import { AddCrewFields } from '../AddCrewFields/AddCrewFields';
 import styles from './CreateCrewForm.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Form del nuovo equipaggio: esito dell'ultimo invio sopra, campi sotto. */
 export function CreateCrewForm() {
@@ -17,7 +18,7 @@ export function CreateCrewForm() {
         {submissionState.status === 'created' && (
           <InlineAlert tone="success">{crewTexts.crewCreated(submissionState.crewName)}</InlineAlert>
         )}
-        {submissionState.status === 'failed' && <InlineAlert>{messages.serverErrors[submissionState.errorKind]}</InlineAlert>}
+        {submissionState.status === 'failed' && <InlineAlert>{serverErrorText(messages, submissionState.errorKind)}</InlineAlert>}
         <AddCrewFields key={formResetKey} isSubmitting={isSubmitting} />
       </form>
     </Panel>

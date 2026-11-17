@@ -23,6 +23,7 @@ import {
 import { CrewFilterBar } from '../CrewFilterBar/CrewFilterBar';
 import { CrewTable } from '../CrewTable/CrewTable';
 import styles from './CrewList.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface CrewListProps {
   readonly crews: readonly SavedCrew[];
@@ -62,7 +63,7 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
     deleteState.status === 'deleted' ? (
       <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>
     ) : deleteState.status === 'failed' ? (
-      <InlineAlert>{messages.serverErrors[deleteState.errorKind]}</InlineAlert>
+      <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>
     ) : null;
 
   if (crews.length === 0) {

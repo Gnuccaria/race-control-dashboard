@@ -17,6 +17,7 @@ import { TrackSettingsPanel } from './components/TrackSettingsPanel/TrackSetting
 import { WaitingTimeBoard } from './components/WaitingTimeBoard/WaitingTimeBoard';
 import { useDisconnectionCalculator } from './hooks/useDisconnectionCalculator';
 import styles from './FieDisconnectionsCalculator.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 type ResultFeedback =
   | { readonly kind: 'sent'; readonly ticketId: number; readonly discordMessage: TicketDiscordMessage | null }
@@ -151,7 +152,7 @@ export function FieDisconnectionsCalculator() {
               <InlineAlert>{ticketTexts.discordProblems[feedback.discordMessage]}</InlineAlert>
             )}
             {feedback?.kind === 'already-resolved' && <InlineAlert>{ticketTexts.alreadyResolved}</InlineAlert>}
-            {feedback?.kind === 'error' && <InlineAlert>{messages.serverErrors[feedback.errorKind]}</InlineAlert>}
+            {feedback?.kind === 'error' && <InlineAlert>{serverErrorText(messages, feedback.errorKind)}</InlineAlert>}
             <p className={styles.resultHint}>
               {selectedTicket ? ticketTexts.selectedTicket(selectedTicket.id) : ticketTexts.sendResultHint}
             </p>

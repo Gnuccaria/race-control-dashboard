@@ -8,6 +8,7 @@ import styles from './ManageRacesPage.module.css';
 import { RaceBrowser } from './components/RaceBrowser/RaceBrowser';
 import { DEFAULT_RACE_SORT, EMPTY_RACE_FILTERS, type RaceFilters, toggleRaceSort } from './model/raceList';
 import { fetchRaces } from './services/raceApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Stessa tabella di "Gestisci ordini di arrivo", senza selezione né eliminazione: si apre una gara per i suoi cambi pilota. */
 function DriverSwapRaceList({ races }: { readonly races: readonly RaceSummary[] }) {
@@ -38,7 +39,7 @@ export function ManageDriverSwapsPage() {
       <ToolPageHeader name={messages.tools.manageDriverSwaps.name} description={messages.tools.manageDriverSwaps.description} />
       {queryState.status === 'loading' && <LoadingStatus>{messages.races.list.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
-        <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
+        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
       )}
       {queryState.status === 'loaded' && <DriverSwapRaceList races={queryState.value} />}
     </div>

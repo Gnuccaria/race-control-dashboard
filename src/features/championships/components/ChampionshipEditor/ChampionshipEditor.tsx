@@ -12,6 +12,7 @@ import styles from '../../Championships.module.css';
 import { useChampionshipDraft } from '../../hooks/useChampionshipDraft';
 import { updateChampionship } from '../../services/championshipApi';
 import { ChampionshipFields } from '../ChampionshipFields/ChampionshipFields';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface ChampionshipEditorFormProps {
   readonly savedChampionship: Championship;
@@ -64,7 +65,7 @@ export function ChampionshipEditor({ savedChampionship, onSaved }: ChampionshipE
   return (
     <Panel title={detailTexts.panelTitle} description={editing.isEditing ? detailTexts.editingDescription : detailTexts.readOnlyDescription}>
       {editing.savedMessageVisible && <InlineAlert tone="success">{messages.editing.saved}</InlineAlert>}
-      {editing.saveErrorKind && <InlineAlert>{messages.serverErrors[editing.saveErrorKind]}</InlineAlert>}
+      {editing.saveErrorKind && <InlineAlert>{serverErrorText(messages, editing.saveErrorKind)}</InlineAlert>}
       <ChampionshipEditorForm
         key={editing.formKey}
         savedChampionship={savedChampionship}

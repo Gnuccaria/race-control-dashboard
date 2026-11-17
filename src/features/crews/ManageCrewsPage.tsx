@@ -5,6 +5,7 @@ import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import styles from './ManageCrewsPage.module.css';
 import { fetchCrews } from './services/crewApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Schermata "Gestisci equipaggio": tutti gli equipaggi salvati, con filtri e ordinamento. */
 export function ManageCrewsPage() {
@@ -17,7 +18,7 @@ export function ManageCrewsPage() {
       {queryState.status === 'loading' && <LoadingStatus>{messages.crews.list.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
         <LoadError
-          message={messages.serverErrors[queryState.errorKind]}
+          message={serverErrorText(messages, queryState.errorKind)}
           retryLabel={messages.crews.list.retry}
           onRetry={reload}
         />

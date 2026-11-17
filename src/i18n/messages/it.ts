@@ -99,6 +99,8 @@ export const it = {
     greetings: ITALIAN_GREETINGS,
   },
   common: {
+    /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
+    errorDetail: (detail: string) => `(dettaglio: ${detail})`,
     timeField: { hours: 'Ore', minutes: 'Minuti', dayPeriod: 'AM/PM' },
     usageGuide: 'Come si usa',
     calculationDetails: 'Dettaglio del calcolo',

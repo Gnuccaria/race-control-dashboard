@@ -42,12 +42,27 @@ const ERROR_KIND_BY_SERVER_CODE: Record<string, ServerErrorKind> = {
   'invalid-protest': 'invalid-protest',
 };
 
-async function readServerErrorCode(errorResponse: Response): Promise<string | undefined> {
+let lastUnexpectedDetail: string | null = null;
+
+/**
+ * Dettaglio dell'ultima risposta imprevista (es. "POST /championships → HTTP 405, risposta non JSON"): l'app lo
+ * aggiunge al messaggio "errore imprevisto" (serverErrorText), così si capisce cosa è successo senza strumenti.
+ */
+export const getLastUnexpectedDetail = (): string | null => lastUnexpectedDetail;
+
+function unexpectedResult(request: Pick<ServerApiRequest, 'method' | 'path'>, status: number, code: string | undefined | null) {
+  lastUnexpectedDetail = `${request.method} ${request.path} → HTTP ${status}${code ? ` ${code}` : code === null ? ', risposta non JSON' : ''}`;
+  console.error('Risposta imprevista del server', lastUnexpectedDetail);
+  return { isSuccess: false, errorKind: 'unexpected' } as const;
+}
+
+/** Codice d'errore del server; null se la risposta non è JSON (es. una pagina del sito al posto dell'API). */
+async function readServerErrorCode(errorResponse: Response): Promise<string | undefined | null> {
   try {
     const errorBody = (await errorResponse.json()) as { error?: { code?: string } };
     return errorBody.error?.code;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
@@ -86,12 +101,18 @@ export async function requestServerApi<Value>(
 
   if (serverResponse.ok) {
     // 204 (es. risultato di un ticket) non ha corpo: niente JSON da leggere.
-    const responseBody: unknown = serverResponse.status === 204 ? undefined : await serverResponse.json();
+    let responseBody: unknown;
+    try {
+      responseBody = serverResponse.status === 204 ? undefined : await serverResponse.json();
+    } catch {
+      return unexpectedResult({ method, path }, serverResponse.status, null);
+    }
     return { isSuccess: true, value: readValue(responseBody) };
   }
 
   const serverErrorCode = await readServerErrorCode(serverResponse);
-  return { isSuccess: false, errorKind: (serverErrorCode && ERROR_KIND_BY_SERVER_CODE[serverErrorCode]) || 'unexpected' };
+  const errorKind = serverErrorCode ? ERROR_KIND_BY_SERVER_CODE[serverErrorCode] : undefined;
+  return errorKind ? { isSuccess: false, errorKind } : unexpectedResult({ method, path }, serverResponse.status, serverErrorCode);
 }
 
 /** Lettore della risposta delle eliminazioni multiple: { deletedCount }. */
@@ -113,5 +134,6 @@ export async function requestServerBlob(path: string): Promise<ServerApiResult<B
   }
   if (serverResponse.ok) return { isSuccess: true, value: await serverResponse.blob() };
   const serverErrorCode = await readServerErrorCode(serverResponse);
-  return { isSuccess: false, errorKind: (serverErrorCode && ERROR_KIND_BY_SERVER_CODE[serverErrorCode]) || 'unexpected' };
+  const errorKind = serverErrorCode ? ERROR_KIND_BY_SERVER_CODE[serverErrorCode] : undefined;
+  return errorKind ? { isSuccess: false, errorKind } : unexpectedResult({ method: 'GET', path }, serverResponse.status, serverErrorCode);
 }

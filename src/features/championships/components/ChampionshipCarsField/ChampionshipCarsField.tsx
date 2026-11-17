@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/useI18n';
 import type { ChampionshipDraftState } from '../../hooks/useChampionshipDraft';
 import styles from '../ChampionshipFields/ChampionshipFields.module.css';
 import { CarMultiPicker } from './CarMultiPicker';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface ChampionshipCarsFieldProps {
   readonly draft: ChampionshipDraftState;
@@ -65,7 +66,7 @@ export function ChampionshipCarsField({ draft, isReadOnly, lockedCarIds }: Champ
           </FormField>
         )}
       </div>
-      {carCatalog.errorKind && !isReadOnly && <p className={styles.rowError}>{messages.serverErrors[carCatalog.errorKind]}</p>}
+      {carCatalog.errorKind && !isReadOnly && <p className={styles.rowError}>{serverErrorText(messages, carCatalog.errorKind)}</p>}
     </div>
   );
 }

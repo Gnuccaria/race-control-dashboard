@@ -7,6 +7,7 @@ import { useCreateRace } from '../../hooks/useCreateRace';
 import { useRaceDraft } from '../../hooks/useRaceDraft';
 import { RaceForm } from '../RaceForm/RaceForm';
 import styles from './CreateRaceForm.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface CreateRaceFormProps {
   readonly crewsQuery: ServerQueryState<SavedCrew[]>;
@@ -32,7 +33,7 @@ export function CreateRaceForm({ crewsQuery }: CreateRaceFormProps) {
     >
       <RaceForm draft={raceDraft} crewsQuery={crewsQuery} isReadOnly={false} />
       {/* Subito sopra il pulsante: il form è lungo e l'esito deve essere visibile dove si è cliccato. */}
-      {createErrorKind && <InlineAlert>{messages.serverErrors[createErrorKind]}</InlineAlert>}
+      {createErrorKind && <InlineAlert>{serverErrorText(messages, createErrorKind)}</InlineAlert>}
       <Button type="submit" variant="confirm" disabled={!raceDraft.check.isComplete || isCreating}>
         {isCreating ? formTexts.savingRace : formTexts.saveRace}
       </Button>

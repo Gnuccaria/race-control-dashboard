@@ -10,6 +10,7 @@ import { RaceEditor } from './components/RaceEditor/RaceEditor';
 import { DRIVER_SWAP_TABS, RESULTS_TABS } from './components/RaceForm/raceFormTabs';
 import type { NewRaceLocationState } from './hooks/useCreateRace';
 import { fetchRace } from './services/raceApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 const RACE_ID_PATTERN = /^\d{1,9}$/;
 
@@ -57,7 +58,7 @@ function RaceDetail({ mode }: { readonly mode: 'results' | 'driverSwaps' }) {
       />
       {queryState.status === 'loading' && <LoadingStatus>{raceTexts.detail.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
-        <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
+        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
       )}
       {loadedRace && (
         <RaceEditor

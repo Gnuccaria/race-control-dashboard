@@ -9,6 +9,7 @@ import { useI18n } from '@/i18n/useI18n';
 import type { ServerErrorKind } from '@/services/serverApi';
 import { refreshCars } from '../carApi';
 import styles from '../ManageCarsPage.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Scelta "nessuna auto di gt-engine" nel menu degli abbinamenti. */
 const NO_BOP = '__none';
@@ -70,7 +71,7 @@ export function CarRefreshPanel({ onSaved }: CarRefreshPanelProps) {
     <Panel title={texts.title} description={texts.description}>
       <div className={styles.refresh}>
         {state.status === 'saved' && <InlineAlert tone="success">{texts.saved(state.preview.inserted.length, state.preview.updated.length, state.preview.deleted.length)}</InlineAlert>}
-        {state.status === 'failed' && <InlineAlert>{messages.serverErrors[state.errorKind]}</InlineAlert>}
+        {state.status === 'failed' && <InlineAlert>{serverErrorText(messages, state.errorKind)}</InlineAlert>}
 
         {preview ? (
           <>

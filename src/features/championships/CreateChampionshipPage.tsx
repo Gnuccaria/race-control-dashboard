@@ -9,6 +9,7 @@ import styles from './Championships.module.css';
 import { ChampionshipFields } from './components/ChampionshipFields/ChampionshipFields';
 import { useChampionshipDraft } from './hooks/useChampionshipDraft';
 import { createChampionship } from './services/championshipApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 type CreateState =
   | { readonly status: 'idle' }
@@ -45,7 +46,7 @@ function CreateChampionshipForm({ onCreated }: CreateChampionshipFormProps) {
         });
       }}
     >
-      {state.status === 'failed' && <InlineAlert>{messages.serverErrors[state.errorKind]}</InlineAlert>}
+      {state.status === 'failed' && <InlineAlert>{serverErrorText(messages, state.errorKind)}</InlineAlert>}
       <ChampionshipFields draft={draft} />
       <div className={styles.actions}>
         <Button type="submit" variant="confirm" disabled={!draft.isComplete || isCreating}>

@@ -9,6 +9,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { CREW_FORM_FIELDS } from '../../crewFormFields';
 import { type CrewDraftState, toCrewChampionships } from '../../hooks/useCrewDraft';
 import styles from './CrewChampionshipsField.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface CrewChampionshipsFieldProps {
   readonly draft: CrewDraftState;
@@ -95,8 +96,8 @@ export function CrewChampionshipsField({ draft, isReadOnly }: CrewChampionshipsF
           onFocus={championshipCatalog.refresh}
         />
       )}
-      {carCatalog.errorKind && !isReadOnly && <p className={styles.error}>{messages.serverErrors[carCatalog.errorKind]}</p>}
-      {championshipCatalog.errorKind && !isReadOnly && <p className={styles.error}>{messages.serverErrors[championshipCatalog.errorKind]}</p>}
+      {carCatalog.errorKind && !isReadOnly && <p className={styles.error}>{serverErrorText(messages, carCatalog.errorKind)}</p>}
+      {championshipCatalog.errorKind && !isReadOnly && <p className={styles.error}>{serverErrorText(messages, championshipCatalog.errorKind)}</p>}
     </fieldset>
   );
 }

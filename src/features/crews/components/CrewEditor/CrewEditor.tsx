@@ -6,6 +6,7 @@ import { useEditingSession } from '@/hooks/useEditingSession';
 import { useI18n } from '@/i18n/useI18n';
 import { updateCrew } from '../../services/crewApi';
 import { CrewEditorForm } from '../CrewEditorForm/CrewEditorForm';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface CrewEditorProps {
   readonly savedCrew: SavedCrew;
@@ -24,7 +25,7 @@ export function CrewEditor({ savedCrew, onSaved }: CrewEditorProps) {
       description={editing.isEditing ? detailTexts.editingDescription : detailTexts.readOnlyDescription}
     >
       {editing.savedMessageVisible && <InlineAlert tone="success">{messages.editing.saved}</InlineAlert>}
-      {editing.saveErrorKind && <InlineAlert>{messages.serverErrors[editing.saveErrorKind]}</InlineAlert>}
+      {editing.saveErrorKind && <InlineAlert>{serverErrorText(messages, editing.saveErrorKind)}</InlineAlert>}
       <CrewEditorForm
         key={editing.formKey}
         savedCrew={savedCrew}

@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/Switch/Switch';
 import { useI18n } from '@/i18n/useI18n';
 import type { ServerErrorKind } from '@/services/serverApi';
 import { fetchTicketAvailability, saveTicketAvailability } from '../../services/ticketApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 type AvailabilityState =
   | { readonly status: 'loading' }
@@ -55,7 +56,7 @@ export function TicketAvailabilitySwitch() {
         isChecked={state.isOpen}
         onCheckedChange={(isOpen) => void change(isOpen)}
       />
-      {state.errorKind && <InlineAlert>{messages.serverErrors[state.errorKind]}</InlineAlert>}
+      {state.errorKind && <InlineAlert>{serverErrorText(messages, state.errorKind)}</InlineAlert>}
     </div>
   );
 }

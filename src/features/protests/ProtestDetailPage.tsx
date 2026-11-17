@@ -15,6 +15,7 @@ import { ProtestReviewPanel } from './ProtestReviewPanel';
 import { protestStore } from './protestStore';
 import styles from './Protests.module.css';
 import { fetchProtest } from './services/protestApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 const PROTEST_ID_PATTERN = /^\d{1,9}$/;
 
@@ -38,7 +39,7 @@ export function ProtestDetailPage() {
       />
       {queryState.status === 'loading' && <LoadingStatus>{texts.detail.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
-        <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
+        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
       )}
       {protest && (
         <>

@@ -10,6 +10,7 @@ import { DEFAULT_RACE_SORT, EMPTY_RACE_FILTERS, filterRaces, type RaceFilters, s
 import { deleteRaces } from '../../services/raceApi';
 import { RaceBrowser } from '../RaceBrowser/RaceBrowser';
 import styles from './RaceList.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface RaceListProps {
   readonly races: readonly RaceSummary[];
@@ -45,7 +46,7 @@ export function RaceList({ races, onRacesDeleted }: RaceListProps) {
     deleteState.status === 'deleted' ? (
       <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>
     ) : deleteState.status === 'failed' ? (
-      <InlineAlert>{messages.serverErrors[deleteState.errorKind]}</InlineAlert>
+      <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>
     ) : null;
 
   if (races.length === 0) {

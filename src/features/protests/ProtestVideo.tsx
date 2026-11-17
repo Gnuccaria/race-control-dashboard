@@ -6,6 +6,7 @@ import type { ServerErrorKind } from '@/services/serverApi';
 import { useI18n } from '@/i18n/useI18n';
 import styles from './Protests.module.css';
 import { fetchProtestVideo } from './services/protestApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 type LoadedVideo = { readonly status: 'ready'; readonly url: string } | { readonly status: 'failed'; readonly errorKind: ServerErrorKind };
 type VideoState = { readonly status: 'loading' } | LoadedVideo;
@@ -49,7 +50,7 @@ export function UploadedProtestVideo({ protestId, size }: { readonly protestId: 
   if (videoState.status === 'failed') {
     return (
       <div className={styles.videoStatus}>
-        <InlineAlert>{messages.serverErrors[videoState.errorKind]}</InlineAlert>
+        <InlineAlert>{serverErrorText(messages, videoState.errorKind)}</InlineAlert>
         <Button variant="secondary" onClick={() => setAttempt((previous) => previous + 1)}>
           {messages.crews.list.retry}
         </Button>

@@ -11,6 +11,7 @@ import { useRowSelection } from '@/hooks/useRowSelection';
 import { useI18n } from '@/i18n/useI18n';
 import { deleteChampionships } from '../../services/championshipApi';
 import styles from './ChampionshipList.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface ChampionshipListProps {
   readonly championships: readonly Championship[];
@@ -48,7 +49,7 @@ export function ChampionshipList({ championships, onChampionshipsDeleted }: Cham
   return (
     <div className={styles.championshipList}>
       {deleteState.status === 'deleted' && <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>}
-      {deleteState.status === 'failed' && <InlineAlert>{messages.serverErrors[deleteState.errorKind]}</InlineAlert>}
+      {deleteState.status === 'failed' && <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>}
       {championships.length === 0 ? (
         <EmptyState title={listTexts.emptyTitle} description={listTexts.emptyDescription} />
       ) : (

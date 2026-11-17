@@ -13,6 +13,7 @@ import { protestRaceLabel } from './protestRaceLabel';
 import { protestStatusTone } from './protestStatus';
 import styles from './Protests.module.css';
 import { fetchProtests } from './services/protestApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 
 function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
@@ -83,7 +84,7 @@ export function ManageProtestsPage() {
       <ToolPageHeader name={messages.tools.manageProtests.name} description={messages.tools.manageProtests.description} />
       {queryState.status === 'loading' && <LoadingStatus>{texts.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
-        <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
+        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
       )}
       {queryState.status === 'loaded' &&
         (queryState.value.length === 0 ? <EmptyState title={texts.emptyTitle} description={texts.emptyDescription} /> : <ProtestTable protests={queryState.value} />)}

@@ -20,6 +20,7 @@ import {
 } from '../../model/trackSelection';
 import { useTrackLabels } from '../../useTrackLabels';
 import styles from './TrackField.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface TrackPickerPanelProps {
   readonly catalog: TrackCatalog;
@@ -46,7 +47,7 @@ export function TrackPickerPanel({ catalog, initialChoice, onConfirm, onRemove, 
   const lengthFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
 
   const catalogMessage = catalog.errorKind
-    ? messages.serverErrors[catalog.errorKind]
+    ? serverErrorText(messages, catalog.errorKind)
     : catalog.isLoading
       ? trackTexts.loading
       : tracks.length === 0

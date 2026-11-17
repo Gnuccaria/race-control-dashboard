@@ -92,6 +92,8 @@ export const de: Messages = {
     greetings: GERMAN_GREETINGS,
   },
   common: {
+    /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
+    errorDetail: (detail: string) => `(Details: ${detail})`,
     timeField: { hours: 'Stunden', minutes: 'Minuten', dayPeriod: 'AM/PM' },
     usageGuide: 'So funktioniert es',
     calculationDetails: 'Berechnung im Detail',

@@ -93,6 +93,8 @@ export const fr: Messages = {
     greetings: FRENCH_GREETINGS,
   },
   common: {
+    /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
+    errorDetail: (detail: string) => `(détail : ${detail})`,
     timeField: { hours: 'Heures', minutes: 'Minutes', dayPeriod: 'AM/PM' },
     usageGuide: 'Mode d’emploi',
     calculationDetails: 'Détail du calcul',

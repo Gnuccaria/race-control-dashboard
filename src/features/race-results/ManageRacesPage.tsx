@@ -6,6 +6,7 @@ import { useI18n } from '@/i18n/useI18n';
 import styles from './ManageRacesPage.module.css';
 import { RaceList } from './components/RaceList/RaceList';
 import { fetchRaces } from './services/raceApi';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Schermata "Gestisci ordini di arrivo": le gare più recenti, con filtri, selezione ed eliminazione. */
 export function ManageRacesPage() {
@@ -23,7 +24,7 @@ export function ManageRacesPage() {
       </div>
       {queryState.status === 'loading' && <LoadingStatus>{messages.races.list.loading}</LoadingStatus>}
       {queryState.status === 'failed' && (
-        <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.crews.list.retry} onRetry={reload} />
+        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
       )}
       {queryState.status === 'loaded' && <RaceList races={queryState.value} onRacesDeleted={reload} />}
     </div>

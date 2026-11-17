@@ -7,6 +7,7 @@ import { fetchCars } from './carApi';
 import { CarRefreshPanel } from './components/CarRefreshPanel';
 import { CarTable } from './components/CarTable';
 import styles from './ManageCarsPage.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 /** Schermata "Gestisci vetture": aggiornamento dai siti (con anteprima) e tabella delle vetture salvate. */
 export function ManageCarsPage() {
@@ -19,7 +20,7 @@ export function ManageCarsPage() {
       <CarRefreshPanel onSaved={reload} />
       <Panel title={messages.cars.manage.title}>
         {queryState.status === 'loading' && <LoadingStatus>{messages.cars.loading}</LoadingStatus>}
-        {queryState.status === 'failed' && <LoadError message={messages.serverErrors[queryState.errorKind]} retryLabel={messages.cars.manage.retry} onRetry={reload} />}
+        {queryState.status === 'failed' && <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.cars.manage.retry} onRetry={reload} />}
         {queryState.status === 'loaded' && <CarTable cars={queryState.value} />}
       </Panel>
     </div>

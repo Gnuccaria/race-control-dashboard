@@ -10,6 +10,7 @@
 	// Sito pubblico dei risultati (cartella site, compilata con `npm run site:build` nella cartella principale):
 	// lo serve questo stesso server, quindi sito e API hanno lo stesso indirizzo. Le pagine del sito
 	// (/ e /gare/…) arrivano dai file; le API sotto elencate passano sempre dal codice del server.
+	// Ogni nuova API va aggiunta qui (lo controlla server/test/workerRoutes.test.ts), altrimenti risponde il sito.
 	"assets": {
 		"directory": "../site/dist",
 		"not_found_handling": "single-page-application",
@@ -19,6 +20,7 @@
 			"/races*",
 			"/tracks*",
 			"/cars*",
+			"/championships*",
 			"/disconnection-tickets*",
 			"/protests*",
 			"/health"

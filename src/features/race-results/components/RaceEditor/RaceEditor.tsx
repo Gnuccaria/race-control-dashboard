@@ -12,6 +12,7 @@ import { toRaceDraftValues } from '../../model/raceDraft';
 import { updateRace, updateRaceDriverSwaps } from '../../services/raceApi';
 import { RaceForm, type RaceFormTab } from '../RaceForm/RaceForm';
 import styles from './RaceEditor.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 interface RaceEditorProps {
   readonly savedRace: SavedRace;
@@ -127,7 +128,7 @@ export function RaceEditor({ savedRace, crewsQuery, onSaved, isNewRace, initialT
         onEdit={editing.startEditing}
         onCancel={editing.cancelEditing}
         onSave={editing.save}
-        saveErrorMessage={editing.saveErrorKind ? messages.serverErrors[editing.saveErrorKind] : null}
+        saveErrorMessage={editing.saveErrorKind ? serverErrorText(messages, editing.saveErrorKind) : null}
         initialTab={initialTab}
         visibleTabs={visibleTabs}
       />

@@ -10,6 +10,7 @@ import { joinClassNames } from '@/lib/joinClassNames';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
 import { getDriverSwapRow, invalidCellKey } from '../../model/driverSwapDraft';
 import styles from './DriverSwapTables.module.css';
+import { serverErrorText } from '@/services/serverErrorText';
 
 const TIME_PLACEHOLDER = 'HH:MM:SS.DDD';
 
@@ -33,7 +34,7 @@ export function DriverSwapTables({ draft, crewsQuery, isReadOnly }: DriverSwapTa
   const { values, championshipCrews, swapCount, driverSwapSheet } = draft;
 
   if (crewsQuery.status === 'loading') return <p className={styles.notice}>{formTexts.loadingCrews}</p>;
-  if (crewsQuery.status === 'failed') return <p className={styles.notice}>{messages.serverErrors[crewsQuery.errorKind]}</p>;
+  if (crewsQuery.status === 'failed') return <p className={styles.notice}>{serverErrorText(messages, crewsQuery.errorKind)}</p>;
   if (values.championship === '') return <p className={styles.notice}>{texts.noChampionship}</p>;
   if (championshipCrews.length === 0) return <p className={styles.notice}>{formTexts.noCrewsInChampionship}</p>;
 
