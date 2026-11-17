@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
-import { createTestApp, createTestEnv, getPath, readError, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
+import { allowCarIn, createTestApp, createTestEnv, crewDetails, getPath, readError, sendJson, withSchedule } from './support/testApp';
 
 const DIRECTOR = 'token-director';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
@@ -34,8 +34,8 @@ describe('API gare e piste', () => {
     env = createTestEnv();
     handleRequest = createTestApp();
     // Due equipaggi del campionato (id 1 e 2) e uno senza campionato (id 3).
-    await request('POST', '/crews', { name: 'Alfa', number: 1, carId: 1, ...REQUIRED_DETAILS });
-    await request('POST', '/crews', { name: 'Beta', number: 2, carId: 2, ...REQUIRED_DETAILS });
+    await request('POST', '/crews', { name: 'Alfa', number: 1, ...crewDetails(1) });
+    await request('POST', '/crews', { name: 'Beta', number: 2, ...crewDetails(2) });
     await env.CREWS_DB.prepare(
       "INSERT INTO crews (name, name_key, number, car_id, created_by_discord_id) VALUES ('Gamma', 'gamma', 3, 1, 'csv')",
     ).run();
@@ -126,7 +126,7 @@ describe('API gare e piste', () => {
   it('restituisce le auto della tabella cars, con i dati tecnici ancora vuoti', async () => {
     const cars = (await request('GET', '/cars')).body.cars as { manufacturer: string; model: string | null; horsepower: number | null }[];
     expect(cars.map((car) => car.manufacturer)).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche']);
-    expect(cars[0]).toEqual({ id: 1, manufacturer: 'Audi', model: null, horsepower: null, weightKg: null, limiter: null, ballastKg: null });
+    expect(cars[0]).toEqual({ id: 1, manufacturer: 'Audi', model: null, horsepower: null, weightKg: null, limiter: null, ballastKg: null, championships: ['Cool1 FIE Championship'] });
     expect((await request('GET', '/cars', undefined, 'token-no-role')).status).toBe(403);
   });
 
@@ -176,7 +176,7 @@ describe('API gare e piste', () => {
   it('la gara salvata tiene l\'auto usata anche se poi l\'equipaggio la cambia', async () => {
     await request('POST', '/races', race());
     // L'equipaggio 2 (Beta) passa dall'auto 2 alla 5.
-    await request('PUT', '/crews/2', { name: 'Beta', number: 2, carId: 5, ...REQUIRED_DETAILS });
+    await request('PUT', '/crews/2', { name: 'Beta', number: 2, ...crewDetails(5) });
 
     // Modifica che lascia Beta in P1: la sua riga tiene l'auto 2.
     const lapsOnly = await request('PUT', '/races/1', race({ results: [{ position: 1, crewId: 2, laps: 30 }, { position: 2, crewId: 1, laps: 28 }] }));
@@ -204,8 +204,24 @@ describe('API gare e piste', () => {
     expect((await request('POST', '/races', race({ results: [{ position: 1, crewId: 2, laps: 29, gapMs: 1000 }] }))).status).toBe(422);
   });
 
+  it('un equipaggio in più campionati corre con l’auto del campionato della gara', async () => {
+    await allowCarIn(env, 5, 'All Japan GT Championship');
+    // L'equipaggio 1 ha l'Audi nel Cool1 FIE e la Nissan nell'All Japan GT.
+    await env.CREWS_DB.prepare("INSERT INTO crew_championships (crew_id, championship, car_id) VALUES (1, 'All Japan GT Championship', 5)").run();
+    const japanRace = await request(
+      'POST',
+      '/races',
+      race({ championship: 'All Japan GT Championship', duration: '3 hours', round: 1, results: [{ position: 1, crewId: 1, laps: 25 }], driverSwaps: [] }),
+    );
+    expect(japanRace.status).toBe(201);
+    expect((japanRace.body.race as { results: { carId: number }[] }).results[0]?.carId).toBe(5);
+    // L'equipaggio 2 non partecipa all'All Japan GT.
+    const outsider = await request('POST', '/races', race({ championship: 'All Japan GT Championship', duration: '3 hours', round: 2, results: [{ position: 1, crewId: 2, laps: 25 }] }));
+    expect(outsider).toMatchObject({ status: 422 });
+  });
+
   it('rifiuta un equipaggio senza auto e una gara senza durata', async () => {
-    await env.CREWS_DB.prepare("UPDATE crews SET car_id = NULL WHERE id = 1").run();
+    await env.CREWS_DB.prepare("UPDATE crew_championships SET car_id = NULL WHERE crew_id = 1").run();
     expect((await request('POST', '/races', race())).body).toMatchObject({
       error: { code: 'invalid-race', details: { results: 'crew-without-car', positions: [2] } },
     });

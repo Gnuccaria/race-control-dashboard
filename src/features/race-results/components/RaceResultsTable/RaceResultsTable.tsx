@@ -1,4 +1,4 @@
-import type { SavedCrew } from '@shared/crewRules';
+import { crewCarIn, type SavedCrew } from '@shared/crewRules';
 import { canPositionHaveGap, RACE_RESULT_POSITIONS } from '@shared/raceRules';
 import { useId } from 'react';
 import { IconButton } from '@/components/ui/IconButton/IconButton';
@@ -38,6 +38,11 @@ export function RaceResultsTable({ draft, crewsQuery, isReadOnly }: RaceResultsT
   const allCrews = crewsQuery.value;
   const championshipCrews = findChampionshipCrews(allCrews, values.championship);
   const crewById = new Map(allCrews.map((crew) => [crew.id, crew]));
+  /** Auto attuale dell'equipaggio nel campionato della gara. */
+  const currentCarIdOf = (crewId: number) => {
+    const crew = crewById.get(crewId);
+    return crew && values.championship !== '' ? crewCarIn(crew, values.championship) : null;
+  };
 
   return (
     <div className={styles.raceResults}>
@@ -99,7 +104,7 @@ export function RaceResultsTable({ draft, crewsQuery, isReadOnly }: RaceResultsT
                 </td>
                 <td className={styles.carCell}>
                   <RaceResultCar
-                    crewCarId={crewId === null ? undefined : (crewById.get(crewId)?.carId ?? null)}
+                    crewCarId={crewId === null ? undefined : currentCarIdOf(crewId)}
                     raceCarId={check.carIdByPosition.get(position)}
                     isMissing={!isReadOnly && check.positionsWithoutCar.includes(position)}
                     carNameById={carNameById}

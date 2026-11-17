@@ -8,7 +8,9 @@ import {
   toCrewNameKey,
   validateCrewDraft, normalizeDiscordChannelId, normalizeDiscordRoleId } from './crewRules';
 
-const COMPLETE_CREW = { name: 'Team', number: 1, carId: 1, championship: 'Cool1 FIE Championship', color: '#E10600' };
+const FIE = 'Cool1 FIE Championship';
+const JAPAN = 'All Japan GT Championship';
+const COMPLETE_CREW = { name: 'Team', number: 1, championships: [{ championship: FIE, carId: 1 }], color: '#E10600' };
 
 describe('regole equipaggio', () => {
   it('accetta parole di lettere (anche accentate) e cifre separate da spazi', () => {
@@ -32,11 +34,20 @@ describe('regole equipaggio', () => {
     expect(normalizeCrewText('Café')).toBe('Café');
   });
 
-  it('il campionato deve essere uno di quelli previsti', () => {
-    expect(validateCrewDraft({ ...COMPLETE_CREW, championship: 'Serie X' })).toEqual({
+  it('i campionati devono essere tra quelli previsti, ognuno una volta sola, ognuno con la sua auto', () => {
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: 'Serie X', carId: 1 }] })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: FIE, carId: 1 }, { championship: FIE, carId: 2 }] })).toEqual({
       isValid: false,
-      issues: { championship: 'invalid' },
+      issues: { championships: 'repeated' },
     });
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: FIE, carId: 'Fiat' }] })).toEqual({ isValid: false, issues: { championships: 'car-invalid' } });
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: 'FIE' })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
+    // Più campionati contemporaneamente (in ordine), oppure nessuno.
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: JAPAN, carId: 5 }, { championship: FIE, carId: 1 }] })).toMatchObject({
+      isValid: true,
+      crew: { championships: [{ championship: FIE, carId: 1 }, { championship: JAPAN, carId: 5 }] },
+    });
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [] })).toMatchObject({ isValid: true, crew: { championships: [] } });
   });
 
   it('nel campo numero tiene solo cifre, al massimo tre', () => {
@@ -60,25 +71,21 @@ describe('regole equipaggio', () => {
 
   it('convalida un equipaggio completo e lo restituisce in forma canonica', () => {
     expect(
-      validateCrewDraft({ name: ' Team  Rosso ', number: 44, carId: 3, championship: 'Cool1 FIE Championship', color: '#e10600' }),
+      validateCrewDraft({ name: ' Team  Rosso ', number: 44, championships: [{ championship: FIE, carId: 3 }], color: '#e10600' }),
     ).toEqual({
       isValid: true,
-      crew: { name: 'Team Rosso', number: 44, carId: 3, championship: 'Cool1 FIE Championship', color: '#E10600', discordChannelId: null, discordRoleId: null },
+      crew: { name: 'Team Rosso', number: 44, championships: [{ championship: FIE, carId: 3 }], color: '#E10600', discordChannelId: null, discordRoleId: null },
     });
   });
 
-  it("auto, campionato e colore sono obbligatori per form e API, facoltativi per l'importazione", () => {
-    expect(validateCrewDraft({ name: 'Team', number: 1, championship: '', color: '' })).toEqual({
+  it("colore e auto di ogni campionato sono obbligatori per form e API, facoltativi per l'importazione", () => {
+    expect(validateCrewDraft({ name: 'Team', number: 1, championships: [{ championship: FIE }], color: '' })).toEqual({
       isValid: false,
-      issues: { carId: 'required', championship: 'required', color: 'required' },
+      issues: { championships: 'car-required', color: 'required' },
     });
-    expect(validateCrewDraft({ name: 'Team', number: 1 }, { areDetailsRequired: false })).toEqual({
+    expect(validateCrewDraft({ name: 'Team', number: 1, championships: [{ championship: FIE }] }, { areDetailsRequired: false })).toEqual({
       isValid: true,
-      crew: { name: 'Team', number: 1, carId: null, championship: null, color: null, discordChannelId: null, discordRoleId: null },
-    });
-    expect(validateCrewDraft({ name: 'Team', number: 1, carId: 'Fiat' }, { areDetailsRequired: false })).toEqual({
-      isValid: false,
-      issues: { carId: 'invalid' },
+      crew: { name: 'Team', number: 1, championships: [{ championship: FIE, carId: null }], color: null, discordChannelId: null, discordRoleId: null },
     });
   });
 
@@ -97,9 +104,9 @@ describe('regole equipaggio', () => {
   });
 
   it('elenca tutti i problemi di dati non validi o manomessi', () => {
-    expect(validateCrewDraft({ name: 'Team-Rosso', number: 1000, carId: 0, championship: 42, color: '#FFF' })).toEqual({
+    expect(validateCrewDraft({ name: 'Team-Rosso', number: 1000, championships: [{ championship: 42, carId: 1 }], color: '#FFF' })).toEqual({
       isValid: false,
-      issues: { name: 'invalid-characters', number: 'invalid', carId: 'invalid', championship: 'invalid', color: 'invalid' },
+      issues: { name: 'invalid-characters', number: 'invalid', championships: 'invalid', color: 'invalid' },
     });
     expect(validateCrewDraft({ ...COMPLETE_CREW, number: 4.5 })).toMatchObject({ isValid: false });
     expect(validateCrewDraft('non un oggetto')).toMatchObject({ isValid: false });

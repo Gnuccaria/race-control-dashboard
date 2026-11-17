@@ -25,10 +25,10 @@ export type ProtestRequestResult<Value> =
 export interface ProtestFormData {
   readonly crew: TicketCrewOption;
   /** Equipaggi di tutti i campionati (escluso il proprio): il modulo mostra quelli del campionato scelto. */
-  /** Gare del campionato dell'equipaggio che accettano proteste, dalla più recente. */
+  /** Gare dei campionati dell'equipaggio con le proteste aperte, dalla più recente. */
   readonly races: readonly ProtestRaceOption[];
-  /** Equipaggi del campionato (escluso il proprio). */
-  readonly otherCrews: readonly (ProtestCrew & { readonly color: string | null })[];
+  /** Equipaggi di quei campionati (escluso il proprio), con i loro campionati: si mostrano quelli della gara scelta. */
+  readonly otherCrews: readonly (ProtestCrew & { readonly color: string | null; readonly championships: readonly string[] })[];
 }
 
 /** Dati della protesta come li manda il modulo (il link YouTube lo converte il server). */

@@ -1,4 +1,4 @@
-import { NO_CHAMPIONSHIP, type SavedCrew } from '@shared/crewRules';
+import type { SavedCrew } from '@shared/crewRules';
 import { Link } from 'react-router';
 import { useI18n } from '@/i18n/useI18n';
 import { type CrewSort, type CrewSortColumn, findMissingCrewFields } from '../../model/crewList';
@@ -29,7 +29,7 @@ export function CrewTable({ crews, sort, onSort, selectedCrewIds, onToggleSelect
   const { messages } = useI18n();
   const crewTexts = messages.crews;
   const listTexts = crewTexts.list;
-  const missingFieldNames = { car: crewTexts.car, championship: crewTexts.championship, color: crewTexts.color };
+  const missingFieldNames = { car: crewTexts.car, color: crewTexts.color };
   const renderSortableHeader = (column: CrewSortColumn) => (
     <SortableColumnHeader key={column} column={column} label={listTexts.columns[column]} currentSort={sort} onSort={onSort} />
   );
@@ -80,20 +80,33 @@ export function CrewTable({ crews, sort, onSort, selectedCrewIds, onToggleSelect
                     <span className={styles.colorDot} data-empty role="img" aria-label={listTexts.noColor} />
                   )}
                 </td>
+                {/* Un campionato per riga, con l'auto alla stessa altezza nella colonna accanto. */}
                 <td>
-                  {crew.carId === null ? (
-                    <span className={tableStyles.missingValue}>{crewTexts.missingCar}</span>
+                  {crew.championships.length === 0 ? (
+                    <span className={tableStyles.missingValue}>–</span>
                   ) : (
-                    (carNameById.get(crew.carId) ?? <span className={tableStyles.missingValue}>…</span>)
+                    <span className={styles.stackedValues}>
+                      {crew.championships.map(({ championship, carId }) => (
+                        <span key={championship}>
+                          {carId === null ? (
+                            <span className={tableStyles.missingValue}>{crewTexts.missingCar}</span>
+                          ) : (
+                            (carNameById.get(carId) ?? <span className={tableStyles.missingValue}>…</span>)
+                          )}
+                        </span>
+                      ))}
+                    </span>
                   )}
                 </td>
                 <td>
-                  {crew.championship === null ? (
-                    <span className={tableStyles.missingValue}>{crewTexts.missingChampionship}</span>
-                  ) : crew.championship === NO_CHAMPIONSHIP ? (
-                    crewTexts.noChampionship
+                  {crew.championships.length === 0 ? (
+                    <span className={tableStyles.missingValue}>{crewTexts.noChampionships}</span>
                   ) : (
-                    crew.championship
+                    <span className={styles.stackedValues}>
+                      {crew.championships.map(({ championship }) => (
+                        <span key={championship}>{championship}</span>
+                      ))}
+                    </span>
                   )}
                 </td>
                 <td className={tableStyles.actionColumn}>

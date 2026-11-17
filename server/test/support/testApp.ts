@@ -53,3 +53,13 @@ export async function readError(response: Response) {
 
 /** Campionato e colore validi, obbligatori come l'auto. */
 export const REQUIRED_DETAILS = { championship: 'Cool1 FIE Championship', color: '#E10600' } as const;
+
+/** Campionati e colore di un equipaggio: un campionato (di default il Cool1 FIE) con la sua auto. */
+export const crewDetails = (carId = 1, championship: string = REQUIRED_DETAILS.championship, color: string = REQUIRED_DETAILS.color) => ({
+  championships: [{ championship, carId }],
+  color,
+});
+
+/** Rende un'auto disponibile anche in un altro campionato (le auto della migrazione sono solo del Cool1 FIE). */
+export const allowCarIn = (env: Env, carId: number, championship: string) =>
+  env.CREWS_DB.prepare('INSERT OR IGNORE INTO car_championships (car_id, championship) VALUES (?, ?)').bind(carId, championship).run();

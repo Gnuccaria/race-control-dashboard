@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
-import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
+import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson, withSchedule, crewDetails } from './support/testApp';
 
 const DIRECTOR = 'token-director';
 
@@ -38,8 +38,8 @@ describe('API penalità e cambi pilota', () => {
     env = createTestEnv();
     handleRequest = createTestApp();
     // Due equipaggi del campionato (id 1 e 2) e uno senza campionato (id 3).
-    await request('POST', '/crews', { name: 'Alfa', number: 1, carId: 1, ...REQUIRED_DETAILS });
-    await request('POST', '/crews', { name: 'Beta', number: 2, carId: 2, ...REQUIRED_DETAILS });
+    await request('POST', '/crews', { name: 'Alfa', number: 1, ...crewDetails(1) });
+    await request('POST', '/crews', { name: 'Beta', number: 2, ...crewDetails(2) });
     await env.CREWS_DB.prepare(
       "INSERT INTO crews (name, name_key, number, car_id, created_by_discord_id) VALUES ('Gamma', 'gamma', 3, 1, 'csv')",
     ).run();
@@ -142,7 +142,7 @@ describe('API penalità e cambi pilota', () => {
   it('accetta una gara con classifica piena e tutti i cambi pilota compilati', async () => {
     const crewIds: number[] = [];
     for (let number = 10; number < 22; number++) {
-      const created = await request('POST', '/crews', { name: `Squadra ${number}`, number, carId: 1, ...REQUIRED_DETAILS });
+      const created = await request('POST', '/crews', { name: `Squadra ${number}`, number, ...crewDetails(1) });
       crewIds.push((created.body.crew as { id: number }).id);
     }
     const allCrewIds = [1, 2, ...crewIds];

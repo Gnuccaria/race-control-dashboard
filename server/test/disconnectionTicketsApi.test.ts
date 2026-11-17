@@ -4,7 +4,7 @@ import { createApp } from '../src/app';
 import type { Env } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { createTestEnv, getPath, MEMBERSHIPS, REQUIRED_DETAILS, sendJson } from './support/testApp';
+import { createTestEnv, crewDetails, getPath, MEMBERSHIPS, sendJson } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
 const VEZ_ROLE = '1571641908688588963';
@@ -93,9 +93,9 @@ describe('ticket di disconnessione', () => {
     channelStatus = 200;
     env = { ...createTestEnv(), DISCORD_BOT_TOKEN: 'bot-token' };
     handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }), discordFetch);
-    await handleRequest(sendJson('POST', '/crews', { name: 'Vez Team Lime', number: 16, carId: 1, ...REQUIRED_DETAILS, discordChannelId: VEZ_CHANNEL }, 'token-director'), env);
-    await handleRequest(sendJson('POST', '/crews', { name: 'Firestarter Project', number: 44, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env);
-    await handleRequest(sendJson('POST', '/crews', { name: 'Fuori campionato', number: 99, carId: 1, championship: 'None', color: '#000000' }, 'token-director'), env);
+    await handleRequest(sendJson('POST', '/crews', { name: 'Vez Team Lime', number: 16, ...crewDetails(1), discordChannelId: VEZ_CHANNEL }, 'token-director'), env);
+    await handleRequest(sendJson('POST', '/crews', { name: 'Firestarter Project', number: 44, ...crewDetails(1) }, 'token-director'), env);
+    await handleRequest(sendJson('POST', '/crews', { name: 'Fuori campionato', number: 99, championships: [], color: '#000000' }, 'token-director'), env);
   });
 
   it('riconosce i ruoli di equipaggio dal nome "#numero …"', () => {
@@ -110,7 +110,7 @@ describe('ticket di disconnessione', () => {
   it('il sito legge l’equipaggio dal ruolo Discord di chi è entrato, con i nomi dei ruoli letti dal bot', async () => {
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez')).toEqual({
       status: 200,
-      body: { crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' } },
+      body: { crew: { id: 1, number: 16, name: 'Vez Team Lime', championships: ['Cool1 FIE Championship'] } },
     });
     // I nomi dei ruoli restano in memoria: la seconda volta il bot non viene richiamato.
     await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez-2');
@@ -123,7 +123,7 @@ describe('ticket di disconnessione', () => {
     isBotWorking = false;
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez')).toEqual({
       status: 200,
-      body: { crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' } },
+      body: { crew: { id: 1, number: 16, name: 'Vez Team Lime', championships: ['Cool1 FIE Championship'] } },
     });
     expect(botCalls).toBe(0);
     // Il ruolo collegato vale da solo: un altro ruolo "#N" senza equipaggio collegato non crea ambiguità.

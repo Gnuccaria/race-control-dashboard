@@ -17,12 +17,12 @@ vi.mock('./services/raceApi');
 const LIST_PATH = '/campionato/ordini-di-arrivo';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
 
-const crew = (id: number, name: string, number: number, championship: SavedCrew['championship'] = CHAMPIONSHIP): SavedCrew => ({
+/** Equipaggio con l'Audi nel campionato indicato (null = nessun campionato). */
+const crew = (id: number, name: string, number: number, championship: string | null = CHAMPIONSHIP, carId: number | null = testCarId('Audi')): SavedCrew => ({
   id,
   name,
   number,
-  carId: testCarId('Audi'),
-  championship,
+  championships: championship === null ? [] : [{ championship: championship as SavedCrew['championships'][number]['championship'], carId }],
   color: '#E10600',
   createdAt: '2026-11-13T00:00:00Z',
 });
@@ -253,7 +253,7 @@ describe('Nuova gara', () => {
   });
 
   it('blocca il salvataggio se un equipaggio non ha un\'auto', async () => {
-    vi.mocked(fetchCrews).mockResolvedValue({ isSuccess: true, value: [...CREWS, { ...crew(4, 'Senza Auto', 30), carId: null }] });
+    vi.mocked(fetchCrews).mockResolvedValue({ isSuccess: true, value: [...CREWS, crew(4, 'Senza Auto', 30, CHAMPIONSHIP, null)] });
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/nuova`);
 

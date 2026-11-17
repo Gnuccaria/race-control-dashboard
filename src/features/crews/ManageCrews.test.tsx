@@ -11,11 +11,14 @@ vi.mock('@/features/auth/services/discordApi');
 vi.mock('./services/crewApi');
 
 const LIST_PATH = '/campionato/gestisci-equipaggi';
+const FIE = 'Cool1 FIE Championship';
+const JAPAN = 'All Japan GT Championship';
+const FIE_CAR = `Auto nel ${FIE}`;
 
 const SAVED_CREWS: SavedCrew[] = [
-  { id: 1, name: 'Sim Racing Café', number: 690, carId: null, championship: 'Cool1 FIE Championship', color: '#00A3E0', createdAt: '2026-11-13T00:00:00Z' },
-  { id: 2, name: 'GT Tribe Team Yellow', number: 20, carId: testCarId('Porsche'), championship: 'Cool1 FIE Championship', color: '#FFB800', createdAt: '2026-11-13T00:00:00Z' },
-  { id: 3, name: 'Alberto Ciola Racing', number: 67, carId: testCarId('Audi'), championship: 'Cool1 FIE Championship', color: '#E10600', createdAt: '2026-11-13T00:00:00Z' },
+  { id: 1, name: 'Sim Racing Café', number: 690, championships: [{ championship: FIE, carId: null }], color: '#00A3E0', createdAt: '2026-11-13T00:00:00Z' },
+  { id: 2, name: 'GT Tribe Team Yellow', number: 20, championships: [{ championship: FIE, carId: testCarId('Porsche') }], color: '#FFB800', createdAt: '2026-11-13T00:00:00Z' },
+  { id: 3, name: 'Alberto Ciola Racing', number: 67, championships: [{ championship: FIE, carId: testCarId('Audi') }], color: '#E10600', createdAt: '2026-11-13T00:00:00Z' },
 ];
 
 /** Numeri degli equipaggi nell'ordine in cui compaiono nella tabella. */
@@ -127,33 +130,32 @@ describe('Gestisci equipaggio: dettaglio', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Sim Racing Café' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Nome equipaggio' })).toHaveAttribute('readonly');
-    expect(screen.getByRole('combobox', { name: 'Auto' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: FIE_CAR })).toBeDisabled();
     expect(fetchCrew).toHaveBeenCalledWith(1);
   });
 
   it('Modifica rende i campi modificabili e Salva invia i dati controllati', async () => {
-    vi.mocked(updateCrew).mockResolvedValue({ isSuccess: true, value: { ...crewWithoutCar, carId: testCarId('Nissan') } });
+    vi.mocked(updateCrew).mockResolvedValue({ isSuccess: true, value: { ...crewWithoutCar, championships: [{ championship: FIE, carId: testCarId('Nissan') }] } });
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/1`);
 
     await user.click(await screen.findByRole('button', { name: 'Modifica' }));
     // Senza auto il salvataggio non è possibile.
     expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Auto' }), 'Nissan');
+    await user.selectOptions(screen.getByRole('combobox', { name: FIE_CAR }), 'Nissan');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
 
     expect(updateCrew).toHaveBeenCalledWith(1, {
       name: 'Sim Racing Café',
       number: 690,
-      carId: testCarId('Nissan'),
-      championship: 'Cool1 FIE Championship',
+      championships: [{ championship: FIE, carId: testCarId('Nissan') }],
       color: '#00A3E0',
       discordChannelId: null,
       discordRoleId: null,
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Modifiche salvate.');
     expect(screen.getByRole('button', { name: 'Modifica' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Auto' })).toHaveDisplayValue('Nissan');
+    expect(screen.getByRole('combobox', { name: FIE_CAR })).toHaveDisplayValue('Nissan');
   });
 
   it('in modifica il colore si cambia con lo stesso popup della creazione', async () => {
@@ -166,7 +168,7 @@ describe('Gestisci equipaggio: dettaglio', () => {
     const colorButton = await screen.findByRole('button', { name: /Colore #00A3E0/ });
     expect(colorButton).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Modifica' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Auto' }), 'Audi');
+    await user.selectOptions(screen.getByRole('combobox', { name: FIE_CAR }), 'Audi');
     await user.click(screen.getByRole('button', { name: /Colore #00A3E0/ }));
 
     const pickerDialog = screen.getByRole('dialog', { name: 'Scegli il colore' });
@@ -181,17 +183,25 @@ describe('Gestisci equipaggio: dettaglio', () => {
     expect(await screen.findByRole('button', { name: /Colore #2E7D32/ })).toBeInTheDocument();
   });
 
-  it('un equipaggio importato senza colore né campionato si salva solo dopo averli completati', async () => {
+  it('un equipaggio importato senza colore si salva solo dopo averlo completato; i campionati si aggiungono e tolgono', async () => {
     vi.mocked(fetchCrew).mockResolvedValue({
       isSuccess: true,
-      value: { ...crewWithoutCar, carId: testCarId('Audi'), championship: null, color: null },
+      value: { ...crewWithoutCar, championships: [], color: null },
     });
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/1`);
 
     await user.click(await screen.findByRole('button', { name: 'Modifica' }));
     expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Campionato' }), 'Cool1 FIE Championship');
+    // Un campionato aggiunto vuole la sua auto, scelta tra quelle di quel campionato; la X lo toglie.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Aggiungi un campionato' }), JAPAN);
+    const japanCar = screen.getByRole('combobox', { name: `Auto nel ${JAPAN}` });
+    expect(within(japanCar).getAllByRole('option').map((option) => option.textContent)).toEqual(['Seleziona un\'auto', 'Nissan']);
+    await user.click(screen.getByRole('button', { name: `Togli ${JAPAN}` }));
+    expect(screen.queryByRole('combobox', { name: `Auto nel ${JAPAN}` })).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Aggiungi un campionato' }), FIE);
+    expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    await user.selectOptions(screen.getByRole('combobox', { name: FIE_CAR }), 'Audi');
     expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Scegli il colore' }));
@@ -207,7 +217,7 @@ describe('Gestisci equipaggio: dettaglio', () => {
     renderApp(`${LIST_PATH}/1`);
 
     await user.click(await screen.findByRole('button', { name: 'Modifica' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Auto' }), 'Audi');
+    await user.selectOptions(screen.getByRole('combobox', { name: FIE_CAR }), 'Audi');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un equipaggio con questo numero.');

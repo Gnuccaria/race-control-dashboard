@@ -1,3 +1,5 @@
+import { CREW_CHAMPIONSHIPS, type CrewChampionship, isCrewChampionship } from './crewRules';
+
 /** Auto disponibili, salvate sul server (tabella cars) e lette dall'app per i menu delle auto. */
 export interface Car {
   readonly id: number;
@@ -11,6 +13,8 @@ export interface Car {
   readonly limiter: number | null;
   /** Zavorra in kg. */
   readonly ballastKg: number | null;
+  /** Campionati in cui l'auto si può scegliere per un equipaggio (dal CSV delle auto; almeno uno). */
+  readonly championships: readonly CrewChampionship[];
 }
 
 /** Dati di un'auto da salvare (senza id). */
@@ -46,6 +50,7 @@ export interface CarDraftIssues {
   readonly weightKg?: 'invalid';
   readonly limiter?: 'invalid';
   readonly ballastKg?: 'invalid';
+  readonly championships?: 'required' | 'invalid';
 }
 
 export type CarDraftValidation =
@@ -86,6 +91,13 @@ export function validateCarDraft(input: unknown): CarDraftValidation {
     } else issues[field] = 'invalid';
   }
 
+  // Campionati: almeno uno, senza ripetizioni, nell'ordine di CREW_CHAMPIONSHIPS.
+  const rawChampionships = candidate.championships;
+  let championships: CrewChampionship[] = [];
+  if (!Array.isArray(rawChampionships) || rawChampionships.length === 0) issues.championships = 'required';
+  else if (!rawChampionships.every(isCrewChampionship)) issues.championships = 'invalid';
+  else championships = CREW_CHAMPIONSHIPS.filter((championship) => rawChampionships.includes(championship));
+
   if (Object.keys(issues).length > 0) return { isValid: false, issues };
-  return { isValid: true, car: { manufacturer, model: model === '' ? null : model, ...numbers } };
+  return { isValid: true, car: { manufacturer, model: model === '' ? null : model, ...numbers, championships } };
 }

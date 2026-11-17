@@ -14,20 +14,35 @@ const TICKET_COLUMNS = `
   disconnected_on_lap AS disconnectedOnLap, submitted_by_name AS submittedByName,
   submitted_by_username AS submittedByUsername, created_at AS createdAt`;
 
-/** Equipaggio di un campionato con quel numero (quello del ruolo Discord "#16 …"). */
 /**
  * Equipaggio dal numero letto nel nome del ruolo ("#16 ..."), solo tra quelli senza un ruolo Discord collegato:
  * un equipaggio con il ruolo collegato si riconosce solo da quel ruolo.
  */
 export async function findTicketCrewByNumber(database: SqlDatabase, crewNumber: number): Promise<TicketCrewOption | null> {
-  return database
-    .prepare(
-      `SELECT id, number, name, championship FROM crews
-       WHERE number = ? AND championship IS NOT NULL AND championship <> 'None' AND discord_role_id IS NULL`,
-    )
+  const row = await database
+    .prepare(`${TICKET_CREW_SELECT} WHERE crews.number = ? AND crews.discord_role_id IS NULL`)
     .bind(crewNumber)
-    .first<TicketCrewOption>();
+    .first<TicketCrewRow>();
+  return row ? toTicketCrew(row) : null;
 }
+
+/** Equipaggi che partecipano ad almeno un campionato, con i campionati separati da "|". */
+const TICKET_CREW_SELECT = `
+  SELECT crews.id, crews.number, crews.name, crews.discord_role_id AS roleId,
+    (SELECT group_concat(championship, '|') FROM crew_championships WHERE crew_id = crews.id) AS championshipsText
+  FROM crews`;
+
+interface TicketCrewRow {
+  readonly id: number;
+  readonly number: number;
+  readonly name: string;
+  readonly roleId: string | null;
+  readonly championshipsText: string | null;
+}
+
+/** null se l'equipaggio non partecipa a nessun campionato (non può mandare ticket né proteste). */
+const toTicketCrew = (row: TicketCrewRow): TicketCrewOption | null =>
+  row.championshipsText ? { id: row.id, number: row.number, name: row.name, championships: row.championshipsText.split('|') } : null;
 
 /** Equipaggi in campionato il cui ruolo Discord collegato è tra quelli indicati, con il ruolo. */
 export async function findTicketCrewsByRoleIds(
@@ -36,14 +51,13 @@ export async function findTicketCrewsByRoleIds(
 ): Promise<(TicketCrewOption & { readonly roleId: string })[]> {
   if (roleIds.length === 0) return [];
   const { results } = await database
-    .prepare(
-      `SELECT id, number, name, championship, discord_role_id AS roleId FROM crews
-       WHERE discord_role_id IN (SELECT value FROM json_each(?)) AND championship IS NOT NULL AND championship <> 'None'
-       ORDER BY number`,
-    )
+    .prepare(`${TICKET_CREW_SELECT} WHERE crews.discord_role_id IN (SELECT value FROM json_each(?)) ORDER BY crews.number`)
     .bind(JSON.stringify(roleIds))
-    .all<TicketCrewOption & { roleId: string }>();
-  return results;
+    .all<TicketCrewRow>();
+  return results.flatMap((row) => {
+    const crew = toTicketCrew(row);
+    return crew && row.roleId ? [{ ...crew, roleId: row.roleId }] : [];
+  });
 }
 
 export async function countOpenTicketsBy(database: SqlDatabase, discordUserId: string): Promise<number> {

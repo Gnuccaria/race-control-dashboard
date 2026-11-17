@@ -31,6 +31,7 @@ import {
   insertProtest,
   linkProtestPenalty,
   listChampionshipCrews,
+  listCrewsOfChampionships,
   listProtests,
   listProtestsVisibleTo,
   listRacesOpenForProtests,
@@ -95,9 +96,10 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       if (member instanceof Response) return member;
       const lookup = await findTicketCrewFromRoles(discordFetch, env, env.CREWS_DB, member.roleIds);
       if (!('crew' in lookup)) return crewProblemResponse(lookup.problem);
-      const championship = lookup.crew.championship;
-      const races = championship ? await listRacesOpenForProtests(env.CREWS_DB, [championship]) : [];
-      const otherCrews = championship ? await listChampionshipCrews(env.CREWS_DB, championship, lookup.crew.id) : [];
+      // Gare di tutti i campionati dell'equipaggio; il sito mostra gli altri equipaggi del campionato della gara scelta.
+      const { championships } = lookup.crew;
+      const races = await listRacesOpenForProtests(env.CREWS_DB, championships);
+      const otherCrews = await listCrewsOfChampionships(env.CREWS_DB, championships, lookup.crew.id);
       return jsonResponse(200, { crew: lookup.crew, races, otherCrews });
     },
 
@@ -112,9 +114,7 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       if ((await countRecentProtestsBy(env.CREWS_DB, profile.id)) >= MAX_PROTESTS_PER_DAY) return errorResponse(429, 'too-many-protests');
 
       // La gara deve essere del campionato dell'equipaggio, con le proteste aperte (dall'inizio a 48 ore dopo la fine).
-      const race = lookup.crew.championship
-        ? (await listRacesOpenForProtests(env.CREWS_DB, [lookup.crew.championship])).find((option) => option.id === validation.protest.raceId)
-        : undefined;
+      const race = (await listRacesOpenForProtests(env.CREWS_DB, lookup.crew.championships)).find((option) => option.id === validation.protest.raceId);
       if (!race) return errorResponse(422, 'invalid-protest', { raceId: 'invalid' });
       // Gli altri equipaggi devono essere del campionato della gara (e non il proprio).
       const championshipCrews = await listChampionshipCrews(env.CREWS_DB, race.championship, lookup.crew.id);

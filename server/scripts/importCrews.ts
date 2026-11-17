@@ -6,12 +6,13 @@
  *   npm run crews:import -- percorso/crews.csv                    → scrive nel database online su Cloudflare
  *
  * Ogni riga aggiorna l'equipaggio con lo stesso numero (o, se il numero è nuovo, con lo stesso nome),
- * oppure ne crea uno nuovo. Auto, campionato e colore lasciati vuoti non cancellano quelli già salvati.
+ * oppure ne crea uno nuovo. Il campionato della riga (con la sua auto) si aggiunge a quelli salvati; vuoto li lascia,
+ * "Nessuno" li toglie tutti. Il colore lasciato vuoto non cancella quello salvato.
  * Gli equipaggi assenti dal file vengono eliminati, tranne quelli presenti in un ordine di arrivo.
  * Tutto o niente: se anche una sola riga ha un problema, non cambia nulla.
  */
 import { formatCarName } from '../../shared/carRules';
-import type { CrewDraft } from '../../shared/crewRules';
+import { CREW_CHAMPIONSHIPS, type CrewDraft, isCrewChampionship } from '../../shared/crewRules';
 import { buildCrewSyncSql, type ExistingCrew, type ImportableCar, planCrewImport, planCrewSync } from '../src/import/crewCsvImport';
 import { countLabel, createD1Client, exitWithProblems, readCsvFile, readImportCommandLine } from './wranglerD1';
 
@@ -22,10 +23,26 @@ const csvText = readCsvFile(csvPath);
 const database = createD1Client();
 
 console.log(`Lettura di equipaggi e auto presenti nel database online…`);
-const cars = database.select<ImportableCar>('SELECT id, manufacturer, model FROM cars');
-const existingCrews = database.select<ExistingCrew>(
-  'SELECT id, name, number, car_id AS carId, championship, color, (SELECT COUNT(*) FROM race_results WHERE race_results.crew_id = crews.id) + (SELECT COUNT(*) FROM penalty_crews WHERE penalty_crews.crew_id = crews.id) + (SELECT COUNT(*) FROM driver_swaps WHERE driver_swaps.crew_id = crews.id) AS usageCount FROM crews',
-);
+// Campionati di auto ed equipaggi come elenchi separati da "|" (il client di wrangler restituisce solo testo semplice).
+const cars = database
+  .select<Omit<ImportableCar, 'championships'> & { championshipsText: string | null }>(
+    "SELECT id, manufacturer, model, (SELECT group_concat(championship, '|') FROM car_championships WHERE car_id = cars.id) AS championshipsText FROM cars",
+  )
+  .map(({ championshipsText, ...car }) => ({ ...car, championships: CREW_CHAMPIONSHIPS.filter((championship) => (championshipsText ?? '').split('|').includes(championship)) }));
+const existingCrews = database
+  .select<Omit<ExistingCrew, 'championships'> & { championshipsText: string | null }>(
+    "SELECT id, name, number, color, (SELECT group_concat(championship || '=' || IFNULL(car_id, ''), '|') FROM crew_championships WHERE crew_id = crews.id) AS championshipsText, (SELECT COUNT(*) FROM race_results WHERE race_results.crew_id = crews.id) + (SELECT COUNT(*) FROM penalty_crews WHERE penalty_crews.crew_id = crews.id) + (SELECT COUNT(*) FROM driver_swaps WHERE driver_swaps.crew_id = crews.id) AS usageCount FROM crews",
+  )
+  .map(({ championshipsText, ...crew }) => ({
+    ...crew,
+    championships: (championshipsText ?? '')
+      .split('|')
+      .filter(Boolean)
+      .flatMap((part) => {
+        const [championship, carText] = part.split('=');
+        return isCrewChampionship(championship) ? [{ championship, carId: carText ? Number(carText) : null }] : [];
+      }),
+  }));
 const carNameById = new Map(cars.map((car) => [car.id, formatCarName(car)]));
 
 const importPlan = planCrewImport(csvText, cars);
@@ -35,8 +52,10 @@ const sync = planCrewSync(importPlan, existingCrews);
 if (sync.problems.length > 0) exitWithProblems(sync.problems, 'gli equipaggi non sono stati modificati');
 
 const describe = (crew: CrewDraft) => {
-  const carName = crew.carId === null ? 'auto da definire' : (carNameById.get(crew.carId) ?? 'auto sconosciuta');
-  return `#${String(crew.number).padStart(3)}  ${crew.name}  (${[carName, crew.championship, crew.color].filter(Boolean).join(', ')})`;
+  const championships = crew.championships.map(
+    ({ championship, carId }) => `${championship}: ${carId === null ? 'auto da definire' : (carNameById.get(carId) ?? 'auto sconosciuta')}`,
+  );
+  return `#${String(crew.number).padStart(3)}  ${crew.name}  (${[...championships, crew.color].filter(Boolean).join(', ') || 'nessun campionato'})`;
 };
 
 console.log(`\nEquipaggi nuovi: ${sync.inserts.length}`);

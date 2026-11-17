@@ -11,8 +11,14 @@ export type CreateCrewState =
 
 const INITIAL_STATE: CreateCrewState = { status: 'idle' };
 
-/** Il menu delle auto ha come valore l'id dell'auto; '' = nessuna scelta. */
-const toCarId = (carIdText: string): number | '' => (carIdText === '' ? '' : Number(carIdText));
+/** Campionati dal campo nascosto (JSON); un testo non valido diventa un valore che la convalida rifiuta. */
+const readChampionships = (jsonText: string): unknown => {
+  try {
+    return jsonText === '' ? [] : (JSON.parse(jsonText) as unknown);
+  } catch {
+    return null;
+  }
+};
 
 const readTextField = (formData: FormData, fieldName: string): string => {
   const fieldValue = formData.get(fieldName);
@@ -33,8 +39,7 @@ export function useCreateCrew() {
     const validation = validateCrewDraft({
       name: readTextField(formData, CREW_FORM_FIELDS.name),
       number: parseCrewNumber(readTextField(formData, CREW_FORM_FIELDS.number)),
-      carId: toCarId(readTextField(formData, CREW_FORM_FIELDS.carId)),
-      championship: readTextField(formData, CREW_FORM_FIELDS.championship),
+      championships: readChampionships(readTextField(formData, CREW_FORM_FIELDS.championships)),
       color: readTextField(formData, CREW_FORM_FIELDS.color),
       discordChannelId: readTextField(formData, CREW_FORM_FIELDS.discordChannelId),
       discordRoleId: readTextField(formData, CREW_FORM_FIELDS.discordRoleId),

@@ -6,12 +6,16 @@ import {
   toCarKey,
   validateCarDraft,
 } from '../../../shared/carRules';
+import { CHAMPIONSHIP_FORMER_NAMES, CREW_CHAMPIONSHIPS, type CrewChampionship } from '../../../shared/crewRules';
 import { type CatalogSyncPlan, planCatalogSync } from './catalogSync';
 import { findColumns, findExtraCellsProblem, type ImportProblem, parseCsv, readCell, toSqlNumber, toSqlText } from './csv';
 
 /**
  * Sostituzione della tabella delle auto con un file CSV (colonne Costruttore, Modello, PS, kg,
- * Limitatore, Zavorra). Puro: lo script scripts/importCars.ts legge il database e scrive l'SQL.
+ * Limitatore, Zavorra, Campionati). Puro: lo script scripts/importCars.ts legge il database e scrive l'SQL.
+ * Campionati: i campionati in cui l'auto si può scegliere per un equipaggio, separati da "|"
+ * (es. "Cool1 FIE Championship|All Japan GT Championship"). Senza la colonna valgono tutte per il Cool1 FIE
+ * Championship, come le auto di prima; con la colonna, ogni auto deve averne almeno uno.
  */
 
 /** Auto già nel database, con quante volte è usata (equipaggi + righe di ordini di arrivo). */
@@ -32,11 +36,25 @@ const HEADER_ALIASES = {
   weightKg: ['kg', 'peso', 'pesokg', 'weight', 'weightkg'],
   limiter: ['limitatore', 'limiter', 'restrictor', 'restrittore', 'powerlimiter'],
   ballastKg: ['zavorra', 'zavorrakg', 'ballast', 'ballastkg'],
+  championships: ['campionati', 'campionato', 'championships', 'championship'],
 } as const;
 type CarColumn = keyof typeof HEADER_ALIASES;
-const DEFAULT_COLUMNS: Record<CarColumn, number> = { manufacturer: 0, model: 1, horsepower: 2, weightKg: 3, limiter: 4, ballastKg: 5 };
+const DEFAULT_COLUMNS: Record<CarColumn, number> = { manufacturer: 0, model: 1, horsepower: 2, weightKg: 3, limiter: 4, ballastKg: 5, championships: 6 };
+/** Senza la colonna dei campionati (file di prima) le auto sono del Cool1 FIE Championship. */
+const DEFAULT_CAR_CHAMPIONSHIPS: readonly CrewChampionship[] = ['Cool1 FIE Championship'];
 
-const COLUMN_LABELS: Record<Exclude<CarColumn, 'manufacturer' | 'model'>, string> = {
+/** "Cool1 FIE Championship|All Japan GT Championship" → campionati; undefined se uno non è riconosciuto. */
+function parseChampionships(rawValue: string): CrewChampionship[] | undefined {
+  const championships: CrewChampionship[] = [];
+  for (const part of rawValue.split('|').map((text) => text.trim().replace(/\s+/g, ' ').toLowerCase()).filter(Boolean)) {
+    const championship = CREW_CHAMPIONSHIPS.find((candidate) => candidate.toLowerCase() === part) ?? CHAMPIONSHIP_FORMER_NAMES[part];
+    if (!championship) return undefined;
+    championships.push(championship);
+  }
+  return championships;
+}
+
+const COLUMN_LABELS: Record<Exclude<CarColumn, 'manufacturer' | 'model' | 'championships'>, string> = {
   horsepower: 'PS (intero da 1 a 9999)',
   weightKg: 'kg (intero da 1 a 99999)',
   limiter: 'limitatore (numero da 0 a 9999, ammessi i decimali)',
@@ -84,7 +102,10 @@ export function planCarImport(csvText: string, existingCars: readonly ExistingCa
       continue;
     }
 
+    const hasChampionshipsColumn = columns.championships >= 0 && (headerColumns !== null || cells.length > columns.championships);
+    const championships = hasChampionshipsColumn ? parseChampionships(raw.championships) : [...DEFAULT_CAR_CHAMPIONSHIPS];
     const validation = validateCarDraft({
+      championships: championships ?? ['?'],
       manufacturer: raw.manufacturer,
       model: raw.model,
       horsepower: parseCsvNumber(raw.horsepower),
@@ -107,6 +128,10 @@ export function planCarImport(csvText: string, existingCars: readonly ExistingCa
         ...(['horsepower', 'weightKg', 'limiter', 'ballastKg'] as const)
           .filter((field) => issues[field])
           .map((field) => `valore "${raw[field]}" non valido per ${COLUMN_LABELS[field]}, oppure vuoto`),
+        issues.championships &&
+          (issues.championships === 'required'
+            ? 'campionati mancanti: indica almeno un campionato in cui l\'auto si può scegliere'
+            : `campionati "${raw.championships}" non riconosciuti (ammessi: ${CREW_CHAMPIONSHIPS.join(', ')}, separati da |)`),
       ].filter(Boolean);
       problems.push({ line, message: `${rowLabel}: ${reasons.join('; ')}` });
       continue;
@@ -139,18 +164,34 @@ export function planCarImport(csvText: string, existingCars: readonly ExistingCa
 const carValuesSql = (car: CarDraft) =>
   [toSqlText(car.manufacturer), toSqlText(car.model), toSqlNumber(car.horsepower), toSqlNumber(car.weightKg), toSqlNumber(car.limiter), toSqlNumber(car.ballastKg)];
 
-/** Prima le eliminazioni, poi gli aggiornamenti, infine le auto nuove: così i nomi non si scontrano mai. */
+/** Campionati di un'auto; carIdSql = espressione SQL che dà l'id dell'auto. */
+const championshipsSql = (carIdSql: string, car: CarDraft) =>
+  car.championships.map((championship) => `INSERT INTO car_championships (car_id, championship) VALUES (${carIdSql}, ${toSqlText(championship)});`);
+
+/** L'auto appena inserita, ritrovata da costruttore e modello (unici senza badare alle maiuscole). */
+const insertedCarIdSql = (car: CarDraft) =>
+  `(SELECT id FROM cars WHERE lower(manufacturer) = lower(${toSqlText(car.manufacturer)}) AND lower(IFNULL(model, '')) = lower(${toSqlText(car.model ?? '')}))`;
+
+/** Prima le eliminazioni, poi gli aggiornamenti, infine le auto nuove: così i nomi non si scontrano mai. Poi i campionati. */
 export function buildCarSyncSql(sync: CatalogSyncPlan<CarDraft, ExistingCar>): string {
   const statements: string[] = [];
-  if (sync.deletes.length > 0) statements.push(`DELETE FROM cars WHERE id IN (${sync.deletes.map((car) => car.id).join(', ')});`);
+  if (sync.deletes.length > 0) {
+    const deletedIds = sync.deletes.map((car) => car.id).join(', ');
+    statements.push(`DELETE FROM car_championships WHERE car_id IN (${deletedIds});`, `DELETE FROM cars WHERE id IN (${deletedIds});`);
+  }
   for (const { existing, draft } of sync.updates) {
     const [manufacturer, model, horsepower, weightKg, limiter, ballastKg] = carValuesSql(draft);
     statements.push(
       `UPDATE cars SET manufacturer = ${manufacturer}, model = ${model}, horsepower = ${horsepower}, weight_kg = ${weightKg}, limiter = ${limiter}, ballast_kg = ${ballastKg} WHERE id = ${existing.id};`,
+      `DELETE FROM car_championships WHERE car_id = ${existing.id};`,
+      ...championshipsSql(String(existing.id), draft),
     );
   }
   for (const draft of sync.inserts) {
-    statements.push(`INSERT INTO cars (manufacturer, model, horsepower, weight_kg, limiter, ballast_kg) VALUES (${carValuesSql(draft).join(', ')});`);
+    statements.push(
+      `INSERT INTO cars (manufacturer, model, horsepower, weight_kg, limiter, ballast_kg) VALUES (${carValuesSql(draft).join(', ')});`,
+      ...championshipsSql(insertedCarIdSql(draft), draft),
+    );
   }
   return statements.join('\n');
 }

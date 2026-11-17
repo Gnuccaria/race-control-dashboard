@@ -4,7 +4,7 @@ import { createApp } from '../src/app';
 import type { Env, VideoBucket } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { createTestEnv, getPath, MEMBERSHIPS, readError, REQUIRED_DETAILS, sendJson, withSchedule } from './support/testApp';
+import { allowCarIn, createTestEnv, getPath, MEMBERSHIPS, readError, sendJson, withSchedule, crewDetails } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
 const HOUR = 60 * 60 * 1000;
@@ -102,12 +102,13 @@ describe('proteste', () => {
     env = { ...createTestEnv(), DISCORD_BOT_TOKEN: 'bot-token', PROTEST_VIDEOS: videos.bucket };
     handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }), discordFetch);
     const crews = [
-      { name: 'Vez Team Lime', number: 16, ...REQUIRED_DETAILS },
-      { name: 'Firestarter Project', number: 44, ...REQUIRED_DETAILS },
-      { name: 'GT Extreme Drivers', number: 26, ...REQUIRED_DETAILS },
-      { name: 'Team Kyoto', number: 8, championship: 'All Japan GT Championship', color: '#283593' },
+      { name: 'Vez Team Lime', number: 16, ...crewDetails(1) },
+      { name: 'Firestarter Project', number: 44, ...crewDetails(1) },
+      { name: 'GT Extreme Drivers', number: 26, ...crewDetails(1) },
+      { name: 'Team Kyoto', number: 8, ...crewDetails(1, 'All Japan GT Championship', '#283593') },
     ];
-    for (const crew of crews) await handleRequest(sendJson('POST', '/crews', { ...crew, carId: 1 }, 'token-director'), env);
+    await allowCarIn(env, 1, 'All Japan GT Championship');
+    for (const crew of crews) await handleRequest(sendJson('POST', '/crews', crew, 'token-director'), env);
     // Gare, con gli orari in ora italiana rispetto ad adesso:
     // 1 (FIE) è iniziata un'ora fa e finisce tra un'ora: proteste aperte;
     // 2 (FIE) è finita più di 48 ore fa: proteste chiuse; 4 (FIE) comincia domani: non ancora aperte;
@@ -174,14 +175,21 @@ describe('proteste', () => {
     expect(await siteRequest('GET', '/public/protests/form', 'site-vez')).toEqual({
       status: 200,
       body: {
-        crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' },
+        crew: { id: 1, number: 16, name: 'Vez Team Lime', championships: ['Cool1 FIE Championship'] },
         races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: romeLocal(-HOUR).date }],
         otherCrews: [
-          { id: 3, number: 26, name: 'GT Extreme Drivers', color: '#E10600' },
-          { id: 2, number: 44, name: 'Firestarter Project', color: '#E10600' },
+          { id: 3, number: 26, name: 'GT Extreme Drivers', color: '#E10600', championships: ['Cool1 FIE Championship'] },
+          { id: 2, number: 44, name: 'Firestarter Project', color: '#E10600', championships: ['Cool1 FIE Championship'] },
         ],
       },
     });
+    // Un equipaggio in due campionati vede le gare di entrambi e gli equipaggi di entrambi.
+    await env.CREWS_DB.prepare("INSERT INTO crew_championships (crew_id, championship, car_id) VALUES (1, 'All Japan GT Championship', 1)").run();
+    clearSiteMembersForTests();
+    const both = (await siteRequest('GET', '/public/protests/form', 'site-vez')).body as { races: { id: number }[]; otherCrews: { number: number }[] };
+    expect(both.races.map((race) => race.id).sort()).toEqual([1, 3]);
+    expect(both.otherCrews.map((crew) => crew.number)).toEqual([8, 26, 44]);
+    expect(await submit(protest({ raceId: 3, otherCrewIds: [4] }))).toMatchObject({ status: 201 });
     expect(await siteRequest('GET', '/public/protests/form', 'site-no-crew')).toMatchObject({ status: 422, body: { error: { code: 'no-crew-role' } } });
     expect((await siteRequest('GET', '/public/protests/form', '')).status).toBe(401);
   });
@@ -410,9 +418,9 @@ describe('ruoli dell’app: Direzione Gara e Commissari Sportivi', () => {
     expect(await status(getPath('/disconnection-tickets', 'token-steward'))).toBe(403);
     expect(await status(getPath('/crews', 'token-steward'))).toBe(200);
     expect(await status(getPath('/races', 'token-steward'))).toBe(200);
-    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-steward'))).toBe(403);
-    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-race-control'))).toBe(403);
-    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-organization'))).toBe(201);
+    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, ...crewDetails(1) }, 'token-steward'))).toBe(403);
+    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, ...crewDetails(1) }, 'token-race-control'))).toBe(403);
+    expect(await status(sendJson('POST', '/crews', { name: 'Alfa', number: 7, ...crewDetails(1) }, 'token-organization'))).toBe(201);
     expect(await status(getPath('/disconnection-tickets', 'token-organization'))).toBe(403);
     expect(await status(getPath('/protests', 'token-organization'))).toBe(403);
   });
@@ -420,8 +428,9 @@ describe('ruoli dell’app: Direzione Gara e Commissari Sportivi', () => {
   it('il Commissario salva solo i cambi pilota di una gara già creata; il salvataggio della gara intera non li tocca', async () => {
     const env = createTestEnv();
     const handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }));
-    await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-organization'), env);
-    await handleRequest(sendJson('POST', '/crews', { name: 'Kyoto', number: 8, carId: 1, championship: 'All Japan GT Championship', color: '#283593' }, 'token-organization'), env);
+    await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 7, ...crewDetails(1) }, 'token-organization'), env);
+    await allowCarIn(env, 1, 'All Japan GT Championship');
+    await handleRequest(sendJson('POST', '/crews', { name: 'Kyoto', number: 8, ...crewDetails(1, 'All Japan GT Championship', '#283593') }, 'token-organization'), env);
     const race = withSchedule({ championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-09-14', results: [{ position: 1, crewId: 1, laps: 30, gapMs: null }] });
     expect((await handleRequest(sendJson('POST', '/races', race, 'token-organization'), env)).status).toBe(201);
     const swap = { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 600_000, isCancelled: false, notes: 'Box' };

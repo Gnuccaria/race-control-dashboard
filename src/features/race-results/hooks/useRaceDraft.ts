@@ -1,4 +1,4 @@
-import type { CrewChampionship, SavedCrew } from '@shared/crewRules';
+import { type CrewChampionship, crewCarIn, type SavedCrew } from '@shared/crewRules';
 import { DRIVER_SWAP_NOTES_MAX_LENGTH, driverSwapCount, normalizeTimestampText, sanitizeTimestampInput } from '@shared/driverSwapRules';
 import {
   canPositionHaveGap,
@@ -44,7 +44,8 @@ const crewIdsWithRows = (driverSwap: DriverSwapValues): number[] =>
  */
 export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES, allCrews?: readonly SavedCrew[]) {
   const [values, setValues] = useState<RaceDraftValues>(initialValues);
-  const currentCarIdByCrewId = allCrews && new Map(allCrews.map((crew) => [crew.id, crew.carId]));
+  // Auto attuale di ogni equipaggio nel campionato della gara (senza campionato, nessuna).
+  const currentCarIdByCrewId = allCrews && new Map(allCrews.map((crew) => [crew.id, values.championship === '' ? null : crewCarIn(crew, values.championship)]));
   // Cambi pilota: tante tabelle quanti i cambi del campionato, una riga per equipaggio del campionato.
   // Finché gli equipaggi non sono letti si usano quelli che hanno già righe compilate.
   const championshipCrews = allCrews ? findChampionshipCrews(allCrews, values.championship) : [];

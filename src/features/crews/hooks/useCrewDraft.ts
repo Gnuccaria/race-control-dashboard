@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
-  type CrewChampionshipChoice,
+  CREW_CHAMPIONSHIPS,
+  type CrewChampionship,
   type CrewDraft,
   findCrewNameIssue,
   normalizeDiscordChannelId,
@@ -14,9 +15,8 @@ import {
 export interface CrewDraftValues {
   readonly name: string;
   readonly numberText: string;
-  /** Id dell'auto come testo (valore del menu); '' = non scelta. */
-  readonly carId: string;
-  readonly championship: CrewChampionshipChoice | '';
+  /** Campionati dell'equipaggio (anche nessuno), ognuno con l'id della sua auto come testo ('' = non scelta). */
+  readonly championships: readonly CrewChampionshipValues[];
   /** Esadecimale "#RRGGBB"; '' = nessun colore. */
   readonly color: string;
   /** ID (o link) del canale Discord dell'equipaggio; '' = nessun canale. */
@@ -25,13 +25,21 @@ export interface CrewDraftValues {
   readonly discordRoleId: string;
 }
 
-const EMPTY_VALUES: CrewDraftValues = { name: '', numberText: '', carId: '', championship: '', color: '', discordChannelId: '', discordRoleId: '' };
+export interface CrewChampionshipValues {
+  readonly championship: CrewChampionship;
+  readonly carId: string;
+}
+
+const EMPTY_VALUES: CrewDraftValues = { name: '', numberText: '', championships: [], color: '', discordChannelId: '', discordRoleId: '' };
+
+/** Campionati come li vuole il server: l'id dell'auto come numero ('' = mancante). */
+export const toCrewChampionships = (championships: readonly CrewChampionshipValues[]) =>
+  championships.map(({ championship, carId }) => ({ championship, carId: carId === '' ? '' : Number(carId) }));
 
 const toDraftValues = (crew: CrewDraft): CrewDraftValues => ({
   name: crew.name,
   numberText: String(crew.number),
-  carId: crew.carId === null ? '' : String(crew.carId),
-  championship: crew.championship ?? '',
+  championships: crew.championships.map(({ championship, carId }) => ({ championship, carId: carId === null ? '' : String(carId) })),
   color: crew.color ?? '',
   discordChannelId: crew.discordChannelId ?? '',
   discordRoleId: crew.discordRoleId ?? '',
@@ -50,12 +58,11 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
   const isChannelInvalid = values.discordChannelId.trim() !== '' && normalizeDiscordChannelId(values.discordChannelId) === null;
   // Anche il ruolo è facoltativo: vuoto va bene, altrimenti deve essere un ID o una menzione di ruolo.
   const isRoleInvalid = values.discordRoleId.trim() !== '' && normalizeDiscordRoleId(values.discordRoleId) === null;
-  // Tutti i campi sono obbligatori.
+  // Nome, numero e colore obbligatori; i campionati possono anche mancare, ma ognuno con la sua auto.
   const isComplete =
     nameIssue === null &&
     parseCrewNumber(values.numberText) !== null &&
-    values.carId !== '' &&
-    values.championship !== '' &&
+    values.championships.every((entry) => entry.carId !== '') &&
     values.color !== '' &&
     !isChannelInvalid &&
     !isRoleInvalid;
@@ -68,11 +75,28 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
     changeNumber: (typedValue: string) => {
       setValues((previousValues) => ({ ...previousValues, numberText: sanitizeCrewNumberInput(typedValue) }));
     },
-    changeCar: (carId: string) => {
-      setValues((previousValues) => ({ ...previousValues, carId }));
+    /** Aggiunge un campionato (senza auto), nell'ordine dei campionati. */
+    addChampionship: (championship: CrewChampionship) => {
+      setValues((previousValues) =>
+        previousValues.championships.some((entry) => entry.championship === championship)
+          ? previousValues
+          : {
+              ...previousValues,
+              championships: [...previousValues.championships, { championship, carId: '' }].sort(
+                (first, second) => CREW_CHAMPIONSHIPS.indexOf(first.championship) - CREW_CHAMPIONSHIPS.indexOf(second.championship),
+              ),
+            },
+      );
     },
-    changeChampionship: (championship: CrewChampionshipChoice) => {
-      setValues((previousValues) => ({ ...previousValues, championship }));
+    /** La X accanto al campionato: l'equipaggio esce da quel campionato. */
+    removeChampionship: (championship: CrewChampionship) => {
+      setValues((previousValues) => ({ ...previousValues, championships: previousValues.championships.filter((entry) => entry.championship !== championship) }));
+    },
+    changeChampionshipCar: (championship: CrewChampionship, carId: string) => {
+      setValues((previousValues) => ({
+        ...previousValues,
+        championships: previousValues.championships.map((entry) => (entry.championship === championship ? { ...entry, carId } : entry)),
+      }));
     },
     changeColor: (color: string) => {
       setValues((previousValues) => ({ ...previousValues, color }));
@@ -107,8 +131,7 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
       validateCrewDraft({
         name: values.name,
         number: parseCrewNumber(values.numberText),
-        carId: values.carId === '' ? '' : Number(values.carId),
-        championship: values.championship,
+        championships: toCrewChampionships(values.championships),
         color: values.color,
         discordChannelId: values.discordChannelId,
         discordRoleId: values.discordRoleId,

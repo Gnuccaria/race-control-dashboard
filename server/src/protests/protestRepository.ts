@@ -204,17 +204,25 @@ export async function attachProtestYoutube(database: SqlDatabase, protestId: num
   return row !== null;
 }
 
-/** Gli equipaggi di tutti i campionati (escluso il proprio), con campionato e colore: il sito li filtra per campionato. */
+/**
+ * Gli altri equipaggi dei campionati indicati (escluso il proprio), con colore e campionati: il sito mostra quelli
+ * del campionato della gara scelta.
+ */
 export async function listCrewsOfChampionships(
   database: SqlDatabase,
   championships: readonly string[],
   excludedCrewId: number,
-): Promise<(ProtestCrew & { readonly championship: string; readonly color: string | null })[]> {
+): Promise<(ProtestCrew & { readonly color: string | null; readonly championships: readonly string[] })[]> {
   const { results } = await database
-    .prepare('SELECT id, number, name, championship, color FROM crews WHERE championship IN (SELECT value FROM json_each(?)) AND id <> ? ORDER BY number')
+    .prepare(
+      `SELECT crews.id, crews.number, crews.name, crews.color, group_concat(crew_championships.championship, '|') AS championshipsText
+       FROM crews JOIN crew_championships ON crew_championships.crew_id = crews.id
+       WHERE crew_championships.championship IN (SELECT value FROM json_each(?)) AND crews.id <> ?
+       GROUP BY crews.id ORDER BY crews.number`,
+    )
     .bind(JSON.stringify(championships), excludedCrewId)
-    .all<ProtestCrew & { championship: string; color: string | null }>();
-  return results;
+    .all<ProtestCrew & { color: string | null; championshipsText: string }>();
+  return results.map(({ championshipsText, ...crew }) => ({ ...crew, championships: championshipsText.split('|') }));
 }
 
 /** Gli altri equipaggi di un campionato, tra cui scegliere quelli coinvolti (escluso il proprio), con il colore. */
@@ -224,7 +232,11 @@ export async function listChampionshipCrews(
   excludedCrewId: number,
 ): Promise<(ProtestCrew & { readonly color: string | null })[]> {
   const { results } = await database
-    .prepare('SELECT id, number, name, color FROM crews WHERE championship = ? AND id <> ? ORDER BY number')
+    .prepare(
+      `SELECT crews.id, crews.number, crews.name, crews.color FROM crews
+       JOIN crew_championships ON crew_championships.crew_id = crews.id AND crew_championships.championship = ?
+       WHERE crews.id <> ? ORDER BY crews.number`,
+    )
     .bind(championship, excludedCrewId)
     .all<ProtestCrew & { color: string | null }>();
   return results;
@@ -242,7 +254,7 @@ export async function countRecentProtestsBy(database: SqlDatabase, discordUserId
 }
 
 interface ProtestSubmission {
-  readonly crew: ProtestCrew & { readonly championship: string | null };
+  readonly crew: ProtestCrew;
   /** La gara scelta (ne copia il campionato nella protesta). */
   readonly race: ProtestRaceOption;
   readonly crewRoleId: string;

@@ -1,4 +1,4 @@
-import type { CrewChampionship, SavedCrew } from '@shared/crewRules';
+import { type CrewChampionship, isCrewInChampionship, type SavedCrew } from '@shared/crewRules';
 import type { DriverSwapEntry } from '@shared/driverSwapRules';
 import {
   canPositionHaveGap,
@@ -135,9 +135,9 @@ export const findPositionsMissingLaps = (values: RaceDraftValues): number[] =>
     crewId !== null && parseLaps(values.lapsTextByPosition[index] ?? '') === null ? [index + 1] : [],
   );
 
-/** Equipaggi selezionabili: solo quelli del campionato della gara, per numero. */
+/** Equipaggi selezionabili: solo quelli che partecipano al campionato della gara, per numero. */
 export const findChampionshipCrews = (crews: readonly SavedCrew[], championship: CrewChampionship | ''): SavedCrew[] =>
-  championship === '' ? [] : crews.filter((crew) => crew.championship === championship).sort((first, second) => first.number - second.number);
+  championship === '' ? [] : crews.filter((crew) => isCrewInChampionship(crew, championship)).sort((first, second) => first.number - second.number);
 
 /** Cambiando campionato si tolgono dalla classifica gli equipaggi che non vi partecipano. */
 export function keepChampionshipCrews(

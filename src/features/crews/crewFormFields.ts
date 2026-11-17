@@ -2,8 +2,8 @@
 export const CREW_FORM_FIELDS = {
   name: 'crewName',
   number: 'crewNumber',
-  carId: 'crewCarId',
-  championship: 'crewChampionship',
+  /** Campo nascosto con i campionati e le loro auto, in JSON. */
+  championships: 'crewChampionships',
   color: 'crewColor',
   discordChannelId: 'crewDiscordChannelId',
   discordRoleId: 'crewDiscordRoleId',

@@ -1,6 +1,6 @@
 import { type CrewDraft, validateCrewDraft } from '../../../shared/crewRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
-import { carExists } from '../cars/carRepository';
+import { isCarAvailableIn } from '../cars/carRepository';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
@@ -23,15 +23,17 @@ const conflictResponse = (conflict: Exclude<CrewConflict, null>) => errorRespons
 
 type CrewDraftReading = { readonly crew: CrewDraft } | { readonly errorResponse: Response };
 
-/** Corpo della richiesta → equipaggio convalidato con le stesse regole dell'app; l'auto deve esistere. */
+/** Corpo della richiesta → equipaggio convalidato con le stesse regole dell'app; ogni auto deve essere del suo campionato. */
 async function readCrewDraft(request: Request, database: SqlDatabase): Promise<CrewDraftReading> {
   const requestBody = await readJsonBody(request);
   if (requestBody === undefined) return { errorResponse: errorResponse(400, 'invalid-request') };
 
   const validation = validateCrewDraft(requestBody);
   if (!validation.isValid) return { errorResponse: errorResponse(422, 'invalid-crew', validation.issues) };
-  if (validation.crew.carId !== null && !(await carExists(database, validation.crew.carId))) {
-    return { errorResponse: errorResponse(422, 'invalid-crew', { carId: 'unknown-car' }) };
+  for (const { championship, carId } of validation.crew.championships) {
+    if (carId !== null && !(await isCarAvailableIn(database, carId, championship))) {
+      return { errorResponse: errorResponse(422, 'invalid-crew', { championships: 'unknown-car' }) };
+    }
   }
   return { crew: validation.crew };
 }

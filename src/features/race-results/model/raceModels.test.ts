@@ -84,12 +84,11 @@ describe('elenco gare', () => {
   });
 });
 
-const crew = (id: number, number: number, championship: SavedCrew['championship']): SavedCrew => ({
+const crew = (id: number, number: number, championship: SavedCrew['championships'][number]['championship'] | null): SavedCrew => ({
   id,
   name: `Team ${id}`,
   number,
-  carId: 1,
-  championship,
+  championships: championship === null ? [] : [{ championship, carId: 1 }],
   color: '#E10600',
   createdAt: '2026-11-13T00:00:00Z',
 });

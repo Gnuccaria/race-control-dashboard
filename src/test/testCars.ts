@@ -9,6 +9,8 @@ export const TEST_CARS: Car[] = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissa
   weightKg: null,
   limiter: null,
   ballastKg: null,
+  // Come dopo la migrazione 0027: tutte del Cool1 FIE; la Nissan anche dell'All Japan GT, per provare più campionati.
+  championships: manufacturer === 'Nissan' ? ['Cool1 FIE Championship', 'All Japan GT Championship'] : ['Cool1 FIE Championship'],
 }));
 
 export const testCarId = (manufacturer: string): number => TEST_CARS.find((car) => car.manufacturer === manufacturer)?.id ?? 0;

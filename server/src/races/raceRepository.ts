@@ -102,12 +102,12 @@ export async function listPublicRaceResults(database: SqlDatabase, raceId: numbe
   }));
 }
 
-/** Auto attuale di ogni equipaggio indicato (null se non ne ha una). */
-export async function findCrewCarIds(database: SqlDatabase, crewIds: readonly number[]): Promise<Map<number, number | null>> {
+/** Auto attuale di ogni equipaggio indicato nel campionato della gara (null se non ne ha una). */
+export async function findCrewCarIds(database: SqlDatabase, crewIds: readonly number[], championship: string): Promise<Map<number, number | null>> {
   if (crewIds.length === 0) return new Map();
   const { results } = await database
-    .prepare('SELECT id, car_id AS carId FROM crews WHERE id IN (SELECT value FROM json_each(?))')
-    .bind(JSON.stringify(crewIds))
+    .prepare('SELECT crew_id AS id, car_id AS carId FROM crew_championships WHERE crew_id IN (SELECT value FROM json_each(?)) AND championship = ?')
+    .bind(JSON.stringify(crewIds), championship)
     .all<{ id: number; carId: number | null }>();
   return new Map(results.map((crew) => [crew.id, crew.carId]));
 }
@@ -157,7 +157,7 @@ export async function hasCrewsOutside(database: SqlDatabase, championship: strin
   const crewIds = [...new Set(requestedCrewIds)];
   if (crewIds.length === 0) return false;
   const row = await database
-    .prepare('SELECT COUNT(*) AS validCount FROM crews WHERE id IN (SELECT value FROM json_each(?)) AND championship = ?')
+    .prepare('SELECT COUNT(*) AS validCount FROM crew_championships WHERE crew_id IN (SELECT value FROM json_each(?)) AND championship = ?')
     .bind(JSON.stringify(crewIds), championship)
     .first<{ validCount: number }>();
   return (row?.validCount ?? 0) !== crewIds.length;

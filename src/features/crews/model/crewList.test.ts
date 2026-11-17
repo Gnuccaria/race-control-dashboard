@@ -10,22 +10,26 @@ import {
   toggleCrewSort,
 } from './crewList';
 
-const crew = (
-  id: number,
-  name: string,
-  number: number,
-  carId: SavedCrew['carId'],
-  championship: SavedCrew['championship'],
-  color: SavedCrew['color'] = '#E10600',
-): SavedCrew => ({ id, name, number, carId, championship, color, createdAt: '2026-11-13T00:00:00Z' });
+const FIE = 'Cool1 FIE Championship';
+const JAPAN = 'All Japan GT Championship';
+
+const crew = (id: number, name: string, number: number, championships: SavedCrew['championships'], color: SavedCrew['color'] = '#E10600'): SavedCrew => ({
+  id,
+  name,
+  number,
+  championships,
+  color,
+  createdAt: '2026-11-13T00:00:00Z',
+});
 
 const CREWS: SavedCrew[] = [
-  crew(1, 'Sim Racing Café', 690, null, 'Cool1 FIE Championship'),
-  crew(2, 'GT Tribe Team Yellow', 20, 6, 'Cool1 FIE Championship'),
-  crew(3, 'alberto Ciola Racing', 67, 1, null),
-  crew(4, 'GT Tribe Team Purple', 21, 2, 'Cool1 FIE Championship'),
-  crew(5, 'Team 10', 120, null, null),
-  crew(6, 'Team 2', 2, 1, 'Cool1 FIE Championship'),
+  crew(1, 'Sim Racing Café', 690, [{ championship: FIE, carId: null }]),
+  crew(2, 'GT Tribe Team Yellow', 20, [{ championship: FIE, carId: 6 }]),
+  crew(3, 'alberto Ciola Racing', 67, [{ championship: JAPAN, carId: 1 }]),
+  crew(4, 'GT Tribe Team Purple', 21, [{ championship: FIE, carId: 2 }]),
+  // Nessun campionato.
+  crew(5, 'Team 10', 120, []),
+  crew(6, 'Team 2', 2, [{ championship: FIE, carId: 1 }]),
 ];
 
 const CAR_NAMES = new Map([
@@ -82,10 +86,15 @@ describe('filtri', () => {
     expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, searchText: '  ' }))).toHaveLength(6);
   });
 
-  it('filtra per auto e campionato, anche per dato mancante, combinando i filtri', () => {
+  it('filtra per auto e campionato (anche senza auto o senza campionati), combinando i filtri', () => {
     expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, carId: '1' }))).toEqual([67, 2]);
-    expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, carId: 'missing' }))).toEqual([690, 120]);
-    expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, championship: 'missing' }))).toEqual([67, 120]);
+    expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, carId: 'missing' }))).toEqual([690]);
+    expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, championship: 'missing' }))).toEqual([120]);
+    expect(numbersOf(filterCrews(CREWS, { ...EMPTY_CREW_FILTERS, championship: JAPAN }))).toEqual([67]);
+    // Un equipaggio in due campionati compare filtrando per l'uno o per l'altro, e per l'auto di ognuno.
+    const both = crew(7, 'Doppio', 7, [{ championship: FIE, carId: 2 }, { championship: JAPAN, carId: 5 }]);
+    expect(numbersOf(filterCrews([both], { ...EMPTY_CREW_FILTERS, championship: FIE }))).toEqual([7]);
+    expect(numbersOf(filterCrews([both], { ...EMPTY_CREW_FILTERS, championship: JAPAN, carId: '5' }))).toEqual([7]);
     expect(numbersOf(filterCrews(CREWS, { searchText: 'team', carId: '1', championship: 'Cool1 FIE Championship' }))).toEqual([2]);
   });
 
@@ -96,7 +105,9 @@ describe('filtri', () => {
 });
 
 it('elenca i dati mancanti di un equipaggio', () => {
-  expect(findMissingCrewFields(CREWS[4] as SavedCrew)).toEqual(['car', 'championship']);
+  // Un campionato senza auto; nessun campionato non è un dato mancante.
+  expect(findMissingCrewFields(CREWS[0] as SavedCrew)).toEqual(['car']);
+  expect(findMissingCrewFields(CREWS[4] as SavedCrew)).toEqual([]);
   expect(findMissingCrewFields(CREWS[1] as SavedCrew)).toEqual([]);
   expect(findMissingCrewFields({ ...(CREWS[1] as SavedCrew), color: null })).toEqual(['color']);
 });

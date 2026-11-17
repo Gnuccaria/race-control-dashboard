@@ -79,9 +79,11 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
 
   const crewValue =
     formState.status === 'ready' ? `#${formState.data.crew.number} ${formState.data.crew.name}` : formState.status === 'loading' ? crewTexts.crewLoading : '';
-  // Gare del campionato dell'equipaggio che accettano proteste; gli altri equipaggi sono quelli dello stesso campionato.
+  // Gare dei campionati dell'equipaggio con le proteste aperte; gli altri equipaggi sono quelli del campionato della gara scelta.
   const races = formState.status === 'ready' ? formState.data.races : [];
-  const otherCrews = formState.status === 'ready' ? formState.data.otherCrews : [];
+  const selectedRace = races.find((race) => String(race.id) === values.raceId);
+  const otherCrews =
+    formState.status === 'ready' && selectedRace ? formState.data.otherCrews.filter((crew) => crew.championships.includes(selectedRace.championship)) : [];
   const raceOptionLabel = (race: (typeof races)[number]) =>
     `${race.name ?? messages.races.raceLabel(race.round, race.championship)} · ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(`${race.raceDate}T12:00:00`))}`;
   const isDescriptionCounterVisible = check.remainingCharacters <= PROTEST_DESCRIPTION_COUNTER_FROM;
@@ -122,7 +124,10 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
                 value={values.raceId}
                 options={races.map((race) => ({ value: String(race.id), label: raceOptionLabel(race) }))}
                 disabled={races.length === 0}
-                onValueChange={(raceId) => change('raceId', raceId)}
+                onValueChange={(raceId) => {
+                  // Cambiando gara (e magari campionato) gli equipaggi scelti si tolgono.
+                  setValues((previousValues) => ({ ...previousValues, raceId, otherCrewIds: [] }));
+                }}
               />
             )}
           </FormField>

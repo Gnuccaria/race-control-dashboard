@@ -2,8 +2,8 @@ import {
   type CrewDraft,
   CHAMPIONSHIP_FORMER_NAMES,
   CREW_CHAMPIONSHIPS,
-  type CrewChampionshipChoice,
-  NO_CHAMPIONSHIP,
+  type CrewChampionship,
+  type CrewChampionshipEntry,
   CREW_NAME_MAX_LENGTH,
   toCrewNameKey,
   validateCrewDraft,
@@ -13,8 +13,16 @@ import { findExtraCellsProblem, type ImportProblem, normalizeHeader, parseCsv, r
 
 export { parseCsv };
 
-/** Auto conosciute dal database: le auto del CSV vengono cercate per nome qui dentro. */
-export type ImportableCar = Pick<Car, 'id' | 'manufacturer' | 'model'>;
+/** Auto conosciute dal database: le auto del CSV vengono cercate per nome qui dentro, tra quelle del campionato. */
+export type ImportableCar = Pick<Car, 'id' | 'manufacturer' | 'model' | 'championships'>;
+
+/**
+ * Cosa fa una riga ai campionati di un equipaggio già salvato:
+ * - merge: aggiunge (o aggiorna) il campionato della riga, con la sua auto, e tiene gli altri;
+ * - keep: campionato vuoto nel file, restano quelli salvati;
+ * - clear: "Nessuno", l'equipaggio esce da tutti i campionati.
+ */
+export type ChampionshipMode = 'merge' | 'keep' | 'clear';
 
 /**
  * Importazione di equipaggi da CSV: lettura del file, controllo di ogni riga con le stesse
@@ -25,9 +33,12 @@ export type ImportableCar = Pick<Car, 'id' | 'manufacturer' | 'model'>;
 export type CrewImportProblem = ImportProblem;
 
 export interface CrewImportPlan {
+  /** Ogni riga ha al massimo un campionato (con la sua auto). */
   readonly crews: readonly CrewDraft[];
   /** Riga del file di ogni equipaggio (stesso ordine di crews). */
   readonly lines: readonly number[];
+  /** Cosa fa ogni riga ai campionati già salvati (stesso ordine di crews). */
+  readonly championshipModes: readonly ChampionshipMode[];
   readonly problems: readonly CrewImportProblem[];
 }
 
@@ -36,8 +47,7 @@ export interface ExistingCrew {
   readonly id: number;
   readonly name: string;
   readonly number: number;
-  readonly carId: number | null;
-  readonly championship: string | null;
+  readonly championships: readonly CrewChampionshipEntry[];
   readonly color: string | null;
   readonly usageCount: number;
 }
@@ -45,7 +55,7 @@ export interface ExistingCrew {
 export interface CrewSyncPlan {
   readonly problems: readonly CrewImportProblem[];
   readonly inserts: readonly CrewDraft[];
-  /** draft = dati finali: auto, campionato e colore vuoti nel file restano quelli già salvati. */
+  /** draft = dati finali: colore vuoto nel file resta quello salvato; campionati secondo ChampionshipMode. */
   readonly updates: readonly { readonly existing: ExistingCrew; readonly draft: CrewDraft }[];
   readonly deletes: readonly ExistingCrew[];
   /** Assenti dal file ma presenti in qualche ordine di arrivo: restano. */
@@ -95,9 +105,9 @@ const findCarId = (rawCar: string, cars: readonly ImportableCar[]): number | und
 const NO_CHAMPIONSHIP_ALIASES = ['none', 'nessuno', 'nessun campionato'];
 
 /** Stesso principio per il campionato, che si riconosce anche con il nome precedente ("FIE Cool1") o come "Nessuno". */
-function matchCrewChampionship(rawChampionship: string): CrewChampionshipChoice | undefined {
+function matchCrewChampionship(rawChampionship: string): CrewChampionship | 'none' | undefined {
   const championshipKey = rawChampionship.trim().replace(/\s+/g, ' ').toLowerCase();
-  if (NO_CHAMPIONSHIP_ALIASES.includes(championshipKey)) return NO_CHAMPIONSHIP;
+  if (NO_CHAMPIONSHIP_ALIASES.includes(championshipKey)) return 'none';
   return (
     CREW_CHAMPIONSHIPS.find((championship) => championship.toLowerCase() === championshipKey) ??
     CHAMPIONSHIP_FORMER_NAMES[championshipKey]
@@ -114,7 +124,7 @@ const NAME_ISSUE_MESSAGES = {
 export function planCrewImport(csvText: string, cars: readonly ImportableCar[]): CrewImportPlan {
   const rows = parseCsv(csvText);
   const [firstRow] = rows;
-  if (!firstRow) return { crews: [], lines: [], problems: [{ line: 1, message: 'il file è vuoto' }] };
+  if (!firstRow) return { crews: [], lines: [], championshipModes: [], problems: [{ line: 1, message: 'il file è vuoto' }] };
 
   const headerPositions = findColumnPositions(firstRow.cells);
   const columnPositions = headerPositions ?? DEFAULT_COLUMN_POSITIONS;
@@ -122,6 +132,7 @@ export function planCrewImport(csvText: string, cars: readonly ImportableCar[]):
 
   const crews: CrewDraft[] = [];
   const lines: number[] = [];
+  const championshipModes: ChampionshipMode[] = [];
   const problems: CrewImportProblem[] = [];
   const lineByNumber = new Map<number, number>();
   const lineByNameKey = new Map<string, number>();
@@ -140,26 +151,35 @@ export function planCrewImport(csvText: string, cars: readonly ImportableCar[]):
       continue;
     }
 
+    // Campionato della riga: uno (con l'auto, che deve essere di quel campionato), "Nessuno" o vuoto.
+    const championship = rawChampionship === '' ? undefined : matchCrewChampionship(rawChampionship);
+    const championshipCars = championship && championship !== 'none' ? cars.filter((car) => car.championships.includes(championship)) : [];
+    const carId = rawCar === '' ? null : findCarId(rawCar, championshipCars);
+    const championshipProblem =
+      rawChampionship !== '' && championship === undefined
+        ? `campionato "${rawChampionship}" non riconosciuto (ammessi: ${CREW_CHAMPIONSHIPS.join(', ')}, Nessuno, oppure vuoto)`
+        : rawCar !== '' && (championship === undefined || championship === 'none')
+          ? `auto "${rawCar}" senza campionato: l'auto vale per un campionato, indicalo nella stessa riga`
+          : rawCar !== '' && carId === undefined
+            ? `auto "${rawCar}" non disponibile nel ${String(championship)} (ammesse: ${championshipCars.map(formatCarName).join(', ') || 'nessuna'}, oppure vuota)`
+            : undefined;
+
     const validation = validateCrewDraft(
       {
         name: rawName,
         number: /^\d{1,3}$/.test(rawNumber) ? Number(rawNumber) : null,
-        // Auto non trovata: un valore non valido fa scattare il messaggio con l'elenco delle auto ammesse.
-        carId: rawCar === '' ? null : (findCarId(rawCar, cars) ?? 'unknown'),
-        championship: matchCrewChampionship(rawChampionship) ?? rawChampionship,
+        championships: championship && championship !== 'none' && carId !== undefined ? [{ championship, carId }] : [],
         color: rawColor,
       },
       { areDetailsRequired: false },
     );
 
-    if (!validation.isValid) {
-      const { issues } = validation;
+    if (!validation.isValid || championshipProblem) {
+      const issues = validation.isValid ? {} : validation.issues;
       const reasons = [
         issues.name && NAME_ISSUE_MESSAGES[issues.name],
         issues.number && `numero "${rawNumber}" non valido (serve un intero da 0 a 999)`,
-        issues.carId && `auto "${rawCar}" non riconosciuta (ammesse: ${cars.map(formatCarName).join(', ')}, oppure vuota)`,
-        issues.championship &&
-          `campionato "${rawChampionship}" non riconosciuto (ammessi: ${CREW_CHAMPIONSHIPS.join(', ')}, Nessuno, oppure vuoto)`,
+        championshipProblem,
         issues.color && `colore "${rawColor}" non valido (serve un esadecimale a 6 cifre, es. #E10600, oppure vuoto)`,
       ].filter(Boolean);
       problems.push({ line, message: `${rowLabel}: ${reasons.join('; ')}` });
@@ -183,10 +203,11 @@ export function planCrewImport(csvText: string, cars: readonly ImportableCar[]):
     else {
       crews.push(crew);
       lines.push(line);
+      championshipModes.push(championship === undefined ? 'keep' : championship === 'none' ? 'clear' : 'merge');
     }
   }
 
-  return { crews, lines, problems };
+  return { crews, lines, championshipModes, problems };
 }
 
 /**
@@ -198,10 +219,10 @@ export function planCrewImport(csvText: string, cars: readonly ImportableCar[]):
  */
 export function planCrewSync(plan: CrewImportPlan, existingCrews: readonly ExistingCrew[]): CrewSyncPlan {
   const unmatched = new Set(existingCrews);
-  const matches: { existing: ExistingCrew | undefined; draft: CrewDraft; line: number }[] = plan.crews.map((draft, index) => {
+  const matches: { existing: ExistingCrew | undefined; draft: CrewDraft; line: number; mode: ChampionshipMode }[] = plan.crews.map((draft, index) => {
     const existing = existingCrews.find((crew) => unmatched.has(crew) && crew.number === draft.number);
     if (existing) unmatched.delete(existing);
-    return { existing, draft, line: plan.lines[index] ?? 0 };
+    return { existing, draft, line: plan.lines[index] ?? 0, mode: plan.championshipModes[index] ?? 'merge' };
   });
   for (const match of matches) {
     if (match.existing) continue;
@@ -231,32 +252,38 @@ export function planCrewSync(plan: CrewImportPlan, existingCrews: readonly Exist
     }
   }
 
-  const updates = matches.flatMap(({ existing, draft }) =>
-    existing
-      ? [
-          {
-            existing,
-            draft: {
-              ...draft,
-              carId: draft.carId ?? existing.carId,
-              championship: draft.championship ?? (existing.championship as CrewDraft['championship']),
-              color: draft.color ?? existing.color,
-            },
-          },
-        ]
-      : [],
+  const updates = matches.flatMap(({ existing, draft, mode }) =>
+    existing ? [{ existing, draft: { ...draft, championships: mergeChampionships(existing.championships, draft.championships, mode), color: draft.color ?? existing.color } }] : [],
   );
   const inserts = matches.filter((match) => !match.existing).map((match) => match.draft);
   return { problems, inserts, updates, deletes, kept };
 }
 
-/** Un INSERT per equipaggio. I valori sono già convalidati, ma vengono comunque protetti come testo SQL. */
+/** Campionati finali di un equipaggio già salvato: quello della riga sostituisce lo stesso campionato (auto vuota = resta quella salvata). */
+function mergeChampionships(saved: readonly CrewChampionshipEntry[], fromFile: readonly CrewChampionshipEntry[], mode: ChampionshipMode): CrewChampionshipEntry[] {
+  if (mode === 'clear') return [];
+  if (mode === 'keep') return [...saved];
+  const merged = saved.filter((entry) => !fromFile.some((fileEntry) => fileEntry.championship === entry.championship));
+  for (const fileEntry of fromFile) {
+    const savedCar = saved.find((entry) => entry.championship === fileEntry.championship)?.carId ?? null;
+    merged.push({ championship: fileEntry.championship, carId: fileEntry.carId ?? savedCar });
+  }
+  return CREW_CHAMPIONSHIPS.flatMap((championship) => merged.filter((entry) => entry.championship === championship));
+}
+
+/** Campionati di un equipaggio; crewIdSql = espressione SQL che dà l'id dell'equipaggio. */
+const championshipInsertSql = (crewIdSql: string, crew: CrewDraft) =>
+  crew.championships.map(
+    ({ championship, carId }) => `INSERT INTO crew_championships (crew_id, championship, car_id) VALUES (${crewIdSql}, ${toSqlText(championship)}, ${carId ?? 'NULL'});`,
+  );
+
+/** Un INSERT per equipaggio, più i suoi campionati. I valori sono già convalidati, ma vengono comunque protetti come testo SQL. */
 export function buildCrewInsertSql(crews: readonly CrewDraft[], importedBy: string): string {
   return crews
-    .map(
-      (crew) =>
-        `INSERT INTO crews (name, name_key, number, car_id, championship, color, created_by_discord_id) VALUES (${toSqlText(crew.name)}, ${toSqlText(toCrewNameKey(crew.name))}, ${crew.number}, ${crew.carId ?? 'NULL'}, ${toSqlText(crew.championship)}, ${toSqlText(crew.color)}, ${toSqlText(importedBy)});`,
-    )
+    .flatMap((crew) => [
+      `INSERT INTO crews (name, name_key, number, color, created_by_discord_id) VALUES (${toSqlText(crew.name)}, ${toSqlText(toCrewNameKey(crew.name))}, ${crew.number}, ${toSqlText(crew.color)}, ${toSqlText(importedBy)});`,
+      ...championshipInsertSql(`(SELECT id FROM crews WHERE number = ${crew.number})`, crew),
+    ])
     .join('\n');
 }
 
@@ -267,13 +294,18 @@ export function buildCrewInsertSql(crews: readonly CrewDraft[], importedBy: stri
  */
 export function buildCrewSyncSql(sync: CrewSyncPlan, importedBy: string): string {
   const statements: string[] = [];
-  if (sync.deletes.length > 0) statements.push(`DELETE FROM crews WHERE id IN (${sync.deletes.map((crew) => crew.id).join(', ')});`);
+  if (sync.deletes.length > 0) {
+    const deletedIds = sync.deletes.map((crew) => crew.id).join(', ');
+    statements.push(`DELETE FROM crew_championships WHERE crew_id IN (${deletedIds});`, `DELETE FROM crews WHERE id IN (${deletedIds});`);
+  }
   if (sync.updates.length > 0) {
     statements.push(`UPDATE crews SET name_key = '~' || id WHERE id IN (${sync.updates.map(({ existing }) => existing.id).join(', ')});`);
   }
   for (const { existing, draft } of sync.updates) {
     statements.push(
-      `UPDATE crews SET name = ${toSqlText(draft.name)}, name_key = ${toSqlText(toCrewNameKey(draft.name))}, number = ${draft.number}, car_id = ${draft.carId ?? 'NULL'}, championship = ${toSqlText(draft.championship)}, color = ${toSqlText(draft.color)} WHERE id = ${existing.id};`,
+      `UPDATE crews SET name = ${toSqlText(draft.name)}, name_key = ${toSqlText(toCrewNameKey(draft.name))}, number = ${draft.number}, color = ${toSqlText(draft.color)} WHERE id = ${existing.id};`,
+      `DELETE FROM crew_championships WHERE crew_id = ${existing.id};`,
+      ...championshipInsertSql(String(existing.id), draft),
     );
   }
   const insertSql = buildCrewInsertSql(sync.inserts, importedBy);

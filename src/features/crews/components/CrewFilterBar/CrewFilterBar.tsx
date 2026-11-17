@@ -1,4 +1,4 @@
-import { CREW_CHAMPIONSHIP_CHOICES, NO_CHAMPIONSHIP } from '@shared/crewRules';
+import { CREW_CHAMPIONSHIPS } from '@shared/crewRules';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
@@ -25,11 +25,9 @@ export function CrewFilterBar({ filters, onFiltersChange, carCatalog }: CrewFilt
   ];
   const championshipOptions: { value: CrewFilters['championship']; label: string }[] = [
     { value: '', label: listTexts.allChampionships },
-    ...CREW_CHAMPIONSHIP_CHOICES.map((championship) => ({
-      value: championship,
-      label: championship === NO_CHAMPIONSHIP ? messages.crews.noChampionship : championship,
-    })),
-    { value: MISSING_VALUE_FILTER, label: messages.crews.championshipNone },
+    ...CREW_CHAMPIONSHIPS.map((championship) => ({ value: championship, label: championship })),
+    // Equipaggi che non partecipano a nessun campionato.
+    { value: MISSING_VALUE_FILTER, label: messages.crews.noChampionships },
   ];
 
   return (

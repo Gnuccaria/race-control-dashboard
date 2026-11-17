@@ -18,3 +18,9 @@
 .colorDot[data-empty] {
   border: 1.5px dashed var(--color-border-strong);
 }
+
+/* Più campionati: uno per riga, con l'auto alla stessa altezza nella colonna Auto. */
+.stackedValues {
+  display: grid;
+  gap: var(--space-1);
+}

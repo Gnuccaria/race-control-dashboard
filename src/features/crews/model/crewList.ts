@@ -1,4 +1,4 @@
-import type { CrewChampionshipChoice, SavedCrew } from '@shared/crewRules';
+import type { CrewChampionship, SavedCrew } from '@shared/crewRules';
 import { type SortState, toggleSort } from '@/lib/sorting';
 
 /** Logica pura dell'elenco equipaggi: filtri, ordinamento e dati mancanti. Nessuna dipendenza da React. */
@@ -13,16 +13,16 @@ export const DEFAULT_CREW_SORT: CrewSort = { column: 'number', direction: 'ascen
 export const toggleCrewSort = (currentSort: CrewSort, clickedColumn: CrewSortColumn): CrewSort =>
   toggleSort(currentSort, clickedColumn);
 
-/** Valore speciale dei filtri per gli equipaggi a cui manca quel dato. */
+/** Valore speciale dei filtri: auto mancante in qualche campionato, oppure nessun campionato. */
 export const MISSING_VALUE_FILTER = 'missing';
 
 export interface CrewFilters {
   /** Testo libero: cerca nel numero e nel nome. */
   readonly searchText: string;
-  /** Id dell'auto come testo; '' = tutte. */
+  /** Id dell'auto come testo (in uno qualsiasi dei campionati); '' = tutte. */
   readonly carId: string;
-  /** '' = tutti. */
-  readonly championship: CrewChampionshipChoice | typeof MISSING_VALUE_FILTER | '';
+  /** Campionato a cui partecipa; MISSING_VALUE_FILTER = nessun campionato; '' = tutti. */
+  readonly championship: CrewChampionship | typeof MISSING_VALUE_FILTER | '';
 }
 
 export const EMPTY_CREW_FILTERS: CrewFilters = { searchText: '', carId: '', championship: '' };
@@ -39,10 +39,18 @@ const toSearchKey = (text: string): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
-function matchesOptionFilter<Value extends string>(crewValue: Value | null, filterValue: Value | string): boolean {
-  if (filterValue === '') return true;
-  if (filterValue === MISSING_VALUE_FILTER) return crewValue === null;
-  return crewValue === filterValue;
+/** Auto: un'auto qualsiasi dei suoi campionati; "mancante" = qualche campionato senza auto. */
+function matchesCarFilter(crew: SavedCrew, carFilter: string): boolean {
+  if (carFilter === '') return true;
+  if (carFilter === MISSING_VALUE_FILTER) return crew.championships.some((entry) => entry.carId === null);
+  return crew.championships.some((entry) => String(entry.carId) === carFilter);
+}
+
+/** Campionato: vi partecipa; "nessuno" = nessun campionato. */
+function matchesChampionshipFilter(crew: SavedCrew, championshipFilter: CrewFilters['championship']): boolean {
+  if (championshipFilter === '') return true;
+  if (championshipFilter === MISSING_VALUE_FILTER) return crew.championships.length === 0;
+  return crew.championships.some((entry) => entry.championship === championshipFilter);
 }
 
 /** Applica tutti i filtri insieme; la ricerca trova il testo dentro il numero o dentro il nome. */
@@ -51,8 +59,8 @@ export function filterCrews(crews: readonly SavedCrew[], filters: CrewFilters): 
   return crews.filter(
     (crew) =>
       (searchKey === '' || String(crew.number).includes(searchKey) || toSearchKey(crew.name).includes(searchKey)) &&
-      matchesOptionFilter(crew.carId === null ? null : String(crew.carId), filters.carId) &&
-      matchesOptionFilter(crew.championship, filters.championship),
+      matchesCarFilter(crew, filters.carId) &&
+      matchesChampionshipFilter(crew, filters.championship),
   );
 }
 
@@ -74,8 +82,14 @@ export function sortCrews(
   const compareColumn = (first: SavedCrew, second: SavedCrew): number => {
     if (column === 'number') return (first.number - second.number) * directionFactor;
 
-    const textValue = (crew: SavedCrew) =>
-      column === 'car' ? (crew.carId === null ? null : (carNameById.get(crew.carId) ?? null)) : crew[column];
+    // Più campionati: conta il primo (e la sua auto).
+    const textValue = (crew: SavedCrew): string | null => {
+      if (column === 'name') return crew.name;
+      const [firstEntry] = crew.championships;
+      if (!firstEntry) return null;
+      if (column === 'championship') return firstEntry.championship;
+      return firstEntry.carId === null ? null : (carNameById.get(firstEntry.carId) ?? null);
+    };
     const firstValue = textValue(first);
     const secondValue = textValue(second);
     if (firstValue === null || secondValue === null) {
@@ -88,13 +102,12 @@ export function sortCrews(
   return [...crews].sort((first, second) => compareColumn(first, second) || first.number - second.number);
 }
 
-export type MissingCrewField = 'car' | 'championship' | 'color';
+export type MissingCrewField = 'car' | 'color';
 
-/** Campi facoltativi ancora vuoti (es. equipaggi importati da CSV): mostrano l'avviso nell'elenco. */
+/** Dati ancora vuoti (es. equipaggi importati da CSV): un campionato senza auto, il colore. Mostrano l'avviso nell'elenco. */
 export function findMissingCrewFields(crew: SavedCrew): MissingCrewField[] {
   const missingFields: MissingCrewField[] = [];
-  if (crew.carId === null) missingFields.push('car');
-  if (crew.championship === null) missingFields.push('championship');
+  if (crew.championships.some((entry) => entry.carId === null)) missingFields.push('car');
   if (crew.color === null) missingFields.push('color');
   return missingFields;
 }

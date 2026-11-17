@@ -54,7 +54,7 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
   }
 
   const savedResults = excludedRaceId === undefined ? [] : await listRaceResults(database, excludedRaceId);
-  const currentCarIds = await findCrewCarIds(database, race.results.map((result) => result.crewId));
+  const currentCarIds = await findCrewCarIds(database, race.results.map((result) => result.crewId), race.championship);
   const { carIdByPosition, positionsWithoutCar } = resolveResultCars(race.results, savedResults, currentCarIds);
   if (positionsWithoutCar.length > 0) {
     return { errorResponse: errorResponse(422, 'invalid-race', { results: 'crew-without-car', positions: positionsWithoutCar }) };

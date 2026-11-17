@@ -1,4 +1,4 @@
-import { type CrewDraft, type SavedCrew, toCrewNameKey } from '../../../shared/crewRules';
+import { CREW_CHAMPIONSHIPS, type CrewChampionshipEntry, type CrewDraft, isCrewChampionship, type SavedCrew, toCrewNameKey } from '../../../shared/crewRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
 export type CrewConflict = 'number' | 'name' | 'role' | null;
@@ -7,22 +7,36 @@ interface CrewRow {
   readonly id: number;
   readonly name: string;
   readonly number: number;
-  readonly car_id: number | null;
-  readonly championship: CrewDraft['championship'];
+  /** Campionati con l'auto, come elenco JSON (crew_championships). */
+  readonly championships_json: string | null;
   readonly color: string | null;
   readonly discord_channel_id: string | null;
   readonly discord_role_id: string | null;
   readonly created_at: string;
 }
 
-const CREW_COLUMNS = 'id, name, number, car_id, championship, color, discord_channel_id, discord_role_id, created_at';
+const CREW_COLUMNS = `id, name, number, color, discord_channel_id, discord_role_id, created_at,
+  (SELECT json_group_array(json_object('championship', championship, 'carId', car_id))
+   FROM crew_championships WHERE crew_championships.crew_id = crews.id) AS championships_json`;
+
+/** Campionati dal JSON del database, nell'ordine di CREW_CHAMPIONSHIPS (si scartano quelli non più previsti). */
+function readChampionships(json: string | null): CrewChampionshipEntry[] {
+  try {
+    const entries = JSON.parse(json ?? '[]') as { championship?: unknown; carId?: unknown }[];
+    return CREW_CHAMPIONSHIPS.flatMap((championship) => {
+      const entry = entries.find((candidate) => isCrewChampionship(candidate.championship) && candidate.championship === championship);
+      return entry ? [{ championship, carId: typeof entry.carId === 'number' ? entry.carId : null }] : [];
+    });
+  } catch {
+    return [];
+  }
+}
 
 const toSavedCrew = (row: CrewRow): SavedCrew => ({
   id: row.id,
   name: row.name,
   number: row.number,
-  carId: row.car_id,
-  championship: row.championship,
+  championships: readChampionships(row.championships_json),
   color: row.color,
   discordChannelId: row.discord_channel_id,
   discordRoleId: row.discord_role_id,
@@ -64,32 +78,44 @@ export async function findCrewConflict(database: SqlDatabase, crew: CrewDraft, e
   return sameRole ? 'role' : null;
 }
 
-export async function insertCrew(database: SqlDatabase, crew: CrewDraft, createdByDiscordId: string): Promise<SavedCrew> {
-  const insertedRow = await database
-    .prepare(
-      `INSERT INTO crews (name, name_key, number, car_id, championship, color, discord_channel_id, discord_role_id, created_by_discord_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       RETURNING ${CREW_COLUMNS}`,
-    )
-    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, createdByDiscordId)
-    .first<CrewRow>();
+/** Campionati dell'equipaggio come un solo parametro JSON: D1 limita il numero di parametri per query. */
+const toChampionshipsJson = (crew: CrewDraft) => JSON.stringify(crew.championships);
 
+/** Inserisce i campionati dell'equipaggio; crewIdSql = espressione SQL che dà l'id dell'equipaggio. */
+const insertChampionshipsSql = (crewIdSql: string) =>
+  `INSERT INTO crew_championships (crew_id, championship, car_id)
+   SELECT ${crewIdSql}, json_extract(value, '$.championship'), json_extract(value, '$.carId') FROM json_each(?)`;
+
+/** Equipaggio e campionati in un'unica transazione. */
+export async function insertCrew(database: SqlDatabase, crew: CrewDraft, createdByDiscordId: string): Promise<SavedCrew> {
+  await database.batch([
+    database
+      .prepare(
+        `INSERT INTO crews (name, name_key, number, color, discord_channel_id, discord_role_id, created_by_discord_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, createdByDiscordId),
+    // L'equipaggio appena inserito si ritrova dal numero, che è unico.
+    database.prepare(insertChampionshipsSql('(SELECT id FROM crews WHERE number = ?)')).bind(crew.number, toChampionshipsJson(crew)),
+  ]);
+  const insertedRow = await database.prepare(`SELECT ${CREW_COLUMNS} FROM crews WHERE number = ?`).bind(crew.number).first<CrewRow>();
   if (!insertedRow) throw new Error('Il database non ha restituito l’equipaggio inserito.');
   return toSavedCrew(insertedRow);
 }
 
-/** Aggiorna l'equipaggio; null se non esiste. */
+/** Aggiorna l'equipaggio e sostituisce i suoi campionati, in un'unica transazione; null se non esiste. */
 export async function updateCrew(database: SqlDatabase, crewId: number, crew: CrewDraft): Promise<SavedCrew | null> {
-  const updatedRow = await database
-    .prepare(
-      `UPDATE crews SET name = ?, name_key = ?, number = ?, car_id = ?, championship = ?, color = ?, discord_channel_id = ?,
-         discord_role_id = ?
-       WHERE id = ?
-       RETURNING ${CREW_COLUMNS}`,
-    )
-    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, crewId)
-    .first<CrewRow>();
-  return updatedRow ? toSavedCrew(updatedRow) : null;
+  await database.batch([
+    database
+      .prepare(
+        `UPDATE crews SET name = ?, name_key = ?, number = ?, color = ?, discord_channel_id = ?, discord_role_id = ?
+         WHERE id = ?`,
+      )
+      .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, crewId),
+    database.prepare('DELETE FROM crew_championships WHERE crew_id = ?').bind(crewId),
+    database.prepare(insertChampionshipsSql('?')).bind(crewId, toChampionshipsJson(crew)),
+  ]);
+  return findCrewById(database, crewId);
 }
 
 /**
@@ -98,11 +124,12 @@ export async function updateCrew(database: SqlDatabase, crewId: number, crew: Cr
  * Restituisce quanti equipaggi sono stati davvero eliminati (id inesistenti vengono ignorati).
  */
 export async function deleteCrews(database: SqlDatabase, crewIds: readonly number[]): Promise<number> {
-  const { results } = await database
-    .prepare('DELETE FROM crews WHERE id IN (SELECT value FROM json_each(?)) RETURNING id')
-    .bind(JSON.stringify(crewIds))
-    .all<{ id: number }>();
-  return results.length;
+  const idsJson = JSON.stringify(crewIds);
+  const [, deleted] = await database.batch<{ id: number }>([
+    database.prepare('DELETE FROM crew_championships WHERE crew_id IN (SELECT value FROM json_each(?))').bind(idsJson),
+    database.prepare('DELETE FROM crews WHERE id IN (SELECT value FROM json_each(?)) RETURNING id').bind(idsJson),
+  ]);
+  return deleted?.results.length ?? 0;
 }
 
 /**

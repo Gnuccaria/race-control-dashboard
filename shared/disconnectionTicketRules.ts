@@ -53,12 +53,12 @@ export interface DisconnectionTicket extends DisconnectionTicketDraft {
   readonly createdAt: string;
 }
 
-/** Equipaggio che si può scegliere nel ticket. */
+/** Equipaggio di chi manda un ticket o una protesta, con i campionati a cui partecipa (almeno uno). */
 export interface TicketCrewOption {
   readonly id: number;
   readonly number: number;
   readonly name: string;
-  readonly championship: string;
+  readonly championships: readonly string[];
 }
 
 export interface DisconnectionTicketIssues {
