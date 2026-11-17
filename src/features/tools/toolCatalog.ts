@@ -6,6 +6,8 @@ import { RACE_BRIEFING_TOOL_INFO, WEATHER_PATTERN_TOOL_INFO } from '@/features/d
 import { WeatherPatternIcon } from '@/features/documentation/WeatherPatternIcon';
 import { CreateChampionshipIcon, ManageChampionshipsIcon } from '@/features/championships/ChampionshipIcons';
 import { CREATE_CHAMPIONSHIP_TOOL_INFO, MANAGE_CHAMPIONSHIPS_TOOL_INFO } from '@/features/championships/championshipsToolInfo';
+import { ManageCarsIcon } from '@/features/cars/CarIcons';
+import { MANAGE_CARS_TOOL_INFO } from '@/features/cars/manageCarsToolInfo';
 import { ADD_CREW_TOOL_INFO, MANAGE_CREWS_TOOL_INFO } from '@/features/crews/addCrewToolInfo';
 import { AddCrewIcon, ManageCrewsIcon } from '@/features/crews/CrewIcons';
 import { FieDisconnectionsIcon } from '@/features/fie-disconnections/FieDisconnectionsIcon';
@@ -98,6 +100,17 @@ export const TOOL_SECTIONS: readonly ToolSection[] = [
               },
             },
           ],
+        },
+      },
+      {
+        ...MANAGE_CARS_TOOL_INFO,
+        Icon: ManageCarsIcon,
+        availability: {
+          status: 'available',
+          loadPage: async () => {
+            const { ManageCarsPage } = await import('@/features/cars');
+            return { Component: ManageCarsPage };
+          },
         },
       },
       {

@@ -6,8 +6,12 @@ interface CarRow {
   readonly id: number;
   readonly manufacturer: string;
   readonly model: string | null;
+  readonly car_group: Car['group'];
   readonly horsepower: number | null;
   readonly weight_kg: number | null;
+  readonly drivetrain: Car['drivetrain'];
+  readonly bop_horsepower: number | null;
+  readonly bop_weight_kg: number | null;
   readonly limiter: number | null;
   readonly ballast_kg: number | null;
   /** Campionati dell'auto come elenco JSON (car_championships). */
@@ -27,8 +31,12 @@ const toCar = (row: CarRow): Car => ({
   id: row.id,
   manufacturer: row.manufacturer,
   model: row.model,
+  group: row.car_group,
   horsepower: row.horsepower,
   weightKg: row.weight_kg,
+  drivetrain: row.drivetrain,
+  bopHorsepower: row.bop_horsepower,
+  bopWeightKg: row.bop_weight_kg,
   limiter: row.limiter,
   ballastKg: row.ballast_kg,
   championships: readChampionships(row.championships_json),
@@ -38,7 +46,7 @@ const toCar = (row: CarRow): Car => ({
 export async function listCars(database: SqlDatabase): Promise<Car[]> {
   const { results } = await database
     .prepare(
-      `SELECT id, manufacturer, model, horsepower, weight_kg, limiter, ballast_kg,
+      `SELECT id, manufacturer, model, car_group, horsepower, weight_kg, drivetrain, bop_horsepower, bop_weight_kg, limiter, ballast_kg,
          (SELECT json_group_array(championship) FROM car_championships WHERE car_championships.car_id = cars.id) AS championships_json
        FROM cars
        ORDER BY manufacturer COLLATE NOCASE, IFNULL(model, '') COLLATE NOCASE`,

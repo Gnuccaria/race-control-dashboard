@@ -126,7 +126,20 @@ describe('API gare e piste', () => {
   it('restituisce le auto della tabella cars, con i dati tecnici ancora vuoti', async () => {
     const cars = (await request('GET', '/cars')).body.cars as { manufacturer: string; model: string | null; horsepower: number | null }[];
     expect(cars.map((car) => car.manufacturer)).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche']);
-    expect(cars[0]).toEqual({ id: 1, manufacturer: 'Audi', model: null, horsepower: null, weightKg: null, limiter: null, ballastKg: null, championships: ['Cool1 FIE Championship'] });
+    expect(cars[0]).toEqual({
+      id: 1,
+      manufacturer: 'Audi',
+      model: null,
+      group: null,
+      horsepower: null,
+      weightKg: null,
+      drivetrain: null,
+      bopHorsepower: null,
+      bopWeightKg: null,
+      limiter: null,
+      ballastKg: null,
+      championships: ['Cool1 FIE Championship'],
+    });
     expect((await request('GET', '/cars', undefined, 'token-no-role')).status).toBe(403);
   });
 

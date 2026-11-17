@@ -5,8 +5,12 @@ export const TEST_CARS: Car[] = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissa
   id: index + 1,
   manufacturer,
   model: null,
+  group: null,
   horsepower: null,
   weightKg: null,
+  drivetrain: null,
+  bopHorsepower: null,
+  bopWeightKg: null,
   limiter: null,
   ballastKg: null,
   // Come dopo la migrazione 0027: tutte del Cool1 FIE; la Nissan anche dell'All Japan GT, per provare più campionati.

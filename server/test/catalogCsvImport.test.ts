@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { planCrewImport } from '../src/import/crewCsvImport';
-import { buildCarSyncSql, type ExistingCar, parseCsvNumber, planCarImport } from '../src/import/carCsvImport';
+import { parseCsvNumber } from '../src/import/csv';
 import { buildTrackSyncSql, type ExistingTrack, planTrackImport } from '../src/import/trackCsvImport';
 import { createMigratedSqliteDatabase } from './support/inMemorySqlDatabase';
 
@@ -12,109 +12,13 @@ function requirePlan<Plan>(plan: Plan | null | undefined): Plan {
   return plan;
 }
 
-const existingCar = (id: number, manufacturer: string, usageCount = 0, model: string | null = null): ExistingCar => ({
-  id,
-  manufacturer,
-  model,
-  horsepower: null,
-  weightKg: null,
-  limiter: null,
-  ballastKg: null,
-  championships: ['Cool1 FIE Championship'],
-  usageCount,
-});
-
-describe('importazione delle auto', () => {
-  it('i campionati delle auto non cambiano con l\'importazione: si decidono nell\'app', () => {
-    const database = createMigratedSqliteDatabase();
-    const existing = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche'].map((name, index) => existingCar(index + 1, name, 1));
-    const { problems, sync } = planCarImport('Costruttore;Modello\nAudi;R8\nBMW;\nFerrari;\nLamborghini;\nNissan;\nPorsche;\nToyota;GR Supra', existing);
-    expect(problems).toEqual([]);
-    database.exec(buildCarSyncSql(requirePlan(sync)));
-    // Le auto di prima restano ammesse nel Cool1 FIE; la nuova non è ammessa in nessun campionato.
-    expect(
-      database
-        .prepare("SELECT cars.manufacturer, COUNT(car_championships.car_id) AS championshipCount FROM cars LEFT JOIN car_championships ON car_championships.car_id = cars.id GROUP BY cars.id ORDER BY cars.manufacturer")
-        .all()
-        .map((row) => ({ ...row })),
-    ).toEqual([
-      { manufacturer: 'Audi', championshipCount: 1 },
-      { manufacturer: 'BMW', championshipCount: 1 },
-      { manufacturer: 'Ferrari', championshipCount: 1 },
-      { manufacturer: 'Lamborghini', championshipCount: 1 },
-      { manufacturer: 'Nissan', championshipCount: 1 },
-      { manufacturer: 'Porsche', championshipCount: 1 },
-      { manufacturer: 'Toyota', championshipCount: 0 },
-    ]);
-  });
-
+describe('numeri nei CSV', () => {
   it('legge i numeri scritti all\'italiana', () => {
     expect(parseCsvNumber('1.250')).toBe(1250);
     expect(parseCsvNumber('95,5')).toBe(95.5);
     expect(parseCsvNumber(' 20% ')).toBe(20);
     expect(parseCsvNumber('')).toBeNull();
     expect(Number.isNaN(parseCsvNumber('tanti'))).toBe(true);
-  });
-
-  it('aggiorna per nome, completa il modello delle auto vecchie, aggiunge ed elimina', () => {
-    const existing = [existingCar(1, 'Audi', 2), existingCar(2, 'BMW', 0), existingCar(3, 'Ferrari', 1), existingCar(4, 'Nissan', 0)];
-    const csv = [
-      'Costruttore;Modello;PS;kg;Limitatore;Zavorra',
-      'Audi;;;;;',
-      'Ferrari;296 GT3;600;1.250;95,5;10',
-      'McLaren;720S GT3 Evo;;1300;;',
-    ].join('\n');
-    const { problems, sync } = planCarImport(csv, existing);
-    expect(problems).toEqual([]);
-    expect(sync?.updates.map(({ existing: car, draft }) => [car.id, draft.model])).toEqual([
-      [1, null],
-      [3, '296 GT3'],
-    ]);
-    expect(sync?.updates[1]?.draft).toMatchObject({ horsepower: 600, weightKg: 1250, limiter: 95.5, ballastKg: 10 });
-    expect(sync?.inserts.map((car) => car.manufacturer)).toEqual(['McLaren']);
-    expect(sync?.deletes.map((car) => car.id)).toEqual([2, 4]);
-    expect(sync?.kept).toEqual([]);
-  });
-
-  it('non elimina un\'auto ancora usata da qualche equipaggio', () => {
-    const { sync } = planCarImport('Costruttore;Modello\nPorsche;911 GT3 R\nPorsche;Cayman GT4', [existingCar(6, 'Porsche', 3)]);
-    // Due modelli Porsche nel file: non si può sapere quale sia quella vecchia, quindi resta.
-    expect(sync?.kept.map((car) => car.id)).toEqual([6]);
-    expect(sync?.inserts).toHaveLength(2);
-    expect(sync?.deletes).toEqual([]);
-  });
-
-  it('rifiuta l\'intero file se una riga ha problemi', () => {
-    const { problems, sync } = planCarImport('Costruttore;Modello;PS\n;Senza nome;\nAudi;R8;tanti\naudi;r8;', []);
-    expect(sync).toBeNull();
-    expect(problems).toEqual([
-      { line: 2, message: 'Senza nome: costruttore mancante' },
-      { line: 3, message: 'Audi R8: valore "tanti" non valido per PS (intero da 1 a 9999), oppure vuoto' },
-    ]);
-    expect(planCarImport('Costruttore;Modello\nAudi;R8\nAUDI;r8', []).problems).toEqual([
-      { line: 3, message: 'AUDI r8: auto già presente alla riga 2' },
-    ]);
-    expect(planCarImport('Costruttore;Modello\n', []).problems[0]?.message).toBe('nel file non ci sono auto');
-  });
-
-  it('applicato al database tiene gli equipaggi collegati', () => {
-    const database = createMigratedSqliteDatabase();
-    database.exec(
-      "INSERT INTO crews (name, name_key, number, car_id, championship, color, created_by_discord_id) VALUES ('Team Rosso', 'team rosso', 1, 3, 'Cool1 FIE Championship', '#E10600', 'test')",
-    );
-    const existing = database
-      .prepare('SELECT id, manufacturer, model, horsepower, weight_kg AS weightKg, limiter, ballast_kg AS ballastKg, (SELECT COUNT(*) FROM crews WHERE crews.car_id = cars.id) AS usageCount FROM cars')
-      .all() as unknown as ExistingCar[];
-    const { sync } = planCarImport("Costruttore;Modello;PS\nFerrari;296 GT3;600\nMcLaren;720S GT3;\nAston Martin;Vantage AMR GT3 'Evo';", existing);
-    database.exec(buildCarSyncSql(requirePlan(sync)));
-
-    const cars = database.prepare('SELECT id, manufacturer, model, horsepower FROM cars ORDER BY manufacturer').all().map((row) => ({ ...row }));
-    expect(cars).toEqual([
-      { id: 8, manufacturer: 'Aston Martin', model: "Vantage AMR GT3 'Evo'", horsepower: null },
-      { id: 3, manufacturer: 'Ferrari', model: '296 GT3', horsepower: 600 },
-      { id: 7, manufacturer: 'McLaren', model: '720S GT3', horsepower: null },
-    ]);
-    expect({ ...database.prepare('SELECT car_id FROM crews').get() }).toEqual({ car_id: 3 });
   });
 });
 
@@ -190,16 +94,6 @@ describe('file pronti in server/data', () => {
     expect(crews).toHaveLength(15);
     expect(crews[0]).toMatchObject({ name: 'Vez Team Lime', number: 16, championships: [{ championship: 'Cool1 FIE Championship', carId: null }], color: null });
     expect(crews.map((crew) => crew.name)).toContain('Sim Racing Café');
-  });
-
-  it('cars.csv: 17 auto; le 6 attuali restano collegate agli equipaggi', () => {
-    const existing = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche'].map((name, index) => existingCar(index + 1, name));
-    const { problems, sync } = planCarImport(readDataFile('cars.csv'), existing);
-    expect(problems).toEqual([]);
-    expect(sync?.updates).toHaveLength(6);
-    expect(sync?.inserts).toHaveLength(11);
-    expect(sync).toMatchObject({ deletes: [], kept: [] });
-    expect(sync?.updates.find(({ existing: car }) => car.id === 3)?.draft).toMatchObject({ model: '296 GT3', limiter: 95.5, ballastKg: 10 });
   });
 
   it('tracks.csv: 84 configurazioni, tutte valide', () => {

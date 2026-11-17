@@ -39,6 +39,10 @@ In tutte le tabelle valgono le stesse regole:
   - una vettura usata da almeno un equipaggio del campionato non si può togliere (la sua casella resta spuntata e bloccata).
 
   Con il clic destro si eliminano i campionati selezionati. Gli equipaggi collegati perdono quel campionato e chi non ne ha altri resta con "Nessuno". Un campionato con gare salvate non si può eliminare: prima vanno eliminate le sue gare.
+- **Gestisci vetture**: tabella delle vetture Gr.1–Gr.4 con costruttore, modello, gruppo, potenza e peso di serie, trasmissione, potenza e peso con il **BoP Midspeed**, **% limitatore** (potenza BoP ÷ potenza di serie, arrotondata all'unità) e **zavorra** (peso BoP − peso di serie, negativa se il BoP toglie peso), con ricerca e filtro per gruppo.
+  - **Aggiorna dati** fa scaricare al server i dati di serie dal catalogo ufficiale di Gran Turismo 7 (gran-turismo.com) e il BoP Midspeed da gt-engine.com, e mostra l'**anteprima**: vetture nuove, con dati cambiati, eliminate, e quelle non più nei siti che restano perché usate da equipaggi o gare.
+  - Se un'auto ha un nome diverso nei due siti (per esempio "BMW M3 GT '11" e "M3 GT3 '11"), compare tra le **vetture senza BoP trovato**: si sceglie a mano la corrispondente di gt-engine (o "Nessuna") e si ricalcola l'anteprima. Le scelte restano per i prossimi aggiornamenti.
+  - **Invia al server**, dopo una conferma, salva. Le vetture già usate restano collegate a equipaggi, gare e campionati. Se un sito non risponde o è cambiato, non si salva nulla e l'app lo dice.
 - **Gestisci gare**: tabella delle gare (campionato, round, nome, tracciato, data, ultima modifica), con filtri per campionato, tracciato e intervallo di date. **Crea gara** apre un form a due schede:
   - **Anagrafica**: nome della gara (facoltativo); **campionato**, da tutti quelli creati; **durata**, solo tra quelle del campionato, scelta da sola se è una sola; **round** (1–99); **data e ora di inizio** e **data e ora di fine**, in ora italiana, obbligatorie, anche nel futuro: le gare si possono inserire in anticipo. Facoltativi il **tracciato** (si sceglie Continente → Tracciato → Configurazione, anche in versione al contrario se prevista) e i **giri totali**.
   - **Dettagli**: l'ordine di arrivo su 14 posizioni, con i soli equipaggi del campionato. Ogni riga ha la vettura (quella che l'equipaggio usa in quel campionato, che resta legata alla gara anche se poi cambia auto), i **giri completati** e il **distacco** facoltativo dal primo (es. `1:05,320`). Le righe vuote sono ammesse; un equipaggio ripetuto viene segnalato.
@@ -95,7 +99,7 @@ Si apre nel browser, nella lingua del browser (italiano, inglese, francese o ted
 - **Invia protesta**: la gara, tra quelle dei campionati del proprio equipaggio aperte alle proteste; stint, giro, curva, gli altri equipaggi coinvolti, una descrizione e, se si vuole, un video (MP4, WebM o MOV, fino a 100 MB) o un link YouTube. Il video si può aggiungere anche dopo, entro 24 ore dall'invio. I video caricati si cancellano dopo 30 giorni. Al massimo 10 proteste in 24 ore a persona.
 - La **campanella del sito** avvisa quando un ticket ha il risultato o una protesta è stata decisa.
 
-## Importare equipaggi, auto e piste da un file CSV
+## Importare equipaggi e piste da un file CSV
 
 Dalla cartella `server`, i file esportati da Excel ("Salva come → CSV") sostituiscono l'elenco online. Con `--dry-run` il comando mostra cosa cambierebbe senza scrivere nulla. Se anche una sola riga ha un problema non cambia niente, e ogni riga da correggere viene elencata con il motivo.
 
@@ -103,14 +107,11 @@ Dalla cartella `server`, i file esportati da Excel ("Salva come → CSV") sostit
 npm run crews:import -- data/crews.csv --dry-run
 ```
 ```bash
-npm run cars:import -- data/cars.csv --dry-run
-```
-```bash
 npm run tracks:import -- data/tracks.csv --dry-run
 ```
 
 - **Equipaggi**: nome e numero obbligatori; auto, campionato (uno di quelli creati nell'app, oppure "Nessuno") e colore facoltativi. Ogni riga aggiorna l'equipaggio con lo stesso numero, così le gare restano collegate. Il campionato della riga si aggiunge a quelli già salvati; "Nessuno" li toglie tutti.
-- **Auto**: costruttore, modello, PS, kg, limitatore e zavorra. In quali campionati un'auto è ammessa si decide nell'app, in Gestione campionati. Le auto nuove non sono ammesse in nessun campionato finché non le si aggiunge.
+- **Vetture**: non si importano più da CSV: si aggiornano dall'app, in Gestisci vetture.
 - **Piste**: una riga per configurazione, con continente, lunghezza e versione al contrario.
 
 Le righe non più nel file vengono eliminate, tranne quelle ancora usate da un equipaggio o da una gara.
@@ -123,7 +124,7 @@ Dalla cartella `server`, questo comando cancella **tutti i dati** online (equipa
 npx wrangler d1 execute race-control --remote --file scripts/clear-all-data.sql
 ```
 
-Dopo, campionati, auto e piste vanno ricreati: le auto e le piste con l'importazione da CSV, i campionati dall'app.
+Dopo, vanno ricreati vetture (Gestisci vetture → Aggiorna dati), piste (importazione da CSV) e campionati (dall'app).
 
 ## Installazione e pubblicazione
 

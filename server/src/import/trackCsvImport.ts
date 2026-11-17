@@ -8,9 +8,8 @@ import {
   toTrackKey,
   validateTrackDraft,
 } from '../../../shared/raceRules';
-import { parseCsvNumber } from './carCsvImport';
 import { type CatalogSyncPlan, planCatalogSync } from './catalogSync';
-import { findColumns, findExtraCellsProblem, type ImportProblem, parseCsv, parseCsvBoolean, readCell, toSqlNumber, toSqlText } from './csv';
+import { findColumns, findExtraCellsProblem, type ImportProblem, parseCsv, parseCsvBoolean, parseCsvNumber, readCell, toSqlNumber, toSqlText } from './csv';
 
 /**
  * Sostituzione della tabella delle piste con un file CSV: una riga per configurazione

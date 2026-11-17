@@ -126,3 +126,14 @@ export const toSqlText = (value: string | null): string => (value === null ? 'NU
 
 /** Valore SQL numerico (o NULL). */
 export const toSqlNumber = (value: number | null): string => (value === null ? 'NULL' : String(value));
+
+/**
+ * "1.250" (migliaia all'italiana) → 1250; "95,5" o "95.5" → 95.5; "20%" → 20; vuoto → null.
+ * Qualsiasi altra cosa → NaN, che la convalida rifiuta.
+ */
+export function parseCsvNumber(rawValue: string): number | null {
+  const text = rawValue.replace(/\s/g, '').replace(/%$/, '');
+  if (text === '') return null;
+  const normalized = /^\d{1,3}(\.\d{3})+$/.test(text) ? text.replaceAll('.', '') : text.replace(',', '.');
+  return /^\d+(\.\d+)?$/.test(normalized) ? Number(normalized) : Number.NaN;
+}

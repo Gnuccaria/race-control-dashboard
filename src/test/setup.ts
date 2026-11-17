@@ -39,6 +39,7 @@ HTMLElement.prototype.hidePopover ??= () => undefined;
 // Le auto arrivano dal server: nei test l'elenco è sempre quello della migrazione.
 vi.mock('@/features/cars/carApi', () => ({
   fetchCars: vi.fn(() => Promise.resolve({ isSuccess: true, value: TEST_CARS })),
+  refreshCars: vi.fn(),
 }));
 
 // Anche i campionati: i due della migrazione 0028; creazione, modifica ed eliminazione si simulano nei singoli test.

@@ -1,5 +1,6 @@
 import type { MembershipChecker } from './auth/authorizeRequest';
 import { createCarHandlers } from './cars/carHandlers';
+import type { SourceFetch } from './cars/carSources';
 import { createChampionshipHandlers } from './championships/championshipHandlers';
 import { createCrewHandlers } from './crews/crewHandlers';
 import type { Env } from './env';
@@ -51,7 +52,7 @@ const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
  *   PUT /races/:id/driver-swaps   (solo i cambi pilota, Commissari Sportivi)
  *   GET · POST · DELETE /championships   GET · PUT /championships/:id
  *   GET · POST /tracks
- *   GET /cars
+ *   GET /cars   POST /cars/refresh   (vetture; aggiornamento dai siti, Organizzazione)
  *   GET /public/races                GET /public/races/:id   (sito dei risultati, senza accesso)
  *   GET /public/races/:id/report.pdf (referto di gara in PDF)
  *   POST /public/discord/session · /refresh · /sign-out   GET /public/discord/me   (accesso al sito con Discord)
@@ -60,13 +61,13 @@ const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
  *   GET /public/disconnection-tickets/availability   (sito: invio dei ticket aperto o chiuso)
  *   GET /public/protests/form · /mine · /:id · /:id/video   POST /public/protests   PUT /public/protests/:id/video · /:id/youtube   (proteste dal sito)
  *   GET /protests · /protests/:id · /protests/:id/video   PUT /protests/:id/review   (proteste nell'app, Commissari Sportivi)
- * La verifica Discord e le chiamate a Discord dell'accesso al sito sono iniettabili per i test.
+ * La verifica Discord, le chiamate a Discord dell'accesso al sito e lo scaricamento dei siti delle vetture sono iniettabili per i test.
  */
-export function createApp(checkMembership?: MembershipChecker, discordFetch?: DiscordFetch) {
+export function createApp(checkMembership?: MembershipChecker, discordFetch?: DiscordFetch, carSourceFetch?: SourceFetch) {
   const crewHandlers = createCrewHandlers(checkMembership);
   const raceHandlers = createRaceHandlers(checkMembership);
   const trackHandlers = createTrackHandlers(checkMembership);
-  const carHandlers = createCarHandlers(checkMembership);
+  const carHandlers = createCarHandlers(checkMembership, carSourceFetch);
   const championshipHandlers = createChampionshipHandlers(checkMembership);
   const penaltyHandlers = createPenaltyHandlers(checkMembership);
   const siteAuthHandlers = createSiteAuthHandlers(discordFetch);
@@ -86,6 +87,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
     '/public/protests/mine': { method: 'GET', handler: protestHandlers.listMyProtests },
     '/public/protests': { method: 'POST', handler: protestHandlers.submitProtest },
     '/protests': { method: 'GET', handler: protestHandlers.listProtests },
+    '/cars/refresh': { method: 'POST', handler: carHandlers.refreshCars },
   };
 
   const resources: Record<string, ResourceRoutes> = {

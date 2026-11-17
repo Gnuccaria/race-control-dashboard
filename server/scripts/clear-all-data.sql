@@ -15,5 +15,6 @@ DELETE FROM car_championships;
 DELETE FROM championship_durations;
 DELETE FROM championships;
 DELETE FROM cars;
+DELETE FROM car_source_matches;
 DELETE FROM tracks;
 DELETE FROM app_settings;
