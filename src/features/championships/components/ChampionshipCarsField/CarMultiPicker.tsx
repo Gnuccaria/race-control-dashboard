@@ -1,6 +1,7 @@
 import { type Car, CAR_GROUPS, type CarGroup, formatCarName } from '@shared/carRules';
-import { type CSSProperties, useId } from 'react';
+import { type CSSProperties, useId, useRef } from 'react';
 import styles from '@/features/race-results/penalties/components/CrewMultiPicker/CrewMultiPicker.module.css';
+import pickerStyles from './CarMultiPicker.module.css';
 
 interface CarMultiPickerProps {
   readonly id: string;
@@ -16,14 +17,18 @@ interface CarMultiPickerProps {
   readonly listLabel: string;
   readonly placeholder: string;
   readonly lockedTitle: (carName: string) => string;
+  /** Nome accessibile della X di una clip: "Togli Audi R8 LMS Evo '19". */
+  readonly removeLabel: (carName: string) => string;
   readonly disabled?: boolean;
   /** Al primo clic sul campo si rileggono le auto dal server. */
   readonly onOpen?: () => void;
 }
 
 /**
- * Vetture ammesse, come "Altri equipaggi coinvolti": il campo mostra le vetture scelte come clip e, al clic,
- * apre un elenco a discesa (Popover API) con una casella di spunta per ogni auto del catalogo.
+ * Vetture ammesse, come "Altri equipaggi coinvolti": il campo mostra le vetture scelte come clip, ognuna con la X per
+ * toglierla (non quelle usate da un equipaggio), e al clic apre un elenco a discesa (Popover API) con una casella di
+ * spunta per ogni auto del catalogo. Le X sono pulsanti a sé: per questo il campo è un riquadro con dentro il pulsante
+ * che apre l'elenco (la freccia), e un clic sul riquadro fuori dalle X apre l'elenco anche lui.
  */
 export function CarMultiPicker({
   id,
@@ -36,6 +41,7 @@ export function CarMultiPicker({
   listLabel,
   placeholder,
   lockedTitle,
+  removeLabel,
   disabled = false,
   onOpen,
 }: CarMultiPickerProps) {
@@ -48,33 +54,55 @@ export function CarMultiPicker({
     .filter((car) => group === '' || car.group === group)
     .sort((first, second) => groupOrder(first) - groupOrder(second) || formatCarName(first).localeCompare(formatCarName(second)));
 
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
   return (
     <div className={styles.crewMultiPicker}>
-      <button
-        id={id}
-        type="button"
-        className={styles.trigger}
-        popoverTarget={popoverId}
-        aria-describedby={describedBy}
-        disabled={disabled}
-        onClick={onOpen}
+      <div
+        className={`${styles.trigger} ${pickerStyles.field}`}
+        data-disabled={disabled || undefined}
         style={{ anchorName } as CSSProperties}
+        onClick={(clickEvent) => {
+          if (!disabled && !(clickEvent.target as HTMLElement).closest('button')) toggleRef.current?.click();
+        }}
       >
         {selectedCars.length === 0 ? (
           <span className={styles.placeholder}>{disabled ? '–' : placeholder}</span>
         ) : (
           <span className={styles.chips} aria-label={listLabel}>
-            {selectedCars.map((car) => (
-              <span key={car.id} className={styles.chip}>
-                {formatCarName(car)}
-              </span>
-            ))}
+            {selectedCars.map((car) => {
+              const name = formatCarName(car);
+              const isLocked = lockedCarIds.includes(car.id);
+              return (
+                <span key={car.id} className={`${styles.chip} ${pickerStyles.chip}`} title={isLocked && !disabled ? lockedTitle(name) : undefined}>
+                  {name}
+                  {!disabled && !isLocked && (
+                    <button type="button" className={pickerStyles.chipRemove} aria-label={removeLabel(name)} title={removeLabel(name)} onClick={() => onToggleCar(car.id)}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <path d="m2.5 2.5 5 5m0-5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </span>
         )}
-        <svg className={styles.chevron} width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="m3 4.5 3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
+        <button
+          ref={toggleRef}
+          id={id}
+          type="button"
+          className={pickerStyles.toggle}
+          popoverTarget={popoverId}
+          aria-describedby={describedBy}
+          disabled={disabled}
+          onClick={onOpen}
+        >
+          <svg className={styles.chevron} width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="m3 4.5 3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
 
       <div id={popoverId} popover="auto" className={styles.dropdown} style={{ positionAnchor: anchorName } as CSSProperties}>
         <fieldset className={styles.options}>

@@ -874,6 +874,7 @@ export const en: Messages = {
     carsPlaceholder: 'Choose the cars',
     carsGroupFilter: 'Car group',
     carsAllGroups: 'All groups',
+    removeCar: (carName: string) => `Remove ${carName}`,
     carsInUse: (carNames: string) => `Used by at least one crew, they cannot be removed: ${carNames}.`,
     carLocked: (carName: string) => `${carName} is used by at least one crew of the championship: it cannot be removed.`,
     create: 'Create championship',

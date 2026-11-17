@@ -1,0 +1,51 @@
+.field {
+  cursor: pointer;
+}
+
+.field[data-disabled] {
+  cursor: default;
+}
+
+/* Clip con la X a destra. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chipRemove {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  margin-inline-end: -0.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.chipRemove:hover,
+.chipRemove:focus-visible {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* La freccia che apre l'elenco, a destra del riquadro. */
+.toggle {
+  display: inline-grid;
+  place-items: center;
+  margin-inline-start: auto;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.toggle:disabled {
+  visibility: hidden;
+}

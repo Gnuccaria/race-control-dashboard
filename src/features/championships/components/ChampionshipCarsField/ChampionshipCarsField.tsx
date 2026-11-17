@@ -46,6 +46,7 @@ export function ChampionshipCarsField({ draft, isReadOnly, lockedCarIds }: Champ
               listLabel={texts.cars}
               placeholder={carCatalog.isLoading ? messages.cars.loading : texts.carsPlaceholder}
               lockedTitle={texts.carLocked}
+            removeLabel={texts.removeCar}
               disabled={isReadOnly}
               onOpen={carCatalog.refresh}
             />

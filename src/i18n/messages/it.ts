@@ -934,6 +934,7 @@ export const it = {
     carsPlaceholder: 'Scegli le vetture',
     carsGroupFilter: 'Gruppo delle vetture',
     carsAllGroups: 'Tutti i gruppi',
+    removeCar: (carName: string) => `Togli ${carName}`,
     carsInUse: (carNames: string) => `Usate da almeno un equipaggio, non si possono togliere: ${carNames}.`,
     carLocked: (carName: string) => `${carName} è usata da almeno un equipaggio del campionato: non si può togliere.`,
     create: 'Crea campionato',

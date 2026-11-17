@@ -916,6 +916,7 @@ export const de: Messages = {
     carsPlaceholder: 'Autos wählen',
     carsGroupFilter: 'Gruppe der Autos',
     carsAllGroups: 'Alle Gruppen',
+    removeCar: (carName: string) => `${carName} entfernen`,
     carsInUse: (carNames: string) => `Von mindestens einer Crew genutzt, nicht entfernbar: ${carNames}.`,
     carLocked: (carName: string) => `${carName} wird von mindestens einer Crew der Meisterschaft genutzt: nicht entfernbar.`,
     create: 'Meisterschaft erstellen',

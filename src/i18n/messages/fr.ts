@@ -917,6 +917,7 @@ export const fr: Messages = {
     carsPlaceholder: 'Choisir les voitures',
     carsGroupFilter: 'Groupe des voitures',
     carsAllGroups: 'Tous les groupes',
+    removeCar: (carName: string) => `Retirer ${carName}`,
     carsInUse: (carNames: string) => `Utilisées par au moins un équipage, elles ne peuvent pas être retirées : ${carNames}.`,
     carLocked: (carName: string) => `${carName} est utilisée par au moins un équipage du championnat : elle ne peut pas être retirée.`,
     create: 'Créer le championnat',

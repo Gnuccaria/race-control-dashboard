@@ -56,18 +56,22 @@ describe('Crea campionato', () => {
     expect(createButton).toBeDisabled();
     // Vetture: caselle di spunta nell'elenco a discesa, scelte mostrate come clip nel campo.
     const carPicker = screen.getByRole('button', { name: 'Vetture ammesse' });
+    // Il riquadro con le clip contiene la freccia che apre l'elenco.
+    const carField = carPicker.parentElement as HTMLElement;
     await user.click(carPicker);
     await user.click(await screen.findByRole('checkbox', { name: 'Audi' }));
     await user.click(screen.getByRole('checkbox', { name: 'Ferrari' }));
-    expect(within(carPicker).getByText('Audi')).toBeInTheDocument();
-    expect(within(carPicker).getByText('Ferrari')).toBeInTheDocument();
-    await user.click(screen.getByRole('checkbox', { name: 'Ferrari' }));
-    expect(within(carPicker).queryByText('Ferrari')).not.toBeInTheDocument();
+    expect(within(carField).getByText('Audi')).toBeInTheDocument();
+    expect(within(carField).getByText('Ferrari')).toBeInTheDocument();
+    // La X della clip toglie la vettura (e toglie la spunta).
+    await user.click(screen.getByRole('button', { name: 'Togli Ferrari' }));
+    expect(within(carField).queryByText('Ferrari')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Ferrari' })).not.toBeChecked();
     // Il filtro Gruppo restringe l'elenco; le clip mostrano sempre tutte le vetture scelte.
     await user.click(screen.getByRole('checkbox', { name: 'Porsche' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Gruppo delle vetture' }), 'Gr.3');
     expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.getAttribute('aria-label'))).toEqual(['Audi', 'BMW', 'Ferrari', 'Lamborghini']);
-    expect(within(carPicker).getByText('Porsche')).toBeInTheDocument();
+    expect(within(carField).getByText('Porsche')).toBeInTheDocument();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Gruppo delle vetture' }), '');
     await user.click(carPicker);
     await user.click(screen.getByRole('checkbox', { name: 'Porsche' }));
@@ -160,6 +164,9 @@ describe('Gestisci campionato', () => {
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 2' }), '120');
     await user.click(screen.getByRole('button', { name: 'Vetture ammesse' }));
     expect(screen.getByRole('checkbox', { name: 'Nissan' })).toBeDisabled();
+    // La vettura usata non ha la X; le altre sì.
+    expect(screen.queryByRole('button', { name: 'Togli Nissan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Togli Audi' })).toBeInTheDocument();
     expect(screen.getByText('Usate da almeno un equipaggio, non si possono togliere: Nissan.')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Audi' }));
     await user.click(screen.getByRole('button', { name: 'Salva' }));

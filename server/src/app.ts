@@ -42,6 +42,18 @@ const PUBLIC_RACES_PATTERN = /^\/public\/races(?:\/(\d{1,9})(\/report\.pdf)?)?$/
 
 const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
 
+/** "POST /championships → 409 duplicate-championship-name {…}": codice e dettagli, mai il corpo della richiesta. */
+async function logErrorResponse(request: Request, response: Response): Promise<void> {
+  let code = '';
+  try {
+    const body = (await response.clone().json()) as { error?: { code?: string; details?: unknown } };
+    code = `${body.error?.code ?? ''} ${body.error?.details === undefined ? '' : JSON.stringify(body.error.details)}`.trim();
+  } catch {
+    code = '(risposta non JSON)';
+  }
+  console.warn(`${request.method} ${new URL(request.url).pathname} → ${response.status} ${code}`);
+}
+
 /**
  * Instradamento delle richieste:
  *   GET /health
@@ -206,11 +218,15 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
   }
 
   return async function handleRequest(request: Request, env: Env): Promise<Response> {
+    let response: Response;
     try {
-      return await route(request, env);
+      response = await route(request, env);
     } catch (unexpectedError) {
       console.error('Errore imprevisto', unexpectedError);
       return errorResponse(500, 'unexpected');
     }
+    // Ogni risposta d'errore finisce nei log (npx wrangler tail) con il suo codice, per capire cosa ha visto l'app.
+    if (response.status >= 400) await logErrorResponse(request, response);
+    return response;
   };
 }
