@@ -1,8 +1,8 @@
-import { CREW_CHAMPIONSHIPS } from '@shared/crewRules';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
 import type { CarCatalog } from '@/features/cars/useCarCatalog';
+import type { ChampionshipCatalog } from '@/features/championships/useChampionships';
 import { useI18n } from '@/i18n/useI18n';
 import { type CrewFilters, MISSING_VALUE_FILTER } from '../../model/crewList';
 import styles from './CrewFilterBar.module.css';
@@ -11,10 +11,11 @@ interface CrewFilterBarProps {
   readonly filters: CrewFilters;
   readonly onFiltersChange: (filters: CrewFilters) => void;
   readonly carCatalog: CarCatalog;
+  readonly championshipCatalog: ChampionshipCatalog;
 }
 
 /** Ricerca per numero o nome (si aggiorna a ogni carattere) e filtri per auto e campionato. */
-export function CrewFilterBar({ filters, onFiltersChange, carCatalog }: CrewFilterBarProps) {
+export function CrewFilterBar({ filters, onFiltersChange, carCatalog, championshipCatalog }: CrewFilterBarProps) {
   const { messages } = useI18n();
   const listTexts = messages.crews.list;
 
@@ -25,9 +26,9 @@ export function CrewFilterBar({ filters, onFiltersChange, carCatalog }: CrewFilt
   ];
   const championshipOptions: { value: CrewFilters['championship']; label: string }[] = [
     { value: '', label: listTexts.allChampionships },
-    ...CREW_CHAMPIONSHIPS.map((championship) => ({ value: championship, label: championship })),
+    ...championshipCatalog.championships.map(({ name }) => ({ value: name, label: name })),
     // Equipaggi che non partecipano a nessun campionato.
-    { value: MISSING_VALUE_FILTER, label: messages.crews.noChampionships },
+    { value: MISSING_VALUE_FILTER, label: messages.crews.noChampionship },
   ];
 
   return (
@@ -68,6 +69,7 @@ export function CrewFilterBar({ filters, onFiltersChange, carCatalog }: CrewFilt
             onValueChange={(championship) => {
               onFiltersChange({ ...filters, championship });
             }}
+            onFocus={championshipCatalog.refresh}
           />
         )}
       </FormField>

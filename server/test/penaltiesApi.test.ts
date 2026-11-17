@@ -15,7 +15,7 @@ describe('API penalità e cambi pilota', () => {
 
   const race = (overrides: Record<string, unknown> = {}) => withSchedule({
     championship: REQUIRED_DETAILS.championship,
-    duration: '6 hours',
+    duration: 6,
     round: 1,
     trackId: null,
     raceDate: '2026-11-08',

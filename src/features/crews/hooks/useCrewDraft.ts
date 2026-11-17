@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  CREW_CHAMPIONSHIPS,
   type CrewChampionship,
   type CrewDraft,
   findCrewNameIssue,
@@ -8,6 +7,7 @@ import {
   normalizeDiscordRoleId,
   parseCrewNumber,
   sanitizeCrewNumberInput,
+  sortCrewChampionships,
   validateCrewDraft,
 } from '@shared/crewRules';
 
@@ -75,16 +75,14 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
     changeNumber: (typedValue: string) => {
       setValues((previousValues) => ({ ...previousValues, numberText: sanitizeCrewNumberInput(typedValue) }));
     },
-    /** Aggiunge un campionato (senza auto), nell'ordine dei campionati. */
+    /** Aggiunge un campionato (senza auto), in ordine alfabetico. */
     addChampionship: (championship: CrewChampionship) => {
       setValues((previousValues) =>
         previousValues.championships.some((entry) => entry.championship === championship)
           ? previousValues
           : {
               ...previousValues,
-              championships: [...previousValues.championships, { championship, carId: '' }].sort(
-                (first, second) => CREW_CHAMPIONSHIPS.indexOf(first.championship) - CREW_CHAMPIONSHIPS.indexOf(second.championship),
-              ),
+              championships: sortCrewChampionships([...previousValues.championships, { championship, carId: '' }]),
             },
       );
     },

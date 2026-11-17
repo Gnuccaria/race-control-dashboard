@@ -9,7 +9,7 @@ export const DISCORD_CONFIG = {
   guildId: '1569698028938600458',
   /** Ruolo Organizzazione: Gestisci campionato (e accesso all'app). */
   organizationRoleId: '1569700040602292346',
-  /** Ruolo Direttore Gara: Crea documentazione e strumenti della Direzione Gara (e accesso all'app). */
+  /** Ruolo Direttore Gara: Strumenti pre-gara e strumenti della Direzione Gara (e accesso all'app). */
   raceControlRoleId: '1569716852886605844',
   /** Ruolo Commissari Sportivi: strumenti dei Commissari Sportivi (e accesso all'app). */
   stewardsRoleId: '1569718968183296130',

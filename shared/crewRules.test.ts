@@ -35,7 +35,7 @@ describe('regole equipaggio', () => {
   });
 
   it('i campionati devono essere tra quelli previsti, ognuno una volta sola, ognuno con la sua auto', () => {
-    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: 'Serie X', carId: 1 }] })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: '  ', carId: 1 }] })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
     expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: FIE, carId: 1 }, { championship: FIE, carId: 2 }] })).toEqual({
       isValid: false,
       issues: { championships: 'repeated' },
@@ -43,9 +43,10 @@ describe('regole equipaggio', () => {
     expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: FIE, carId: 'Fiat' }] })).toEqual({ isValid: false, issues: { championships: 'car-invalid' } });
     expect(validateCrewDraft({ ...COMPLETE_CREW, championships: 'FIE' })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
     // Più campionati contemporaneamente (in ordine), oppure nessuno.
-    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: JAPAN, carId: 5 }, { championship: FIE, carId: 1 }] })).toMatchObject({
+    // Campionati in ordine alfabetico (che esistano lo controlla il server).
+    expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [{ championship: FIE, carId: 1 }, { championship: JAPAN, carId: 5 }] })).toMatchObject({
       isValid: true,
-      crew: { championships: [{ championship: FIE, carId: 1 }, { championship: JAPAN, carId: 5 }] },
+      crew: { championships: [{ championship: JAPAN, carId: 5 }, { championship: FIE, carId: 1 }] },
     });
     expect(validateCrewDraft({ ...COMPLETE_CREW, championships: [] })).toMatchObject({ isValid: true, crew: { championships: [] } });
   });

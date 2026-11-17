@@ -1,4 +1,5 @@
-import { driverSwapCount, readDriverSwaps } from '../../../shared/driverSwapRules';
+import { driverSwapCountOf } from '../../../shared/championshipRules';
+import { readDriverSwaps } from '../../../shared/driverSwapRules';
 import { type RaceDraft, resolveResultCars, type SavedRaceResult, validateRaceDraft } from '../../../shared/raceRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
@@ -6,6 +7,7 @@ import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readIdList } from '../http/readIdList';
 import { MAX_RACE_BODY_BYTES, readJsonBody } from '../http/readJsonBody';
+import { listChampionships } from '../championships/championshipRepository';
 import { findTrackById } from '../tracks/trackRepository';
 import {
   deleteRaces,
@@ -27,7 +29,7 @@ type RaceDraftReading =
 
 /**
  * Corpo della richiesta → gara convalidata: stesse regole dell'app, più i controlli che solo il server
- * può fare (la pista esiste, gli equipaggi esistono e partecipano al campionato, il round è libero).
+ * può fare (il campionato esiste con quella durata, la pista esiste, gli equipaggi esistono e partecipano al campionato, il round è libero).
  * Decide anche la vettura di ogni riga (resolveResultCars): le righe rimaste uguali tengono quella già
  * salvata, le altre prendono l'auto attuale dell'equipaggio, che quindi deve averne una.
  */
@@ -35,7 +37,7 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
   const requestBody = await readJsonBody(request, MAX_RACE_BODY_BYTES);
   if (requestBody === undefined) return { errorResponse: errorResponse(400, 'invalid-request') };
 
-  const validation = validateRaceDraft(requestBody);
+  const validation = validateRaceDraft(requestBody, await listChampionships(database));
   if (!validation.isValid) return { errorResponse: errorResponse(422, 'invalid-race', validation.issues) };
   const { race } = validation;
 
@@ -119,7 +121,7 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
 
     /**
      * PUT /races/:id/driver-swaps con { driverSwaps } — solo i cambi pilota di una gara già creata (Commissari
-     * Sportivi): stesse regole della gara intera (numero di cambi del campionato, equipaggi del campionato).
+     * Sportivi): stesse regole della gara intera (numero di cambi dagli stint della durata, equipaggi del campionato).
      */
     async updateDriverSwaps(request: Request, env: Env, raceId: number): Promise<Response> {
       const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
@@ -128,7 +130,7 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
       const race = await findRaceById(env.CREWS_DB, raceId);
       if (!race) return errorResponse(404, 'not-found');
       const body = (await readJsonBody(request, MAX_RACE_BODY_BYTES)) as { driverSwaps?: unknown } | undefined;
-      const driverSwaps = readDriverSwaps(body?.driverSwaps, driverSwapCount(race.championship));
+      const driverSwaps = readDriverSwaps(body?.driverSwaps, driverSwapCountOf(await listChampionships(env.CREWS_DB), race.championship, race.duration));
       if (!driverSwaps) return errorResponse(422, 'invalid-race', { driverSwaps: 'invalid' });
       if (await hasCrewsOutside(env.CREWS_DB, race.championship, driverSwaps.map((driverSwap) => driverSwap.crewId))) {
         return errorResponse(422, 'invalid-race', { driverSwaps: 'unknown-crew' });

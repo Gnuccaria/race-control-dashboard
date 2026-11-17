@@ -1,15 +1,14 @@
+import { championshipDurations, driverSwapCountOf, onlyDurationOf } from '@shared/championshipRules';
 import { type CrewChampionship, crewCarIn, type SavedCrew } from '@shared/crewRules';
-import { DRIVER_SWAP_NOTES_MAX_LENGTH, driverSwapCount, normalizeTimestampText, sanitizeTimestampInput } from '@shared/driverSwapRules';
+import { DRIVER_SWAP_NOTES_MAX_LENGTH, normalizeTimestampText, sanitizeTimestampInput } from '@shared/driverSwapRules';
 import {
   canPositionHaveGap,
-  onlyRaceDurationFor,
-  raceDurationsFor,
-  type RaceDuration,
   sanitizeGapInput,
   sanitizeLapsInput,
   sanitizeRoundInput,
 } from '@shared/raceRules';
 import { useState } from 'react';
+import { useChampionships } from '@/features/championships/useChampionships';
 import type { TrackChoice } from '@/features/tracks/model/trackSelection';
 import {
   checkRaceDraft,
@@ -44,12 +43,15 @@ const crewIdsWithRows = (driverSwap: DriverSwapValues): number[] =>
  */
 export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES, allCrews?: readonly SavedCrew[]) {
   const [values, setValues] = useState<RaceDraftValues>(initialValues);
+  // Campionati dal server: durate possibili e, dagli stint, quanti cambi pilota ha la gara.
+  const championshipCatalog = useChampionships();
+  const { championships } = championshipCatalog;
   // Auto attuale di ogni equipaggio nel campionato della gara (senza campionato, nessuna).
   const currentCarIdByCrewId = allCrews && new Map(allCrews.map((crew) => [crew.id, values.championship === '' ? null : crewCarIn(crew, values.championship)]));
-  // Cambi pilota: tante tabelle quanti i cambi del campionato, una riga per equipaggio del campionato.
+  // Cambi pilota: tante tabelle quanti i cambi della durata (stint − 1), una riga per equipaggio del campionato.
   // Finché gli equipaggi non sono letti si usano quelli che hanno già righe compilate.
   const championshipCrews = allCrews ? findChampionshipCrews(allCrews, values.championship) : [];
-  const swapCount = driverSwapCount(values.championship);
+  const swapCount = driverSwapCountOf(championships, values.championship, values.duration === '' ? null : Number(values.duration));
   const driverSwapSheet = computeDriverSwapSheet(
     values.driverSwap,
     allCrews ? championshipCrews.map((crew) => crew.id) : crewIdsWithRows(values.driverSwap),
@@ -58,7 +60,14 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
 
   return {
     values,
-    check: checkRaceDraft(values, currentCarIdByCrewId, driverSwapSheet),
+    // Senza i campionati (ancora in lettura) non si sa quante tabelle dei cambi servono: non si salva.
+    check: (() => {
+      const raceCheck = checkRaceDraft(values, currentCarIdByCrewId, driverSwapSheet);
+      return { ...raceCheck, isComplete: raceCheck.isComplete && championships.length > 0 };
+    })(),
+    championshipCatalog,
+    /** Durate del campionato scelto (ore), per il menu Durata. */
+    durationOptions: championshipDurations(championships, values.championship).map((duration) => duration.hours),
     championshipCrews,
     swapCount,
     driverSwapSheet,
@@ -68,7 +77,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
     changeTotalLaps: (rawTotalLaps: string) => {
       setValues((previousValues) => ({ ...previousValues, totalLapsText: sanitizeLapsInput(rawTotalLaps) }));
     },
-    changeDuration: (duration: RaceDuration) => {
+    changeDuration: (duration: string) => {
       setValues((previousValues) => ({ ...previousValues, duration }));
     },
     /** Cambiando campionato si tolgono dalla classifica gli equipaggi che non vi partecipano. */
@@ -80,9 +89,9 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
           championship,
           // Resta la durata scelta se il nuovo campionato la prevede; con una sola durata possibile si sceglie da sola.
           duration:
-            previousValues.duration !== '' && raceDurationsFor(championship).includes(previousValues.duration)
+            previousValues.duration !== '' && championshipDurations(championships, championship).some((duration) => String(duration.hours) === previousValues.duration)
               ? previousValues.duration
-              : (onlyRaceDurationFor(championship) ?? ''),
+              : String(onlyDurationOf(championships, championship) ?? ''),
           crewIdByPosition,
           // Le posizioni rimaste senza equipaggio perdono anche giri e distacco.
           lapsTextByPosition: previousValues.lapsTextByPosition.map((lapsText, index) =>
@@ -180,7 +189,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
         return { ...previousValues, driverSwap: { rowsBySwap } };
       });
     },
-    validate: () => validateRaceValues(values, driverSwapSheet.entries),
+    validate: () => validateRaceValues(values, championships, driverSwapSheet.entries),
   };
 }
 

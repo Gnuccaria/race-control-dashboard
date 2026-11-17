@@ -22,3 +22,17 @@
 .mainContent:focus {
   outline: none;
 }
+
+/* Menu laterale a sinistra e contenuto a destra; nelle finestre strette il menu va sopra. */
+.withSideMenu {
+  display: grid;
+  grid-template-columns: 16rem minmax(0, 1fr);
+  min-block-size: calc(100dvh - var(--header-height));
+}
+
+@media (width < 60rem) {
+  .withSideMenu {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+}

@@ -18,27 +18,54 @@ describe('applicazione', () => {
     renderApp('/');
 
     expect(screen.getByRole('heading', { level: 1, name: /Niko/ })).toBeInTheDocument();
-    const sectionHeadings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
-    expect(sectionHeadings).toEqual(['Gestisci campionato', 'Crea documentazione', 'Strumenti della Direzione Gara', 'Strumenti dei Commissari Sportivi']);
+    const main = within(screen.getByRole('main'));
+    const sectionHeadings = main.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(sectionHeadings).toEqual([
+      'Gestione campionati',
+      'Gestione equipaggi',
+      'Strumenti pre-gara',
+      'Strumenti della Direzione Gara',
+      'Strumenti dei Commissari Sportivi',
+    ]);
 
-    expect(screen.getByRole('link', { name: /Aggiungi equipaggio/ })).toHaveAttribute('href', '/campionato/aggiungi-equipaggio');
-    expect(screen.getByRole('link', { name: /Gestisci equipaggio/ })).toHaveAttribute('href', '/campionato/gestisci-equipaggi');
-    expect(screen.getByRole('link', { name: /Gestisci ordini di arrivo/ })).toHaveAttribute('href', '/campionato/ordini-di-arrivo');
-    expect(screen.getByRole('link', { name: /Calcolatore di giri/ })).toHaveAttribute('href', '/strumenti/calcolatore-giri');
-    expect(screen.getByRole('link', { name: /Calcolatore deficit BoP/ })).toHaveAttribute('href', '/strumenti/deficit-bop');
-    expect(screen.getByRole('link', { name: /Calcolatore disconnessioni/ })).toHaveAttribute(
-      'href',
-      '/strumenti/calcolatore-disconnessioni',
-    );
-    expect(screen.getByRole('link', { name: /Gestisci proteste/ })).toHaveAttribute('href', '/commissari/proteste');
-    expect(screen.getByRole('link', { name: /Gestisci cambi pilota/ })).toHaveAttribute('href', '/commissari/cambi-pilota');
+    expect(main.getByRole('link', { name: /Crea campionato/ })).toHaveAttribute('href', '/campionati/crea-campionato');
+    expect(main.getByRole('link', { name: /Gestisci campionato/ })).toHaveAttribute('href', '/campionati/gestisci-campionati');
+    expect(main.getByRole('link', { name: /Gestisci gare/ })).toHaveAttribute('href', '/campionati/gare');
+    expect(main.getByRole('link', { name: /Crea equipaggio/ })).toHaveAttribute('href', '/equipaggi/crea-equipaggio');
+    expect(main.getByRole('link', { name: /Gestisci equipaggio/ })).toHaveAttribute('href', '/equipaggi/gestisci-equipaggi');
+    expect(main.getByRole('link', { name: /Calcolatore di giri/ })).toHaveAttribute('href', '/strumenti/calcolatore-giri');
+    expect(main.getByRole('link', { name: /Calcolatore deficit BoP/ })).toHaveAttribute('href', '/strumenti/deficit-bop');
+    expect(main.getByRole('link', { name: /Gestisci disconnessioni/ })).toHaveAttribute('href', '/strumenti/gestisci-disconnessioni');
+    expect(main.getByRole('link', { name: /Gestisci proteste/ })).toHaveAttribute('href', '/commissari/proteste');
+    expect(main.getByRole('link', { name: /Gestisci cambi pilota/ })).toHaveAttribute('href', '/commissari/cambi-pilota');
+    // Strumenti pre-gara: entrambi in costruzione, quindi non sono link.
+    expect(main.getByText('Crea briefing pre-gara')).toBeInTheDocument();
+    expect(main.getByText('Crea pattern meteo')).toBeInTheDocument();
+    expect(main.queryByRole('link', { name: /Crea pattern meteo/ })).not.toBeInTheDocument();
   });
 
+  it('il menu laterale porta alle sezioni e ai loro strumenti', async () => {
+    const user = userEvent.setup();
+    renderApp('/');
+
+    const sideMenu = within(screen.getByRole('navigation', { name: "Sezioni dell'app" }));
+    expect(sideMenu.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(sideMenu.getByRole('link', { name: 'Gestisci gare' })).toHaveAttribute('href', '/campionati/gare');
+
+    await user.click(sideMenu.getByRole('link', { name: 'Gestione equipaggi' }));
+    const main = within(screen.getByRole('main'));
+    expect(main.getByRole('heading', { level: 2, name: 'Gestione equipaggi' })).toBeInTheDocument();
+    expect(main.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/equipaggi/crea-equipaggio', '/equipaggi/gestisci-equipaggi']);
+    expect(sideMenu.getByRole('link', { name: 'Gestione equipaggi' })).toHaveAttribute('aria-current', 'page');
+
+    await user.click(sideMenu.getByRole('link', { name: 'Crea campionato' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Crea campionato' })).toBeInTheDocument();
+  });
 
   it.each([
     ['/strumenti/deficit-bop', 'Calcolatore deficit BoP'],
-    ['/strumenti/calcolatore-disconnessioni', 'Calcolatore disconnessioni'],
-    ['/campionato/aggiungi-equipaggio', 'Aggiungi equipaggio'],
+    ['/strumenti/gestisci-disconnessioni', 'Gestisci disconnessioni'],
+    ['/equipaggi/crea-equipaggio', 'Crea equipaggio'],
   ])('apre %s direttamente', async (toolPath, toolName) => {
     renderApp(toolPath);
     expect(await screen.findByRole('heading', { level: 1, name: toolName })).toBeInTheDocument();
@@ -48,7 +75,7 @@ describe('applicazione', () => {
     const user = userEvent.setup();
     renderApp('/');
 
-    await user.click(screen.getByRole('link', { name: /Calcolatore di giri/ }));
+    await user.click(within(screen.getByRole('main')).getByRole('link', { name: /Calcolatore di giri/ }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Calcolatore di giri' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: 'Tutti gli strumenti' }));
@@ -105,7 +132,7 @@ describe('applicazione', () => {
 
     await user.selectOptions(screen.getByLabelText('Lingua'), 'English');
     expect(screen.getByText('Pick a tool to get started.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Lap calculator/ })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: /Lap calculator/ })).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Language'), 'Deutsch');
     expect(screen.getByText('Wähle ein Werkzeug, um loszulegen.')).toBeInTheDocument();

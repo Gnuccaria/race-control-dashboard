@@ -431,7 +431,7 @@ describe('ruoli dell’app: Direzione Gara e Commissari Sportivi', () => {
     await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 7, ...crewDetails(1) }, 'token-organization'), env);
     await allowCarIn(env, 1, 'All Japan GT Championship');
     await handleRequest(sendJson('POST', '/crews', { name: 'Kyoto', number: 8, ...crewDetails(1, 'All Japan GT Championship', '#283593') }, 'token-organization'), env);
-    const race = withSchedule({ championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-09-14', results: [{ position: 1, crewId: 1, laps: 30, gapMs: null }] });
+    const race = withSchedule({ championship: 'Cool1 FIE Championship', duration: 6, round: 1, raceDate: '2026-09-14', results: [{ position: 1, crewId: 1, laps: 30, gapMs: null }] });
     expect((await handleRequest(sendJson('POST', '/races', race, 'token-organization'), env)).status).toBe(201);
     const swap = { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 600_000, isCancelled: false, notes: 'Box' };
 

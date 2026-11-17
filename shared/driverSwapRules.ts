@@ -1,5 +1,3 @@
-import type { CrewChampionship } from './crewRules';
-
 /**
  * Cambi pilota (dal foglio "Driver Swap Checker"). A ogni cambio, tra la fine di uno stint (Pit In: vettura ferma
  * in piazzola) e l'inizio del successivo (Pit Out: pit stop effettuato), ogni vettura deve ripartire con almeno
@@ -18,14 +16,7 @@ export const DRIVER_SWAP_BUFFER_MS = 2000;
 export const DRIVER_SWAP_COEFFICIENT = 2.5;
 export const DRIVER_SWAP_NOTES_MAX_LENGTH = 120;
 
-/** Quanti cambi pilota (e quindi tabelle) ha una gara di ogni campionato. */
-export const DRIVER_SWAP_COUNT_BY_CHAMPIONSHIP: Readonly<Record<CrewChampionship, number>> = {
-  'Cool1 FIE Championship': 5,
-  'All Japan GT Championship': 1,
-};
-
-export const driverSwapCount = (championship: CrewChampionship | ''): number =>
-  championship === '' ? 0 : DRIVER_SWAP_COUNT_BY_CHAMPIONSHIP[championship];
+/* Quanti cambi pilota (e quindi tabelle) ha una gara: dagli stint della sua durata (shared/championshipRules.ts, driverSwapCountOf). */
 
 /* ---------- Tempi: sempre mostrati come HH:MM:SS.DDD ---------- */
 

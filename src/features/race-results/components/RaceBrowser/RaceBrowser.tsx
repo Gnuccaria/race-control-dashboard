@@ -8,6 +8,7 @@ import {
   EMPTY_RACE_FILTERS,
   filterRaces,
   hasActiveRaceFilters,
+  listRaceChampionships,
   listRaceTrackOptions,
   type RaceFilters,
   type RaceSort,
@@ -44,7 +45,7 @@ export function RaceBrowser({ races, filters, onFiltersChange, sort, hint, ...ta
 
   return (
     <>
-      <RaceFilterBar filters={filters} onFiltersChange={onFiltersChange} trackOptions={trackOptions} />
+      <RaceFilterBar filters={filters} onFiltersChange={onFiltersChange} trackOptions={trackOptions} championships={listRaceChampionships(races)} />
       <div className={tableStyles.tableCaption}>
         <p aria-live="polite">{listTexts.resultCount(shownRaces.length, races.length)}</p>
         {hint && <p>{hint}</p>}

@@ -1,5 +1,5 @@
 import type { Car } from '../../../shared/carRules';
-import { CREW_CHAMPIONSHIPS, type CrewChampionship, isCrewChampionship } from '../../../shared/crewRules';
+import { sortChampionshipNames } from '../../../shared/championshipRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
 interface CarRow {
@@ -14,10 +14,10 @@ interface CarRow {
   readonly championships_json: string | null;
 }
 
-function readChampionships(json: string | null): CrewChampionship[] {
+function readChampionships(json: string | null): string[] {
   try {
     const values = JSON.parse(json ?? '[]') as unknown;
-    return Array.isArray(values) ? CREW_CHAMPIONSHIPS.filter((championship) => values.some((value) => isCrewChampionship(value) && value === championship)) : [];
+    return Array.isArray(values) ? sortChampionshipNames(values.filter((value): value is string => typeof value === 'string')) : [];
   } catch {
     return [];
   }
@@ -50,4 +50,13 @@ export async function listCars(database: SqlDatabase): Promise<Car[]> {
 /** L'auto esiste ed è disponibile in quel campionato? */
 export async function isCarAvailableIn(database: SqlDatabase, carId: number, championship: string): Promise<boolean> {
   return (await database.prepare('SELECT car_id FROM car_championships WHERE car_id = ? AND championship = ?').bind(carId, championship).first()) !== null;
+}
+
+/** Quali di queste auto esistono nel catalogo. */
+export async function findExistingCarIds(database: SqlDatabase, carIds: readonly number[]): Promise<number[]> {
+  const { results } = await database
+    .prepare('SELECT id FROM cars WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify(carIds))
+    .all<{ id: number }>();
+  return results.map((row) => row.id);
 }

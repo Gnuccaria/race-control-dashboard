@@ -1,4 +1,5 @@
 import type { SavedCrew } from '@shared/crewRules';
+import { TEST_CHAMPIONSHIPS } from '@shared/testChampionships';
 import type { RaceSummary, SavedRace } from '@shared/raceRules';
 import { describe, expect, it } from 'vitest';
 import {
@@ -35,7 +36,7 @@ const summary = (id: number, round: number, raceDate: string, trackName: string 
   id,
   name: null,
   championship: CHAMPIONSHIP,
-  duration: '6 hours',
+  duration: 6,
   totalLaps: null,
   round,
   trackId: trackName ? id : null,
@@ -97,7 +98,7 @@ describe('form della gara', () => {
   const completeValues = {
     name: '',
     championship: CHAMPIONSHIP,
-    duration: '6 hours',
+    duration: '6',
     totalLapsText: '',
     roundText: '4',
     raceDate: '2026-11-08',
@@ -116,13 +117,13 @@ describe('form della gara', () => {
   it('richiede la durata nel Cool1 FIE Championship e controlla il nome', () => {
     expect(checkRaceDraft({ ...completeValues, duration: '' })).toMatchObject({ isDurationRequired: true, isComplete: false });
     expect(checkRaceDraft({ ...completeValues, name: '<b>' })).toMatchObject({ isNameInvalid: true, hasInfoErrors: true, isComplete: false });
-    expect(validateRaceValues({ ...completeValues, name: ' 6 Ore ' })).toMatchObject({ isValid: true, race: { name: '6 Ore', duration: '6 hours' } });
+    expect(validateRaceValues({ ...completeValues, name: ' 6 Ore ' }, TEST_CHAMPIONSHIPS)).toMatchObject({ isValid: true, race: { name: '6 Ore', duration: 6 } });
   });
 
   it('controlla i giri totali e i giri che li superano', () => {
     expect(checkRaceDraft({ ...completeValues, totalLapsText: '0' })).toMatchObject({ isTotalLapsInvalid: true, hasInfoErrors: true, isComplete: false });
     expect(checkRaceDraft({ ...completeValues, totalLapsText: '24' })).toMatchObject({ positionsOverTotalLaps: [1], hasResultsErrors: true, isComplete: false });
-    expect(validateRaceValues({ ...completeValues, totalLapsText: '25' })).toMatchObject({ isValid: true, race: { totalLaps: 25 } });
+    expect(validateRaceValues({ ...completeValues, totalLapsText: '25' }, TEST_CHAMPIONSHIPS)).toMatchObject({ isValid: true, race: { totalLaps: 25 } });
   });
 
   it('decide la vettura di ogni riga e blocca gli equipaggi senza auto', () => {
@@ -141,7 +142,7 @@ describe('form della gara', () => {
       { position: 1, crewId: 7, laps: 25, gapMs: null },
       { position: 3, crewId: 9, laps: 24, gapMs: 65_320 },
     ]);
-    expect(validateRaceValues(completeValues)).toMatchObject({ isValid: true, race: { round: 4, trackId: null } });
+    expect(validateRaceValues(completeValues, TEST_CHAMPIONSHIPS)).toMatchObject({ isValid: true, race: { round: 4, trackId: null } });
   });
 
   it('richiede i giri completati per ogni equipaggio inserito', () => {
@@ -153,7 +154,7 @@ describe('form della gara', () => {
     // La posizione 2 è vuota, quindi il testo lì non conta; in posizione 3 "1:65" non è valido.
     const invalidGap = checkRaceDraft({ ...completeValues, gapTextByPosition: ['', 'abc', '1:65', ...Array.from({ length: 11 }, () => '')] });
     expect(invalidGap).toMatchObject({ positionsWithInvalidGap: [3], hasResultsErrors: true, isComplete: false });
-    expect(validateRaceValues({ ...completeValues, gapTextByPosition: Array.from({ length: 14 }, () => '') })).toMatchObject({ isValid: true });
+    expect(validateRaceValues({ ...completeValues, gapTextByPosition: Array.from({ length: 14 }, () => '') }, TEST_CHAMPIONSHIPS)).toMatchObject({ isValid: true });
   });
 
   it('il primo non ha distacco: un testo rimasto nella sua riga non conta e non viene salvato', () => {
@@ -168,7 +169,7 @@ describe('form della gara', () => {
     expect(checkRaceDraft({ ...completeValues, raceDate: '2099-01-01', endDate: '2099-01-01' })).toMatchObject({ isComplete: true });
     expect(checkRaceDraft({ ...completeValues, endTime: '' })).toMatchObject({ isEndBeforeStart: false, isComplete: false });
     expect(checkRaceDraft({ ...completeValues, endTime: '20:00' })).toMatchObject({ isEndBeforeStart: true, hasInfoErrors: true, isComplete: false });
-    expect(validateRaceValues({ ...completeValues, endTime: '20:00' })).toMatchObject({ isValid: false, issues: { endTime: 'before-start' } });
+    expect(validateRaceValues({ ...completeValues, endTime: '20:00' }, TEST_CHAMPIONSHIPS)).toMatchObject({ isValid: false, issues: { endTime: 'before-start' } });
     const repeated = checkRaceDraft({
       ...completeValues,
       crewIdByPosition: [7, 9, 7, ...Array.from({ length: 11 }, () => null)],
@@ -250,7 +251,7 @@ describe('cambi pilota nel form', () => {
     const raceValues = {
       ...EMPTY_RACE_VALUES,
       championship: CHAMPIONSHIP,
-      duration: '6 hours' as const,
+      duration: '6',
       roundText: '4',
       raceDate: '2026-11-08',
       startTime: '21:00',
@@ -261,6 +262,6 @@ describe('cambi pilota nel form', () => {
     const sheet = computeDriverSwapSheet(values.driverSwap, [7, 9], 5);
     expect(checkRaceDraft(values, undefined, sheet)).toMatchObject({ hasDriverSwapErrors: true, isComplete: false });
     const entries = [{ swap: 1, crewId: 7, pitInMs: 1_000, pitOutMs: 2_000, isCancelled: false, notes: '' }];
-    expect(validateRaceValues(raceValues, entries)).toMatchObject({ isValid: true, race: { driverSwaps: entries } });
+    expect(validateRaceValues(raceValues, TEST_CHAMPIONSHIPS, entries)).toMatchObject({ isValid: true, race: { driverSwaps: entries } });
   });
 });

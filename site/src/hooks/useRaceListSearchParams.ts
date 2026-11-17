@@ -33,6 +33,7 @@ export function useRaceListSearchParams() {
   const toDate = readText(PARAM.toDate);
 
   const filters: RaceFilters = {
+    // Un campionato qualsiasi: se non ha gare, l'elenco resta vuoto e si può azzerare il filtro.
     championship: isCrewChampionship(championship) ? championship : '',
     trackId: /^\d{1,9}$/.test(trackId) ? trackId : '',
     fromDate: isIsoDate(fromDate) ? fromDate : '',

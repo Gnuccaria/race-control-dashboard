@@ -2,9 +2,10 @@
  * Regole di una gara e del suo ordine di arrivo, condivise tra app desktop e server
  * (come shared/crewRules.ts per gli equipaggi).
  */
-import { type CrewChampionship, isCrewChampionship } from './crewRules';
+import { type Championship, championshipDurations, driverSwapCountOf, findChampionship } from './championshipRules';
+import type { CrewChampionship } from './crewRules';
 import { isRaceTime, raceInstants } from './raceSchedule';
-import { type DriverSwapEntry, driverSwapCount, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
+import { type DriverSwapEntry, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
 
 /** Righe dell'ordine di arrivo. */
 export const RACE_RESULT_POSITIONS = 14;
@@ -60,23 +61,8 @@ export interface PublicRace extends RaceSummary {
   readonly results: readonly PublicRaceResult[];
 }
 
-/** Durate di gara, salvate in inglese. */
-export const RACE_DURATIONS = ['3 hours', '6 hours', '12 hours'] as const;
-export type RaceDuration = (typeof RACE_DURATIONS)[number];
-/** Durate possibili in ogni campionato; la durata è sempre obbligatoria. */
-export const RACE_DURATIONS_BY_CHAMPIONSHIP: Readonly<Record<CrewChampionship, readonly RaceDuration[]>> = {
-  'Cool1 FIE Championship': ['6 hours', '12 hours'],
-  'All Japan GT Championship': ['3 hours'],
-};
-/** Durate del campionato (nessuna per un campionato sconosciuto). */
-export const raceDurationsFor = (championship: string): readonly RaceDuration[] =>
-  isCrewChampionship(championship) ? RACE_DURATIONS_BY_CHAMPIONSHIP[championship] : [];
-/** La durata che si può dare per scontata: l'unica del campionato (es. 3 ore nell'All Japan GT Championship). */
-export const onlyRaceDurationFor = (championship: string): RaceDuration | null => {
-  const durations = raceDurationsFor(championship);
-  return durations.length === 1 ? (durations[0] ?? null) : null;
-};
-export const isRaceDuration = (value: unknown): value is RaceDuration => RACE_DURATIONS.some((duration) => duration === value);
+/** Durata di una gara in ore intere (tra le durate del suo campionato). */
+export type RaceDuration = number;
 
 /** Nome della gara (facoltativo): lettere, cifre, spazi e la punteggiatura dei titoli ("6 Ore di Monza – Round 3"). */
 export const RACE_NAME_MAX_LENGTH = 80;
@@ -121,7 +107,7 @@ export interface RaceDraft {
   /** Nome della gara (facoltativo). */
   readonly name: string | null;
   readonly championship: CrewChampionship;
-  /** Obbligatoria, tra quelle del campionato (RACE_DURATIONS_BY_CHAMPIONSHIP). */
+  /** Ore, obbligatoria, tra le durate del campionato. */
   readonly duration: RaceDuration | null;
   /** Giri totali della gara (facoltativi, 1–999): nessun equipaggio può averne completati di più. */
   readonly totalLaps: number | null;
@@ -388,13 +374,14 @@ function readResults(rawResults: unknown): RaceResultEntry[] | null {
 }
 
 /** Convalida dati di origine sconosciuta e li restituisce in forma canonica. */
-export function validateRaceDraft(input: unknown): RaceDraftValidation {
+export function validateRaceDraft(input: unknown, championships: readonly Pick<Championship, 'name' | 'durations'>[]): RaceDraftValidation {
   const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
 
-  const championship = isCrewChampionship(candidate.championship) ? candidate.championship : null;
+  // Il campionato deve esistere; si salva con il nome com'è scritto nel campionato.
+  const championship = typeof candidate.championship === 'string' ? (findChampionship(championships, candidate.championship)?.name ?? null) : null;
   const name = normalizeRaceName(candidate.name);
   const isDurationMissing = candidate.duration === undefined || candidate.duration === null || candidate.duration === '';
-  const duration = isRaceDuration(candidate.duration) ? candidate.duration : null;
+  const duration = typeof candidate.duration === 'number' && Number.isInteger(candidate.duration) ? candidate.duration : null;
   const isTotalLapsMissing = candidate.totalLaps === undefined || candidate.totalLaps === null;
   const totalLaps =
     typeof candidate.totalLaps === 'number' && Number.isInteger(candidate.totalLaps) && candidate.totalLaps >= 1 && candidate.totalLaps <= RACE_LAPS_MAX
@@ -411,14 +398,16 @@ export function validateRaceDraft(input: unknown): RaceDraftValidation {
   const trackId = isPositiveInteger(candidate.trackId) ? candidate.trackId : null;
   const raceDate = isIsoDate(candidate.raceDate) ? candidate.raceDate : null;
   const results = readResults(candidate.results ?? []);
-  // Il numero di cambi dipende dal campionato (senza campionato nessuno).
-  const driverSwaps = readDriverSwaps(candidate.driverSwaps ?? [], championship ? driverSwapCount(championship) : 0);
+  // Il numero di cambi dipende dal campionato e dalla durata, cioè dagli stint (senza campionato nessuno).
+  const driverSwaps = readDriverSwaps(candidate.driverSwaps ?? [], championship ? driverSwapCountOf(championships, championship, duration) : 0);
 
   const issues: { -readonly [Field in keyof RaceDraftIssues]: RaceDraftIssues[Field] } = {};
   if (name === undefined) issues.name = 'invalid';
   if (!championship) issues.championship = 'required';
   else if (isDurationMissing) issues.duration = 'required';
-  else if (duration === null || !raceDurationsFor(championship).includes(duration)) issues.duration = 'invalid';
+  else if (duration === null || !championshipDurations(championships, championship).some((candidateDuration) => candidateDuration.hours === duration)) {
+    issues.duration = 'invalid';
+  }
   if (round === null) issues.round = 'invalid';
   const isTrackReversed = candidate.isTrackReversed === true;
   if (!isTrackMissing && trackId === null) issues.trackId = 'invalid';

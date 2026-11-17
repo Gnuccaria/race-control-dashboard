@@ -1,4 +1,4 @@
-import { CREW_CHAMPIONSHIPS, type CrewChampionshipEntry, type CrewDraft, isCrewChampionship, type SavedCrew, toCrewNameKey } from '../../../shared/crewRules';
+import { type CrewChampionshipEntry, type CrewDraft, isCrewChampionship, type SavedCrew, sortCrewChampionships, toCrewNameKey } from '../../../shared/crewRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
 export type CrewConflict = 'number' | 'name' | 'role' | null;
@@ -19,14 +19,13 @@ const CREW_COLUMNS = `id, name, number, color, discord_channel_id, discord_role_
   (SELECT json_group_array(json_object('championship', championship, 'carId', car_id))
    FROM crew_championships WHERE crew_championships.crew_id = crews.id) AS championships_json`;
 
-/** Campionati dal JSON del database, nell'ordine di CREW_CHAMPIONSHIPS (si scartano quelli non più previsti). */
+/** Campionati dal JSON del database, in ordine alfabetico. */
 function readChampionships(json: string | null): CrewChampionshipEntry[] {
   try {
     const entries = JSON.parse(json ?? '[]') as { championship?: unknown; carId?: unknown }[];
-    return CREW_CHAMPIONSHIPS.flatMap((championship) => {
-      const entry = entries.find((candidate) => isCrewChampionship(candidate.championship) && candidate.championship === championship);
-      return entry ? [{ championship, carId: typeof entry.carId === 'number' ? entry.carId : null }] : [];
-    });
+    return sortCrewChampionships(
+      entries.flatMap(({ championship, carId }) => (isCrewChampionship(championship) ? [{ championship, carId: typeof carId === 'number' ? carId : null }] : [])),
+    );
   } catch {
     return [];
   }

@@ -1,0 +1,17 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+  max-inline-size: var(--layout-width-wide);
+  margin-inline: auto;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

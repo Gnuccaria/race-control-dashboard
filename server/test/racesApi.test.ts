@@ -17,7 +17,7 @@ describe('API gare e piste', () => {
   const race = (overrides: Record<string, unknown> = {}) => withSchedule({
     name: 'Gara di prova',
     championship: CHAMPIONSHIP,
-    duration: '6 hours',
+    duration: 6,
     totalLaps: 30,
     round: 1,
     trackId: null,
@@ -48,7 +48,7 @@ describe('API gare e piste', () => {
       id: 1,
       name: 'Gara di prova',
       championship: CHAMPIONSHIP,
-      duration: '6 hours',
+      duration: 6,
       totalLaps: 30,
       round: 1,
       trackName: null,
@@ -211,12 +211,12 @@ describe('API gare e piste', () => {
     const japanRace = await request(
       'POST',
       '/races',
-      race({ championship: 'All Japan GT Championship', duration: '3 hours', round: 1, results: [{ position: 1, crewId: 1, laps: 25 }], driverSwaps: [] }),
+      race({ championship: 'All Japan GT Championship', duration: 3, round: 1, results: [{ position: 1, crewId: 1, laps: 25 }], driverSwaps: [] }),
     );
     expect(japanRace.status).toBe(201);
     expect((japanRace.body.race as { results: { carId: number }[] }).results[0]?.carId).toBe(5);
     // L'equipaggio 2 non partecipa all'All Japan GT.
-    const outsider = await request('POST', '/races', race({ championship: 'All Japan GT Championship', duration: '3 hours', round: 2, results: [{ position: 1, crewId: 2, laps: 25 }] }));
+    const outsider = await request('POST', '/races', race({ championship: 'All Japan GT Championship', duration: 3, round: 2, results: [{ position: 1, crewId: 2, laps: 25 }] }));
     expect(outsider).toMatchObject({ status: 422 });
   });
 

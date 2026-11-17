@@ -1,0 +1,106 @@
+.fields {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.hint,
+.rowSummary {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.rowError {
+  margin: 0;
+  color: var(--color-text-error);
+  font-size: var(--font-size-small);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Ore, stint, riepilogo (stint e cambi pilota) e X sulla stessa riga; su schermi stretti il riepilogo va sotto. */
+.durationRow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 9rem) minmax(7rem, 10rem) 1fr auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.durationRow > .rowSummary,
+.durationRow > .rowError {
+  align-self: center;
+}
+
+@media (width < 40rem) {
+  .durationRow {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .durationRow > :nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.inlineField {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+}
+
+.addButton {
+  justify-self: start;
+}
+
+.carList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3) var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-sunken);
+}
+
+.carItem:not(:has(button)) {
+  padding-inline-end: var(--space-3);
+}
+
+.addCarRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}

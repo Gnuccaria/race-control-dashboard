@@ -1,3 +1,4 @@
+import { sortChampionshipNames } from '@shared/championshipRules';
 import type { CrewChampionship } from '@shared/crewRules';
 import type { RaceSummary } from '@shared/raceRules';
 import { type SortState, toggleSort } from '@/lib/sorting';
@@ -34,6 +35,9 @@ export interface RaceTrackOption {
 }
 
 /** Piste usate nelle gare elencate (una voce per configurazione), in ordine alfabetico: le scelte del filtro Tracciato. */
+/** Campionati presenti nelle gare, in ordine alfabetico: le voci del filtro Campionato. */
+export const listRaceChampionships = (races: readonly RaceSummary[]): string[] => sortChampionshipNames([...new Set(races.map((race) => race.championship))]);
+
 export function listRaceTrackOptions(races: readonly RaceSummary[], labelOf: (race: RaceSummary) => string, locale: string): RaceTrackOption[] {
   const optionsByTrackId = new Map<number, RaceTrackOption>();
   for (const race of races) {

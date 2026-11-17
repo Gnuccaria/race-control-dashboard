@@ -3,13 +3,14 @@
  * l'app le usa per guidare l'utente, il server per non fidarsi mai di ciò che riceve.
  */
 
-/** Campionati selezionabili. Per aggiungerne uno basta aggiungerlo qui: app, server e importazione lo accettano. */
-export const CREW_CHAMPIONSHIPS = ['Cool1 FIE Championship', 'All Japan GT Championship'] as const;
-export type CrewChampionship = (typeof CREW_CHAMPIONSHIPS)[number];
+import { CHAMPIONSHIP_NAME_MAX_LENGTH, normalizeChampionshipName, sortChampionshipNames } from './championshipRules';
+
+/** Nome di un campionato creato in "Gestione campionati" (shared/championshipRules.ts). */
+export type CrewChampionship = string;
 
 /**
  * Un equipaggio partecipa a zero, uno o più campionati, e in ognuno ha la sua auto, scelta tra quelle disponibili
- * in quel campionato (shared/carRules.ts, Car.championships). L'auto può mancare (null) solo negli equipaggi
+ * in quel campionato (le vetture ammesse del campionato). L'auto può mancare (null) solo negli equipaggi
  * importati da CSV, finché qualcuno non la completa.
  */
 export interface CrewChampionshipEntry {
@@ -18,7 +19,7 @@ export interface CrewChampionshipEntry {
 }
 
 /** Nomi precedenti ancora riconosciuti nei file importati (in minuscolo). */
-export const CHAMPIONSHIP_FORMER_NAMES: Readonly<Record<string, CrewChampionship>> = {
+export const CHAMPIONSHIP_FORMER_NAMES: Readonly<Record<string, string>> = {
   'fie cool1': 'Cool1 FIE Championship',
 };
 
@@ -125,8 +126,9 @@ export function normalizeDiscordRoleId(rawValue: string): string | null {
   return DISCORD_ROLE_MENTION_PATTERN.exec(text)?.[1] ?? null;
 }
 
+/** Un nome di campionato ben formato (che il campionato esista lo controlla il server). */
 export const isCrewChampionship = (value: unknown): value is CrewChampionship =>
-  CREW_CHAMPIONSHIPS.some((championship) => championship === value);
+  typeof value === 'string' && value === normalizeChampionshipName(value) && value !== '' && [...value].length <= CHAMPIONSHIP_NAME_MAX_LENGTH;
 
 /** L'equipaggio partecipa al campionato? */
 export const isCrewInChampionship = (crew: Pick<CrewDraft, 'championships'>, championship: string): boolean =>
@@ -218,7 +220,7 @@ export function validateCrewDraft(
 
 const isPositiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
 
-/** Campionati dal corpo della richiesta, in ordine di CREW_CHAMPIONSHIPS; l'auto è obbligatoria se isCarRequired. */
+/** Campionati dal corpo della richiesta, in ordine alfabetico; l'auto è obbligatoria se isCarRequired. */
 function readCrewChampionships(
   rawValue: unknown,
   isCarRequired: boolean,
@@ -228,13 +230,18 @@ function readCrewChampionships(
   for (const rawEntry of rawValue as unknown[]) {
     const { championship, carId } = (typeof rawEntry === 'object' && rawEntry !== null ? rawEntry : {}) as Record<string, unknown>;
     if (!isCrewChampionship(championship)) return { issue: 'invalid' };
-    if (entries.some((entry) => entry.championship === championship)) return { issue: 'repeated' };
+    if (entries.some((entry) => entry.championship.toLowerCase() === championship.toLowerCase())) return { issue: 'repeated' };
     if (carId === undefined || carId === null || carId === '') {
       if (isCarRequired) return { issue: 'car-required' };
       entries.push({ championship, carId: null });
     } else if (isPositiveInteger(carId)) entries.push({ championship, carId });
     else return { issue: 'car-invalid' };
   }
-  const order = (entry: CrewChampionshipEntry) => CREW_CHAMPIONSHIPS.indexOf(entry.championship);
-  return { championships: entries.sort((first, second) => order(first) - order(second)) };
+  return { championships: sortCrewChampionships(entries) };
+}
+
+/** Campionati di un equipaggio in ordine alfabetico. */
+export function sortCrewChampionships<Entry extends { readonly championship: string }>(entries: readonly Entry[]): Entry[] {
+  const order = sortChampionshipNames(entries.map((entry) => entry.championship));
+  return [...entries].sort((first, second) => order.indexOf(first.championship) - order.indexOf(second.championship));
 }

@@ -1,5 +1,3 @@
-import { CREW_CHAMPIONSHIPS, type CrewChampionship, isCrewChampionship } from './crewRules';
-
 /** Auto disponibili, salvate sul server (tabella cars) e lette dall'app per i menu delle auto. */
 export interface Car {
   readonly id: number;
@@ -13,12 +11,12 @@ export interface Car {
   readonly limiter: number | null;
   /** Zavorra in kg. */
   readonly ballastKg: number | null;
-  /** Campionati in cui l'auto si può scegliere per un equipaggio (dal CSV delle auto; almeno uno). */
-  readonly championships: readonly CrewChampionship[];
+  /** Campionati in cui l'auto è ammessa (si decide in "Gestisci campionati"), in ordine alfabetico. */
+  readonly championships: readonly string[];
 }
 
-/** Dati di un'auto da salvare (senza id). */
-export type CarDraft = Omit<Car, 'id'>;
+/** Dati di un'auto da salvare (senza id e campionati, che si decidono nei campionati). */
+export type CarDraft = Omit<Car, 'id' | 'championships'>;
 
 export const CAR_MANUFACTURER_MAX_LENGTH = 48;
 export const CAR_MODEL_MAX_LENGTH = 64;
@@ -50,7 +48,6 @@ export interface CarDraftIssues {
   readonly weightKg?: 'invalid';
   readonly limiter?: 'invalid';
   readonly ballastKg?: 'invalid';
-  readonly championships?: 'required' | 'invalid';
 }
 
 export type CarDraftValidation =
@@ -91,13 +88,25 @@ export function validateCarDraft(input: unknown): CarDraftValidation {
     } else issues[field] = 'invalid';
   }
 
-  // Campionati: almeno uno, senza ripetizioni, nell'ordine di CREW_CHAMPIONSHIPS.
-  const rawChampionships = candidate.championships;
-  let championships: CrewChampionship[] = [];
-  if (!Array.isArray(rawChampionships) || rawChampionships.length === 0) issues.championships = 'required';
-  else if (!rawChampionships.every(isCrewChampionship)) issues.championships = 'invalid';
-  else championships = CREW_CHAMPIONSHIPS.filter((championship) => rawChampionships.includes(championship));
-
   if (Object.keys(issues).length > 0) return { isValid: false, issues };
-  return { isValid: true, car: { manufacturer, model: model === '' ? null : model, ...numbers, championships } };
+  return { isValid: true, car: { manufacturer, model: model === '' ? null : model, ...numbers } };
+}
+
+/**
+ * Vetture scritte una per riga ("Porsche 911 GT3 R", senza badare a maiuscole e spazi) → id del catalogo.
+ * Le righe vuote si saltano; quelle che non corrispondono a nessuna auto tornano in unknownLines.
+ */
+export function matchCarLines(text: string, cars: readonly Pick<Car, 'id' | 'manufacturer' | 'model'>[]): { carIds: number[]; unknownLines: string[] } {
+  const normalize = (value: string) => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+  const carIdByName = new Map(cars.map((car) => [normalize(formatCarName(car)), car.id]));
+  const carIds: number[] = [];
+  const unknownLines: string[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const key = normalize(line);
+    if (key === '') continue;
+    const carId = carIdByName.get(key);
+    if (carId === undefined) unknownLines.push(line.trim());
+    else if (!carIds.includes(carId)) carIds.push(carId);
+  }
+  return { carIds, unknownLines };
 }

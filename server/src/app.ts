@@ -1,5 +1,6 @@
 import type { MembershipChecker } from './auth/authorizeRequest';
 import { createCarHandlers } from './cars/carHandlers';
+import { createChampionshipHandlers } from './championships/championshipHandlers';
 import { createCrewHandlers } from './crews/crewHandlers';
 import type { Env } from './env';
 import { errorResponse, jsonResponse } from './http/jsonResponse';
@@ -48,6 +49,7 @@ const methodNotAllowed = () => errorResponse(405, 'method-not-allowed');
  *   GET · POST · DELETE /races/:id/penalties    GET · PUT /races/:id/penalties/:penaltyId
  *   GET /races/:id/reprimands[?before=:penaltyId]
  *   PUT /races/:id/driver-swaps   (solo i cambi pilota, Commissari Sportivi)
+ *   GET · POST · DELETE /championships   GET · PUT /championships/:id
  *   GET · POST /tracks
  *   GET /cars
  *   GET /public/races                GET /public/races/:id   (sito dei risultati, senza accesso)
@@ -65,6 +67,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
   const raceHandlers = createRaceHandlers(checkMembership);
   const trackHandlers = createTrackHandlers(checkMembership);
   const carHandlers = createCarHandlers(checkMembership);
+  const championshipHandlers = createChampionshipHandlers(checkMembership);
   const penaltyHandlers = createPenaltyHandlers(checkMembership);
   const siteAuthHandlers = createSiteAuthHandlers(discordFetch);
   const ticketHandlers = createTicketHandlers(checkMembership, discordFetch);
@@ -93,6 +96,10 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
     races: {
       collection: { GET: raceHandlers.listRaces, POST: raceHandlers.createRace, DELETE: raceHandlers.deleteRaces },
       item: { GET: raceHandlers.getRace, PUT: raceHandlers.updateRace },
+    },
+    championships: {
+      collection: { GET: championshipHandlers.listChampionships, POST: championshipHandlers.createChampionship, DELETE: championshipHandlers.deleteChampionships },
+      item: { GET: championshipHandlers.getChampionship, PUT: championshipHandlers.updateChampionship },
     },
     tracks: {
       collection: { GET: trackHandlers.listTracks, POST: trackHandlers.createTrack },

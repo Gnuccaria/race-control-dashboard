@@ -79,6 +79,11 @@ describe('POST /crews', () => {
     // Le auto della migrazione sono solo del Cool1 FIE: nell'All Japan GT servono auto di quel campionato.
     const wrongChampionship = await handleRequest(postCrew({ ...VALID_CREW, ...crewDetails(1, 'All Japan GT Championship') }, 'token-director'), env);
     expect(await wrongChampionship.json()).toEqual({ error: { code: 'invalid-crew', details: { championships: 'unknown-car' } } });
+    // Il campionato deve esistere; scritto con altre maiuscole si salva com'è nel campionato.
+    const unknownChampionship = await handleRequest(postCrew({ ...VALID_CREW, ...crewDetails(1, 'Serie Inventata') }, 'token-director'), env);
+    expect(await unknownChampionship.json()).toEqual({ error: { code: 'invalid-crew', details: { championships: 'unknown-championship' } } });
+    const lowercase = await handleRequest(postCrew({ name: 'Minuscole', number: 77, ...crewDetails(1, 'cool1 fie championship') }, 'token-director'), env);
+    expect(await lowercase.json()).toMatchObject({ crew: { championships: [{ championship: 'Cool1 FIE Championship', carId: 1 }] } });
     await allowCarIn(env, 1, 'All Japan GT Championship');
     expect((await handleRequest(postCrew({ ...VALID_CREW, ...crewDetails(1, 'All Japan GT Championship') }, 'token-director'), env)).status).toBe(201);
   });
@@ -101,12 +106,12 @@ describe('POST /crews', () => {
       env,
     );
     expect(both.status).toBe(201);
-    // In ordine di campionato.
+    // In ordine alfabetico di campionato.
     expect(await both.json()).toMatchObject({
       crew: {
         championships: [
-          { championship: 'Cool1 FIE Championship', carId: 1 },
           { championship: 'All Japan GT Championship', carId: 3 },
+          { championship: 'Cool1 FIE Championship', carId: 1 },
         ],
       },
     });

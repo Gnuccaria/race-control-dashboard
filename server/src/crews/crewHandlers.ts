@@ -1,6 +1,8 @@
-import { type CrewDraft, validateCrewDraft } from '../../../shared/crewRules';
+import { findChampionship } from '../../../shared/championshipRules';
+import { type CrewDraft, sortCrewChampionships, validateCrewDraft } from '../../../shared/crewRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import { isCarAvailableIn } from '../cars/carRepository';
+import { listChampionships } from '../championships/championshipRepository';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
@@ -23,19 +25,27 @@ const conflictResponse = (conflict: Exclude<CrewConflict, null>) => errorRespons
 
 type CrewDraftReading = { readonly crew: CrewDraft } | { readonly errorResponse: Response };
 
-/** Corpo della richiesta → equipaggio convalidato con le stesse regole dell'app; ogni auto deve essere del suo campionato. */
+/**
+ * Corpo della richiesta → equipaggio convalidato con le stesse regole dell'app; ogni campionato deve esistere
+ * (si salva con il nome com'è scritto nel campionato) e ogni auto deve esservi ammessa.
+ */
 async function readCrewDraft(request: Request, database: SqlDatabase): Promise<CrewDraftReading> {
   const requestBody = await readJsonBody(request);
   if (requestBody === undefined) return { errorResponse: errorResponse(400, 'invalid-request') };
 
   const validation = validateCrewDraft(requestBody);
   if (!validation.isValid) return { errorResponse: errorResponse(422, 'invalid-crew', validation.issues) };
-  for (const { championship, carId } of validation.crew.championships) {
-    if (carId !== null && !(await isCarAvailableIn(database, carId, championship))) {
+  const savedChampionships = await listChampionships(database);
+  const championships = [];
+  for (const entry of validation.crew.championships) {
+    const championship = findChampionship(savedChampionships, entry.championship)?.name;
+    if (!championship) return { errorResponse: errorResponse(422, 'invalid-crew', { championships: 'unknown-championship' }) };
+    if (entry.carId !== null && !(await isCarAvailableIn(database, entry.carId, championship))) {
       return { errorResponse: errorResponse(422, 'invalid-crew', { championships: 'unknown-car' }) };
     }
+    championships.push({ championship, carId: entry.carId });
   }
-  return { crew: validation.crew };
+  return { crew: { ...validation.crew, championships: sortCrewChampionships(championships) } };
 }
 
 /**

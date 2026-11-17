@@ -14,7 +14,7 @@ vi.mock('@/features/auth/services/discordApi');
 vi.mock('@/features/crews/services/crewApi');
 vi.mock('./services/raceApi');
 
-const LIST_PATH = '/campionato/ordini-di-arrivo';
+const LIST_PATH = '/campionati/gare';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
 
 /** Equipaggio con l'Audi nel campionato indicato (null = nessun campionato). */
@@ -33,7 +33,7 @@ const summary = (id: number, round: number, raceDate: string): RaceSummary => ({
   id,
   name: null,
   championship: CHAMPIONSHIP,
-  duration: '6 hours',
+  duration: 6,
   totalLaps: null,
   round,
   trackId: null,
@@ -110,7 +110,7 @@ describe('Nuova gara', () => {
     const savedRace: SavedRace = {
       ...summary(5, 3, '2026-11-08'),
       name: '6 Ore di Alsazia',
-      duration: '12 hours',
+      duration: 12,
       results: [{ position: 1, crewId: 2, laps: 25, gapMs: null, carId: testCarId('Audi') }],
       driverSwaps: [],
     };
@@ -233,7 +233,7 @@ describe('Nuova gara', () => {
     expect(createRace).toHaveBeenCalledWith({
       name: '6 Ore di Alsazia',
       championship: CHAMPIONSHIP,
-      duration: '12 hours',
+      duration: 12,
       totalLaps: 25,
       round: 3,
       trackId: 1,
@@ -337,7 +337,7 @@ describe('Dettaglio gara', () => {
       1,
       expect.objectContaining({
         round: 4,
-        duration: '6 hours',
+        duration: 6,
         results: savedRace.results.map(({ position, crewId, laps, gapMs }) => ({ position, crewId, laps, gapMs })),
         // I cambi pilota salvati tornano al server così come sono.
         driverSwaps: savedRace.driverSwaps.map(({ swap, crewId, pitInMs, pitOutMs, isCancelled, notes }) => ({

@@ -23,7 +23,7 @@ export function RaceFacts({ race }: { readonly race: RaceSummary }) {
           description:
             race.trackName === null ? notSet : trackLabel({ name: race.trackName, configuration: race.trackConfiguration }, race.isTrackReversed),
         },
-        { term: factTexts.duration, description: race.duration ? (messages.races.form.durations[race.duration] ?? race.duration) : notSet },
+        { term: factTexts.duration, description: race.duration ? messages.races.form.durationLabel(race.duration) : notSet },
         { term: factTexts.totalLaps, description: race.totalLaps ?? notSet },
       ]}
     />

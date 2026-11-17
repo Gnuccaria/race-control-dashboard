@@ -37,7 +37,7 @@ async function chooseColorFromPalette(user: ReturnType<typeof userEvent.setup>, 
   await user.click(within(pickerDialog).getByRole('button', { name: 'Conferma' }));
 }
 
-describe('Aggiungi equipaggio', () => {
+describe('Crea equipaggio', () => {
   beforeEach(() => {
     vi.mocked(createCrew).mockReset();
   });
@@ -139,9 +139,10 @@ describe('Aggiungi equipaggio', () => {
     expect(createCrew).toHaveBeenCalledWith({
       name: 'Sim Racing Café',
       number: 77,
+      // In ordine alfabetico di campionato.
       championships: [
-        { championship: FIE, carId: testCarId('Porsche') },
         { championship: JAPAN, carId: testCarId('Nissan') },
+        { championship: FIE, carId: testCarId('Porsche') },
       ],
       color: '#E60000',
       discordChannelId: null,

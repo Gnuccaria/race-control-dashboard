@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   checkDriverSwap,
   type DriverSwapEntry,
-  driverSwapCount,
   formatRaceTimestamp,
   normalizeTimestampText,
   parseRaceTimestamp,
@@ -10,6 +9,8 @@ import {
   totalDriverSwapPenalties,
   withDriverSwapPenalties,
 } from './driverSwapRules';
+import { driverSwapCountOf } from './championshipRules';
+import { TEST_CHAMPIONSHIPS } from './testChampionships';
 
 const entry = (crewId: number, pitIn: string, pitOut: string, overrides: Partial<DriverSwapEntry> = {}): DriverSwapEntry => ({
   swap: 1,
@@ -24,10 +25,12 @@ const entry = (crewId: number, pitIn: string, pitOut: string, overrides: Partial
 const isInvalid = (text: string) => Number.isNaN(parseRaceTimestamp(text));
 
 describe('cambi pilota', () => {
-  it('il campionato decide quanti cambi ci sono', () => {
-    expect(driverSwapCount('Cool1 FIE Championship')).toBe(5);
-    expect(driverSwapCount('All Japan GT Championship')).toBe(1);
-    expect(driverSwapCount('')).toBe(0);
+  it('gli stint della durata decidono quanti cambi ci sono', () => {
+    expect(driverSwapCountOf(TEST_CHAMPIONSHIPS, 'Cool1 FIE Championship', 6)).toBe(5);
+    expect(driverSwapCountOf(TEST_CHAMPIONSHIPS, 'Cool1 FIE Championship', 12)).toBe(5);
+    expect(driverSwapCountOf(TEST_CHAMPIONSHIPS, 'All Japan GT Championship', 3)).toBe(1);
+    expect(driverSwapCountOf(TEST_CHAMPIONSHIPS, 'Cool1 FIE Championship', null)).toBe(0);
+    expect(driverSwapCountOf(TEST_CHAMPIONSHIPS, '', 6)).toBe(0);
   });
 
   it('legge i tempi scritti in molti modi e li riporta sempre a HH:MM:SS.DDD', () => {

@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { setLanguagePreference } from '@/i18n/languagePreferenceStore';
+import { TEST_CHAMPIONSHIPS } from '@shared/testChampionships';
 import { TEST_CARS } from './testCars';
 import { TEST_TRACKS } from './testTracks';
 
@@ -38,6 +39,15 @@ HTMLElement.prototype.hidePopover ??= () => undefined;
 // Le auto arrivano dal server: nei test l'elenco è sempre quello della migrazione.
 vi.mock('@/features/cars/carApi', () => ({
   fetchCars: vi.fn(() => Promise.resolve({ isSuccess: true, value: TEST_CARS })),
+}));
+
+// Anche i campionati: i due della migrazione 0028; creazione, modifica ed eliminazione si simulano nei singoli test.
+vi.mock('@/features/championships/services/championshipApi', () => ({
+  fetchChampionships: vi.fn(() => Promise.resolve({ isSuccess: true, value: TEST_CHAMPIONSHIPS })),
+  fetchChampionship: vi.fn(),
+  createChampionship: vi.fn(),
+  updateChampionship: vi.fn(),
+  deleteChampionships: vi.fn(),
 }));
 
 // Anche le piste: un piccolo elenco con continenti, configurazioni e senso inverso.

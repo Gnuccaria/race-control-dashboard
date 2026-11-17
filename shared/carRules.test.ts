@@ -3,7 +3,7 @@ import { formatCarName, toCarKey, validateCarDraft } from './carRules';
 
 describe('regole auto', () => {
   it('normalizza i nomi e lascia vuoti i dati non indicati', () => {
-    expect(validateCarDraft({ manufacturer: '  Mercedes-AMG ', model: 'GT3   Evo', championships: ['All Japan GT Championship', 'Cool1 FIE Championship'] })).toEqual({
+    expect(validateCarDraft({ manufacturer: '  Mercedes-AMG ', model: 'GT3   Evo' })).toEqual({
       isValid: true,
       car: {
         manufacturer: 'Mercedes-AMG',
@@ -12,20 +12,17 @@ describe('regole auto', () => {
         weightKg: null,
         limiter: null,
         ballastKg: null,
-        championships: ['Cool1 FIE Championship', 'All Japan GT Championship'],
       },
     });
-    expect(validateCarDraft({ manufacturer: 'Audi', model: '', championships: ['Cool1 FIE Championship'] })).toMatchObject({ isValid: true, car: { model: null } });
+    expect(validateCarDraft({ manufacturer: 'Audi', model: '' })).toMatchObject({ isValid: true, car: { model: null } });
   });
 
   it('controlla nomi e numeri', () => {
     expect(validateCarDraft({ manufacturer: '', model: '<b>', horsepower: 0, weightKg: 12.5, limiter: -1, ballastKg: Number.NaN })).toEqual({
       isValid: false,
-      issues: { manufacturer: 'required', model: 'invalid-characters', horsepower: 'invalid', weightKg: 'invalid', limiter: 'invalid', ballastKg: 'invalid', championships: 'required' },
+      issues: { manufacturer: 'required', model: 'invalid-characters', horsepower: 'invalid', weightKg: 'invalid', limiter: 'invalid', ballastKg: 'invalid' },
     });
-    expect(validateCarDraft({ manufacturer: 'Audi', limiter: 97.5, ballastKg: 0, championships: ['Cool1 FIE Championship'] }).isValid).toBe(true);
-    // Almeno un campionato, tra quelli previsti.
-    expect(validateCarDraft({ manufacturer: 'Audi', championships: ['Serie X'] })).toEqual({ isValid: false, issues: { championships: 'invalid' } });
+    expect(validateCarDraft({ manufacturer: 'Audi', limiter: 97.5, ballastKg: 0 }).isValid).toBe(true);
   });
 
   it('riconosce la stessa auto senza badare alle maiuscole', () => {

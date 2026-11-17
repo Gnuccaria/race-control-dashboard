@@ -21,7 +21,7 @@ import { DISCORD_CONFIG } from '@/config/discordConfig';
 export interface AppAccess {
   /** Ruolo Organizzazione: Gestisci campionato. */
   readonly organization: boolean;
-  /** Ruolo Direttore Gara: Crea documentazione e strumenti della Direzione Gara. */
+  /** Ruolo Direttore Gara: Strumenti pre-gara e strumenti della Direzione Gara. */
   readonly raceControl: boolean;
   /** Ruolo Commissari Sportivi: strumenti dei Commissari Sportivi. */
   readonly stewards: boolean;

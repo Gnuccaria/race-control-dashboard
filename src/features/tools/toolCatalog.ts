@@ -2,7 +2,10 @@ import type { ComponentType } from 'react';
 import { BopDeficitIcon } from '@/features/bop-deficit/BopDeficitIcon';
 import { BOP_DEFICIT_TOOL_INFO } from '@/features/bop-deficit/toolInfo';
 import { RaceBriefingIcon } from '@/features/documentation/RaceBriefingIcon';
-import { RACE_BRIEFING_TOOL_INFO } from '@/features/documentation/toolInfo';
+import { RACE_BRIEFING_TOOL_INFO, WEATHER_PATTERN_TOOL_INFO } from '@/features/documentation/toolInfo';
+import { WeatherPatternIcon } from '@/features/documentation/WeatherPatternIcon';
+import { CreateChampionshipIcon, ManageChampionshipsIcon } from '@/features/championships/ChampionshipIcons';
+import { CREATE_CHAMPIONSHIP_TOOL_INFO, MANAGE_CHAMPIONSHIPS_TOOL_INFO } from '@/features/championships/championshipsToolInfo';
 import { ADD_CREW_TOOL_INFO, MANAGE_CREWS_TOOL_INFO } from '@/features/crews/addCrewToolInfo';
 import { AddCrewIcon, ManageCrewsIcon } from '@/features/crews/CrewIcons';
 import { FieDisconnectionsIcon } from '@/features/fie-disconnections/FieDisconnectionsIcon';
@@ -42,7 +45,7 @@ export interface ToolDefinition {
 
 export interface ToolSection {
   readonly id: string;
-  /** Primo segmento dell'URL degli strumenti della sezione, es. "campionato". */
+  /** Primo segmento dell'URL della sezione e dei suoi strumenti, es. "campionati" (la pagina della sezione è /campionati). */
   readonly pathSegment: string;
   /** Chiave del titolo tradotto in messages.home.sections. */
   readonly messageKey: keyof Messages['home']['sections'];
@@ -55,43 +58,43 @@ export interface ToolSection {
 export const canUseSection = (section: ToolSection, access: AppAccess): boolean => !section.requiredAccess || access[section.requiredAccess];
 
 /**
- * Unica fonte di verità di sezioni e strumenti: da qui derivano le card della home e le rotte.
+ * Unica fonte di verità di sezioni e strumenti: da qui derivano le card della home, il menu laterale e le rotte.
  * Per aggiungere uno strumento basta aggiungere una voce nella sezione giusta; con
  * availability: { status: 'under-construction' } la card compare disattivata con "In costruzione".
  */
 export const TOOL_SECTIONS: readonly ToolSection[] = [
   {
-    id: 'championship',
-    pathSegment: 'campionato',
-    messageKey: 'championship',
+    id: 'championships',
+    pathSegment: 'campionati',
+    messageKey: 'championships',
     requiredAccess: 'organization',
     tools: [
       {
-        ...ADD_CREW_TOOL_INFO,
-        Icon: AddCrewIcon,
+        ...CREATE_CHAMPIONSHIP_TOOL_INFO,
+        Icon: CreateChampionshipIcon,
         availability: {
           status: 'available',
           loadPage: async () => {
-            const { AddCrewPage } = await import('@/features/crews');
-            return { Component: AddCrewPage };
+            const { CreateChampionshipPage } = await import('@/features/championships');
+            return { Component: CreateChampionshipPage };
           },
         },
       },
       {
-        ...MANAGE_CREWS_TOOL_INFO,
-        Icon: ManageCrewsIcon,
+        ...MANAGE_CHAMPIONSHIPS_TOOL_INFO,
+        Icon: ManageChampionshipsIcon,
         availability: {
           status: 'available',
           loadPage: async () => {
-            const { ManageCrewsPage } = await import('@/features/crews');
-            return { Component: ManageCrewsPage };
+            const { ManageChampionshipsPage } = await import('@/features/championships');
+            return { Component: ManageChampionshipsPage };
           },
           subPages: [
             {
-              path: ':crewId',
+              path: ':championshipId',
               loadPage: async () => {
-                const { CrewDetailPage } = await import('@/features/crews');
-                return { Component: CrewDetailPage };
+                const { ChampionshipDetailPage } = await import('@/features/championships');
+                return { Component: ChampionshipDetailPage };
               },
             },
           ],
@@ -128,11 +131,53 @@ export const TOOL_SECTIONS: readonly ToolSection[] = [
     ],
   },
   {
-    id: 'documentation',
-    pathSegment: 'documentazione',
-    messageKey: 'documentation',
+    id: 'crews',
+    pathSegment: 'equipaggi',
+    messageKey: 'crews',
+    requiredAccess: 'organization',
+    tools: [
+      {
+        ...ADD_CREW_TOOL_INFO,
+        Icon: AddCrewIcon,
+        availability: {
+          status: 'available',
+          loadPage: async () => {
+            const { AddCrewPage } = await import('@/features/crews');
+            return { Component: AddCrewPage };
+          },
+        },
+      },
+      {
+        ...MANAGE_CREWS_TOOL_INFO,
+        Icon: ManageCrewsIcon,
+        availability: {
+          status: 'available',
+          loadPage: async () => {
+            const { ManageCrewsPage } = await import('@/features/crews');
+            return { Component: ManageCrewsPage };
+          },
+          subPages: [
+            {
+              path: ':crewId',
+              loadPage: async () => {
+                const { CrewDetailPage } = await import('@/features/crews');
+                return { Component: CrewDetailPage };
+              },
+            },
+          ],
+        },
+      },
+    ],
+  },
+  {
+    id: 'pre-race',
+    pathSegment: 'pre-gara',
+    messageKey: 'preRace',
     requiredAccess: 'raceControl',
-    tools: [{ ...RACE_BRIEFING_TOOL_INFO, Icon: RaceBriefingIcon, availability: { status: 'under-construction' } }],
+    tools: [
+      { ...RACE_BRIEFING_TOOL_INFO, Icon: RaceBriefingIcon, availability: { status: 'under-construction' } },
+      { ...WEATHER_PATTERN_TOOL_INFO, Icon: WeatherPatternIcon, availability: { status: 'under-construction' } },
+    ],
   },
   {
     id: 'race-control',
@@ -231,3 +276,6 @@ export const getToolRoutePath = (section: ToolSection, tool: ToolDefinition): st
 
 /** URL da usare nei link. */
 export const getToolHref = (section: ToolSection, tool: ToolDefinition): string => `/${getToolRoutePath(section, tool)}`;
+
+/** URL della pagina di una sezione (le sue card), es. "/campionati". */
+export const getSectionHref = (section: ToolSection): string => `/${section.pathSegment}`;

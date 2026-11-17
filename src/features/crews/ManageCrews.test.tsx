@@ -10,7 +10,7 @@ vi.mock('@/features/auth/services/desktopBridge');
 vi.mock('@/features/auth/services/discordApi');
 vi.mock('./services/crewApi');
 
-const LIST_PATH = '/campionato/gestisci-equipaggi';
+const LIST_PATH = '/equipaggi/gestisci-equipaggi';
 const FIE = 'Cool1 FIE Championship';
 const JAPAN = 'All Japan GT Championship';
 const FIE_CAR = `Auto nel ${FIE}`;

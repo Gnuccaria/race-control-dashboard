@@ -1,7 +1,7 @@
 /**
  * Sostituisce l'elenco delle auto con quello di un file CSV
- * (colonne: Costruttore, Modello, PS, kg, Limitatore, Zavorra, Campionati; solo il costruttore è obbligatorio;
- * Campionati separati da "|": senza la colonna le auto valgono per il Cool1 FIE Championship).
+ * (colonne: Costruttore, Modello, PS, kg, Limitatore, Zavorra; solo il costruttore è obbligatorio).
+ * I campionati in cui un'auto è ammessa si decidono nell'app (Gestione campionati) e restano come sono.
  *
  *   npm run cars:import -- percorso/auto.csv --dry-run           → mostra cosa cambierebbe, senza scrivere
  *   npm run cars:import -- percorso/auto.csv                       → scrive nel database online su Cloudflare
@@ -11,7 +11,6 @@
  * qualche equipaggio o in una gara salvata non viene eliminata.
  * Tutto o niente: se anche una sola riga ha un problema, non cambia nulla.
  */
-import { CREW_CHAMPIONSHIPS } from '../../shared/crewRules';
 import { type Car, formatCarName } from '../../shared/carRules';
 import { buildCarSyncSql, type ExistingCar, planCarImport } from '../src/import/carCsvImport';
 import { countLabel, createD1Client, exitWithProblems, readCsvFile, readImportCommandLine } from './wranglerD1';
@@ -26,17 +25,16 @@ const existingCars = database
   .select<Omit<ExistingCar, 'championships'> & { championshipsText: string | null }>(
     "SELECT id, manufacturer, model, horsepower, weight_kg AS weightKg, limiter, ballast_kg AS ballastKg, (SELECT group_concat(championship, '|') FROM car_championships WHERE car_id = cars.id) AS championshipsText, (SELECT COUNT(*) FROM crew_championships WHERE crew_championships.car_id = cars.id) + (SELECT COUNT(*) FROM race_results WHERE race_results.car_id = cars.id) AS usageCount FROM cars",
   )
-  .map(({ championshipsText, ...car }) => ({ ...car, championships: CREW_CHAMPIONSHIPS.filter((championship) => (championshipsText ?? '').split('|').includes(championship)) }));
+  .map(({ championshipsText, ...car }) => ({ ...car, championships: (championshipsText ?? '').split('|').filter(Boolean) }));
 const { problems, sync } = planCarImport(csvText, existingCars);
 if (!sync) exitWithProblems(problems, 'la tabella delle auto non è stata modificata');
 
-const describe = (car: Omit<Car, 'id'>) => {
+const describe = (car: Omit<Car, 'id' | 'championships'>) => {
   const details = [
     car.horsepower !== null && `${car.horsepower} PS`,
     car.weightKg !== null && `${car.weightKg} kg`,
     car.limiter !== null && `limitatore ${car.limiter}`,
     car.ballastKg !== null && `zavorra ${car.ballastKg} kg`,
-    car.championships.join(' + '),
   ].filter(Boolean);
   return details.length > 0 ? `${formatCarName(car)} (${details.join(', ')})` : formatCarName(car);
 };

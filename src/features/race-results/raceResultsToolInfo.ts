@@ -1,6 +1,6 @@
-/** "Gestisci ordini di arrivo" (testi in messages.tools.manageResults). */
+/** "Gestisci gare": gare con orari, durata e ordine di arrivo (testi in messages.tools.manageResults). */
 export const MANAGE_RESULTS_TOOL_INFO = {
-  slug: 'ordini-di-arrivo',
+  slug: 'gare',
   messageKey: 'manageResults',
 } as const;
 

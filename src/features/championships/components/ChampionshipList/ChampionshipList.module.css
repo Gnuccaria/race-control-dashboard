@@ -1,0 +1,9 @@
+.championshipList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.stackedValues {
+  display: grid;
+  gap: var(--space-1);
+}

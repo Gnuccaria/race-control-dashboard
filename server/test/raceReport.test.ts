@@ -148,7 +148,7 @@ describe('GET /public/races/:id/report.pdf', () => {
     await request('POST', '/races', withSchedule({
       name: '1000 km di Suzuka',
       championship: REQUIRED_DETAILS.championship,
-      duration: '6 hours',
+      duration: 6,
       round: 1,
       trackId: null,
       raceDate: '2026-11-08',

@@ -100,7 +100,7 @@ export function CrewTable({ crews, sort, onSort, selectedCrewIds, onToggleSelect
                 </td>
                 <td>
                   {crew.championships.length === 0 ? (
-                    <span className={tableStyles.missingValue}>{crewTexts.noChampionships}</span>
+                    <span className={tableStyles.missingValue}>{crewTexts.noChampionship}</span>
                   ) : (
                     <span className={styles.stackedValues}>
                       {crew.championships.map(({ championship }) => (

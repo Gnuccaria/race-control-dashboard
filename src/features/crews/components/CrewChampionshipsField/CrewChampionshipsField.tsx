@@ -1,8 +1,10 @@
 import { formatCarName } from '@shared/carRules';
-import { CREW_CHAMPIONSHIPS, type CrewChampionship, isCrewChampionship } from '@shared/crewRules';
+import { findChampionship } from '@shared/championshipRules';
+import type { CrewChampionship } from '@shared/crewRules';
 import { IconButton } from '@/components/ui/IconButton/IconButton';
 import { Select } from '@/components/ui/Select/Select';
 import { useCarCatalog } from '@/features/cars/useCarCatalog';
+import { useChampionships } from '@/features/championships/useChampionships';
 import { useI18n } from '@/i18n/useI18n';
 import { CREW_FORM_FIELDS } from '../../crewFormFields';
 import { type CrewDraftState, toCrewChampionships } from '../../hooks/useCrewDraft';
@@ -23,8 +25,12 @@ export function CrewChampionshipsField({ draft, isReadOnly }: CrewChampionshipsF
   const texts = messages.crews;
   // Le auto arrivano dal server: lette all'apertura e di nuovo a ogni interazione con un menu.
   const carCatalog = useCarCatalog();
+  // Anche i campionati: quelli creati in "Gestione campionati", con le loro vetture ammesse.
+  const championshipCatalog = useChampionships();
   const { championships } = draft.values;
-  const availableChampionships = CREW_CHAMPIONSHIPS.filter((championship) => !championships.some((entry) => entry.championship === championship));
+  const availableChampionships = championshipCatalog.championships
+    .map(({ name }) => name)
+    .filter((name) => !championships.some((entry) => entry.championship === name));
 
   const carPlaceholder = (carId: string) => {
     if (carCatalog.isLoading) return messages.cars.loading;
@@ -43,7 +49,7 @@ export function CrewChampionshipsField({ draft, isReadOnly }: CrewChampionshipsF
       ) : (
         <ul className={styles.list}>
           {championships.map(({ championship, carId }) => {
-            // Solo le auto disponibili in quel campionato (dal CSV delle auto).
+            // Solo le vetture ammesse in quel campionato.
             const cars = carCatalog.cars.filter((car) => car.championships.includes(championship));
             const isCarListed = cars.some((car) => String(car.id) === carId);
             return (
@@ -83,11 +89,14 @@ export function CrewChampionshipsField({ draft, isReadOnly }: CrewChampionshipsF
           value=""
           options={availableChampionships.map((championship) => ({ value: championship, label: championship }))}
           onValueChange={(championship) => {
-            if (isCrewChampionship(championship)) draft.addChampionship(championship);
+            const name = findChampionship(championshipCatalog.championships, championship)?.name;
+            if (name) draft.addChampionship(name);
           }}
+          onFocus={championshipCatalog.refresh}
         />
       )}
       {carCatalog.errorKind && !isReadOnly && <p className={styles.error}>{messages.serverErrors[carCatalog.errorKind]}</p>}
+      {championshipCatalog.errorKind && !isReadOnly && <p className={styles.error}>{messages.serverErrors[championshipCatalog.errorKind]}</p>}
     </fieldset>
   );
 }

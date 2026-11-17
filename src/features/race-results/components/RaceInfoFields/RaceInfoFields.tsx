@@ -1,5 +1,5 @@
-import { CREW_CHAMPIONSHIPS, type SavedCrew } from '@shared/crewRules';
-import { RACE_NAME_MAX_LENGTH, raceDurationsFor } from '@shared/raceRules';
+import type { SavedCrew } from '@shared/crewRules';
+import { RACE_NAME_MAX_LENGTH } from '@shared/raceRules';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
@@ -8,8 +8,6 @@ import { useTrackCatalog } from '@/features/tracks/useTrackCatalog';
 import { useI18n } from '@/i18n/useI18n';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
 import styles from './RaceInfoFields.module.css';
-
-const CHAMPIONSHIP_OPTIONS = CREW_CHAMPIONSHIPS.map((championship) => ({ value: championship, label: championship }));
 
 interface RaceInfoFieldsProps {
   readonly draft: RaceDraftState;
@@ -27,6 +25,14 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
   const formTexts = messages.races.form;
   const { values, check } = draft;
   const trackCatalog = useTrackCatalog();
+  // Tutti i campionati creati; quello della gara resta nel menu anche mentre l'elenco si legge.
+  const championshipNames = draft.championshipCatalog.championships.map(({ name }) => name);
+  if (values.championship !== '' && !championshipNames.includes(values.championship)) championshipNames.push(values.championship);
+  // Solo le durate del campionato scelto; con una sola durata si sceglie da sola.
+  const durationOptions = draft.durationOptions.map((hours) => ({ value: String(hours), label: formTexts.durationLabel(hours) }));
+  if (values.duration !== '' && !draft.durationOptions.includes(Number(values.duration))) {
+    durationOptions.push({ value: values.duration, label: formTexts.durationLabel(Number(values.duration)) });
+  }
 
   return (
     <div className={styles.raceInfoFields}>
@@ -48,7 +54,7 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
         )}
       </FormField>
 
-      {/* Durata accanto al campionato: le sue voci dipendono dal campionato (solo 3 ore nell'All Japan GT Championship). */}
+      {/* Durata accanto al campionato: le sue voci sono le durate del campionato scelto. */}
       <div className={styles.fieldPair}>
         <FormField label={formTexts.championship}>
           {(controlProps) => (
@@ -58,10 +64,11 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
               disabled={isReadOnly}
               placeholderLabel={formTexts.championshipPlaceholder}
               value={values.championship}
-              options={CHAMPIONSHIP_OPTIONS}
+              options={championshipNames.map((name) => ({ value: name, label: name }))}
               onValueChange={(championship) => {
                 draft.changeChampionship(championship, allCrews);
               }}
+              onFocus={draft.championshipCatalog.refresh}
             />
           )}
         </FormField>
@@ -74,7 +81,7 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
               disabled={isReadOnly || !check.isDurationRequired}
               placeholderLabel={formTexts.durationPlaceholder}
               value={values.duration}
-              options={raceDurationsFor(values.championship).map((duration) => ({ value: duration, label: formTexts.durations[duration] ?? duration }))}
+              options={durationOptions}
               onValueChange={draft.changeDuration}
             />
           )}

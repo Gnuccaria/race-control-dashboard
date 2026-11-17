@@ -1,8 +1,8 @@
+import type { Championship } from '@shared/championshipRules';
 import { type CrewChampionship, isCrewInChampionship, type SavedCrew } from '@shared/crewRules';
 import type { DriverSwapEntry } from '@shared/driverSwapRules';
 import {
   canPositionHaveGap,
-  onlyRaceDurationFor,
   findRepeatedCrewPositions,
   formatGap,
   isIsoDate,
@@ -13,7 +13,6 @@ import {
   RACE_RESULT_POSITIONS,
   type RaceDraft,
   type RaceDraftValidation,
-  type RaceDuration,
   type RaceResultEntry,
   resolveResultCars,
   type SavedRace,
@@ -27,8 +26,8 @@ import { type DriverSwapSheet, type DriverSwapValues, EMPTY_DRIVER_SWAP_VALUES, 
 export interface RaceDraftValues {
   readonly name: string;
   readonly championship: CrewChampionship | '';
-  /** Solo nei campionati che la prevedono (Cool1 FIE Championship). */
-  readonly duration: RaceDuration | '';
+  /** Ore di gara come testo, tra le durate del campionato ('' = non scelta). */
+  readonly duration: string;
   /** Giri totali come testo (facoltativi). */
   readonly totalLapsText: string;
   readonly roundText: string;
@@ -84,8 +83,7 @@ export function toRaceDraftValues(race: SavedRace, decimalSeparator = ','): Race
   return {
     name: race.name ?? '',
     championship: race.championship,
-    // Le gare salvate prima che la durata fosse obbligatoria ricevono l'unica durata del campionato, se ce n'è una.
-    duration: race.duration ?? onlyRaceDurationFor(race.championship) ?? '',
+    duration: race.duration === null ? '' : String(race.duration),
     totalLapsText: race.totalLaps === null ? '' : String(race.totalLaps),
     roundText: String(race.round),
     raceDate: race.raceDate,
@@ -245,14 +243,18 @@ export function checkRaceDraft(
 }
 
 /**
- * Stessa convalida del server, con i valori del form.
+ * Stessa convalida del server, con i valori del form e i campionati salvati (durate e cambi pilota).
  * driverSwaps: righe compilate dei cambi pilota (vedi computeDriverSwapSheet).
  */
-export const validateRaceValues = (values: RaceDraftValues, driverSwaps: readonly DriverSwapEntry[] = []): RaceDraftValidation =>
+export const validateRaceValues = (
+  values: RaceDraftValues,
+  championships: readonly Pick<Championship, 'name' | 'durations'>[],
+  driverSwaps: readonly DriverSwapEntry[] = [],
+): RaceDraftValidation =>
   validateRaceDraft({
     name: values.name,
     championship: values.championship,
-    duration: values.duration === '' ? null : values.duration,
+    duration: values.duration === '' ? null : Number(values.duration),
     totalLaps: values.totalLapsText === '' ? null : (parseLaps(values.totalLapsText) ?? Number.NaN),
     round: parseRound(values.roundText),
     trackId: values.trackId,
@@ -263,6 +265,6 @@ export const validateRaceValues = (values: RaceDraftValues, driverSwaps: readonl
     endTime: values.endTime,
     results: toRaceResults(values),
     driverSwaps,
-  });
+  }, championships);
 
 export type { RaceDraft };

@@ -25,33 +25,26 @@ const existingCar = (id: number, manufacturer: string, usageCount = 0, model: st
 });
 
 describe('importazione delle auto', () => {
-  it('legge i campionati di ogni auto (separati da "|"); senza la colonna valgono per il Cool1 FIE', () => {
-    const withColumn = planCarImport('Costruttore;Modello;Campionati\nNissan;GT-R;All Japan GT Championship | Cool1 FIE Championship\nAudi;R8;Cool1 FIE Championship', []);
-    expect(withColumn.problems).toEqual([]);
-    expect(withColumn.sync?.inserts.map((car) => car.championships)).toEqual([['Cool1 FIE Championship', 'All Japan GT Championship'], ['Cool1 FIE Championship']]);
-    expect(planCarImport('Costruttore;Modello\nAudi;R8', []).sync?.inserts[0]?.championships).toEqual(['Cool1 FIE Championship']);
-    const invalid = planCarImport('Costruttore;Campionati\nAudi;\nBMW;Serie X', []);
-    expect(invalid.problems.map((problem) => problem.message)).toEqual([
-      expect.stringContaining('campionati mancanti'),
-      expect.stringContaining('campionati "Serie X" non riconosciuti'),
-    ]);
-
-    // Applicato al database: le auto aggiornate e quelle nuove ricevono i loro campionati.
+  it('i campionati delle auto non cambiano con l\'importazione: si decidono nell\'app', () => {
     const database = createMigratedSqliteDatabase();
     const existing = ['Audi', 'BMW', 'Ferrari', 'Lamborghini', 'Nissan', 'Porsche'].map((name, index) => existingCar(index + 1, name, 1));
-    const { sync } = planCarImport(
-      'Costruttore;Modello;Campionati\nAudi;;Cool1 FIE Championship\nBMW;;Cool1 FIE Championship\nFerrari;;Cool1 FIE Championship\nLamborghini;;Cool1 FIE Championship\nNissan;;Cool1 FIE Championship|All Japan GT Championship\nPorsche;;Cool1 FIE Championship\nToyota;GR Supra;All Japan GT Championship',
-      existing,
-    );
+    const { problems, sync } = planCarImport('Costruttore;Modello\nAudi;R8\nBMW;\nFerrari;\nLamborghini;\nNissan;\nPorsche;\nToyota;GR Supra', existing);
+    expect(problems).toEqual([]);
     database.exec(buildCarSyncSql(requirePlan(sync)));
+    // Le auto di prima restano ammesse nel Cool1 FIE; la nuova non è ammessa in nessun campionato.
     expect(
       database
-        .prepare("SELECT cars.manufacturer, car_championships.championship FROM car_championships JOIN cars ON cars.id = car_championships.car_id WHERE championship = 'All Japan GT Championship' ORDER BY cars.manufacturer")
+        .prepare("SELECT cars.manufacturer, COUNT(car_championships.car_id) AS championshipCount FROM cars LEFT JOIN car_championships ON car_championships.car_id = cars.id GROUP BY cars.id ORDER BY cars.manufacturer")
         .all()
         .map((row) => ({ ...row })),
     ).toEqual([
-      { manufacturer: 'Nissan', championship: 'All Japan GT Championship' },
-      { manufacturer: 'Toyota', championship: 'All Japan GT Championship' },
+      { manufacturer: 'Audi', championshipCount: 1 },
+      { manufacturer: 'BMW', championshipCount: 1 },
+      { manufacturer: 'Ferrari', championshipCount: 1 },
+      { manufacturer: 'Lamborghini', championshipCount: 1 },
+      { manufacturer: 'Nissan', championshipCount: 1 },
+      { manufacturer: 'Porsche', championshipCount: 1 },
+      { manufacturer: 'Toyota', championshipCount: 0 },
     ]);
   });
 
@@ -192,7 +185,7 @@ describe('file pronti in server/data', () => {
   const readDataFile = (fileName: string) => readFileSync(join(import.meta.dirname, '../data', fileName), 'utf8');
 
   it('crews.csv: i 15 equipaggi FIE, riconosciuti dalle intestazioni in inglese', () => {
-    const { crews, problems } = planCrewImport(readDataFile('crews.csv'), []);
+    const { crews, problems } = planCrewImport(readDataFile('crews.csv'), [], ['All Japan GT Championship', 'Cool1 FIE Championship']);
     expect(problems).toEqual([]);
     expect(crews).toHaveLength(15);
     expect(crews[0]).toMatchObject({ name: 'Vez Team Lime', number: 16, championships: [{ championship: 'Cool1 FIE Championship', carId: null }], color: null });

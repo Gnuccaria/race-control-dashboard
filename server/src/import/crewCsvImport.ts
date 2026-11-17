@@ -1,10 +1,10 @@
 import {
   type CrewDraft,
   CHAMPIONSHIP_FORMER_NAMES,
-  CREW_CHAMPIONSHIPS,
   type CrewChampionship,
   type CrewChampionshipEntry,
   CREW_NAME_MAX_LENGTH,
+  sortCrewChampionships,
   toCrewNameKey,
   validateCrewDraft,
 } from '../../../shared/crewRules';
@@ -105,13 +105,11 @@ const findCarId = (rawCar: string, cars: readonly ImportableCar[]): number | und
 const NO_CHAMPIONSHIP_ALIASES = ['none', 'nessuno', 'nessun campionato'];
 
 /** Stesso principio per il campionato, che si riconosce anche con il nome precedente ("FIE Cool1") o come "Nessuno". */
-function matchCrewChampionship(rawChampionship: string): CrewChampionship | 'none' | undefined {
+function matchCrewChampionship(rawChampionship: string, championships: readonly string[]): CrewChampionship | 'none' | undefined {
   const championshipKey = rawChampionship.trim().replace(/\s+/g, ' ').toLowerCase();
   if (NO_CHAMPIONSHIP_ALIASES.includes(championshipKey)) return 'none';
-  return (
-    CREW_CHAMPIONSHIPS.find((championship) => championship.toLowerCase() === championshipKey) ??
-    CHAMPIONSHIP_FORMER_NAMES[championshipKey]
-  );
+  const formerName = CHAMPIONSHIP_FORMER_NAMES[championshipKey]?.toLowerCase();
+  return championships.find((championship) => championship.toLowerCase() === championshipKey || championship.toLowerCase() === formerName);
 }
 
 const NAME_ISSUE_MESSAGES = {
@@ -121,7 +119,8 @@ const NAME_ISSUE_MESSAGES = {
 } as const;
 
 /** Controlla tutto il file prima di scrivere qualsiasi cosa: dati non validi e duplicati dentro il file. */
-export function planCrewImport(csvText: string, cars: readonly ImportableCar[]): CrewImportPlan {
+/** championships = nomi dei campionati creati nell'app (tabella championships). */
+export function planCrewImport(csvText: string, cars: readonly ImportableCar[], championships: readonly string[]): CrewImportPlan {
   const rows = parseCsv(csvText);
   const [firstRow] = rows;
   if (!firstRow) return { crews: [], lines: [], championshipModes: [], problems: [{ line: 1, message: 'il file è vuoto' }] };
@@ -152,12 +151,12 @@ export function planCrewImport(csvText: string, cars: readonly ImportableCar[]):
     }
 
     // Campionato della riga: uno (con l'auto, che deve essere di quel campionato), "Nessuno" o vuoto.
-    const championship = rawChampionship === '' ? undefined : matchCrewChampionship(rawChampionship);
+    const championship = rawChampionship === '' ? undefined : matchCrewChampionship(rawChampionship, championships);
     const championshipCars = championship && championship !== 'none' ? cars.filter((car) => car.championships.includes(championship)) : [];
     const carId = rawCar === '' ? null : findCarId(rawCar, championshipCars);
     const championshipProblem =
       rawChampionship !== '' && championship === undefined
-        ? `campionato "${rawChampionship}" non riconosciuto (ammessi: ${CREW_CHAMPIONSHIPS.join(', ')}, Nessuno, oppure vuoto)`
+        ? `campionato "${rawChampionship}" non riconosciuto (ammessi: ${championships.join(', ')}, Nessuno, oppure vuoto)`
         : rawCar !== '' && (championship === undefined || championship === 'none')
           ? `auto "${rawCar}" senza campionato: l'auto vale per un campionato, indicalo nella stessa riga`
           : rawCar !== '' && carId === undefined
@@ -268,7 +267,7 @@ function mergeChampionships(saved: readonly CrewChampionshipEntry[], fromFile: r
     const savedCar = saved.find((entry) => entry.championship === fileEntry.championship)?.carId ?? null;
     merged.push({ championship: fileEntry.championship, carId: fileEntry.carId ?? savedCar });
   }
-  return CREW_CHAMPIONSHIPS.flatMap((championship) => merged.filter((entry) => entry.championship === championship));
+  return sortCrewChampionships(merged);
 }
 
 /** Campionati di un equipaggio; crewIdSql = espressione SQL che dà l'id dell'equipaggio. */

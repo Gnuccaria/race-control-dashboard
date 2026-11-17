@@ -6,13 +6,13 @@
  *   npm run crews:import -- percorso/crews.csv                    → scrive nel database online su Cloudflare
  *
  * Ogni riga aggiorna l'equipaggio con lo stesso numero (o, se il numero è nuovo, con lo stesso nome),
- * oppure ne crea uno nuovo. Il campionato della riga (con la sua auto) si aggiunge a quelli salvati; vuoto li lascia,
+ * oppure ne crea uno nuovo. Il campionato della riga (uno di quelli creati nell'app) (con la sua auto) si aggiunge a quelli salvati; vuoto li lascia,
  * "Nessuno" li toglie tutti. Il colore lasciato vuoto non cancella quello salvato.
  * Gli equipaggi assenti dal file vengono eliminati, tranne quelli presenti in un ordine di arrivo.
  * Tutto o niente: se anche una sola riga ha un problema, non cambia nulla.
  */
 import { formatCarName } from '../../shared/carRules';
-import { CREW_CHAMPIONSHIPS, type CrewDraft, isCrewChampionship } from '../../shared/crewRules';
+import { type CrewDraft, isCrewChampionship } from '../../shared/crewRules';
 import { buildCrewSyncSql, type ExistingCrew, type ImportableCar, planCrewImport, planCrewSync } from '../src/import/crewCsvImport';
 import { countLabel, createD1Client, exitWithProblems, readCsvFile, readImportCommandLine } from './wranglerD1';
 
@@ -22,13 +22,14 @@ const { csvPath, isDryRun } = readImportCommandLine('npm run crews:import -- cre
 const csvText = readCsvFile(csvPath);
 const database = createD1Client();
 
-console.log(`Lettura di equipaggi e auto presenti nel database online…`);
+console.log(`Lettura di campionati, equipaggi e auto presenti nel database online…`);
+const championships = database.select<{ name: string }>('SELECT name FROM championships ORDER BY name COLLATE NOCASE').map((row) => row.name);
 // Campionati di auto ed equipaggi come elenchi separati da "|" (il client di wrangler restituisce solo testo semplice).
 const cars = database
   .select<Omit<ImportableCar, 'championships'> & { championshipsText: string | null }>(
     "SELECT id, manufacturer, model, (SELECT group_concat(championship, '|') FROM car_championships WHERE car_id = cars.id) AS championshipsText FROM cars",
   )
-  .map(({ championshipsText, ...car }) => ({ ...car, championships: CREW_CHAMPIONSHIPS.filter((championship) => (championshipsText ?? '').split('|').includes(championship)) }));
+  .map(({ championshipsText, ...car }) => ({ ...car, championships: (championshipsText ?? '').split('|').filter(Boolean) }));
 const existingCrews = database
   .select<Omit<ExistingCrew, 'championships'> & { championshipsText: string | null }>(
     "SELECT id, name, number, color, (SELECT group_concat(championship || '=' || IFNULL(car_id, ''), '|') FROM crew_championships WHERE crew_id = crews.id) AS championshipsText, (SELECT COUNT(*) FROM race_results WHERE race_results.crew_id = crews.id) + (SELECT COUNT(*) FROM penalty_crews WHERE penalty_crews.crew_id = crews.id) + (SELECT COUNT(*) FROM driver_swaps WHERE driver_swaps.crew_id = crews.id) AS usageCount FROM crews",
@@ -45,7 +46,7 @@ const existingCrews = database
   }));
 const carNameById = new Map(cars.map((car) => [car.id, formatCarName(car)]));
 
-const importPlan = planCrewImport(csvText, cars);
+const importPlan = planCrewImport(csvText, cars, championships);
 if (importPlan.problems.length > 0) exitWithProblems(importPlan.problems, 'gli equipaggi non sono stati modificati');
 if (importPlan.crews.length === 0) exitWithProblems([{ line: 1, message: 'nel file non ci sono equipaggi' }], 'gli equipaggi non sono stati modificati');
 const sync = planCrewSync(importPlan, existingCrews);

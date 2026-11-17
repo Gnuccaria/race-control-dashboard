@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  onlyRaceDurationFor,
-  raceDurationsFor,
   findRepeatedCrewPositions,
   isIsoDate,
   normalizeTrackName,
@@ -17,15 +15,20 @@ import {
   todayIsoDate,
   validateRaceDraft,
 } from './raceRules';
+import { onlyDurationOf, championshipDurations } from './championshipRules';
+import { TEST_CHAMPIONSHIPS } from './testChampionships';
 
 /** Orari in ora italiana, obbligatori. */
 const SCHEDULE = { startTime: '21:00', endDate: '2026-11-08', endTime: '23:30' };
+
+/** Convalida con i campionati della migrazione 0028. */
+const validateRaceDraftWith = (input: unknown) => validateRaceDraft(input, TEST_CHAMPIONSHIPS);
 
 const COMPLETE_RACE = {
   ...SCHEDULE,
   name: '  6 Ore   di Monza ',
   championship: 'Cool1 FIE Championship',
-  duration: '6 hours',
+  duration: 6,
   round: 3,
   trackId: null,
   raceDate: '2026-11-08',
@@ -59,23 +62,23 @@ describe('regole gara', () => {
   });
 
   it('ammette le gare future; orari di inizio e fine obbligatori, con la fine dopo l’inizio', () => {
-    const base = { championship: 'Cool1 FIE Championship', duration: '12 hours', round: 1, results: [], raceDate: '2099-01-01' };
-    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2099-01-02', endTime: '08:00' })).toMatchObject({
+    const base = { championship: 'Cool1 FIE Championship', duration: 12, round: 1, results: [], raceDate: '2099-01-01' };
+    expect(validateRaceDraftWith({ ...base, startTime: '20:00', endDate: '2099-01-02', endTime: '08:00' })).toMatchObject({
       isValid: true,
       race: { raceDate: '2099-01-01', startTime: '20:00', endDate: '2099-01-02', endTime: '08:00' },
     });
-    expect(validateRaceDraft(base)).toEqual({ isValid: false, issues: { startTime: 'invalid', endDate: 'invalid', endTime: 'invalid' } });
-    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2099-01-01', endTime: '20:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
-    expect(validateRaceDraft({ ...base, startTime: '20:00', endDate: '2098-12-31', endTime: '23:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
-    expect(validateRaceDraft({ ...base, startTime: '24:00', endDate: '2099-01-01', endTime: '9:00' })).toEqual({ isValid: false, issues: { startTime: 'invalid', endTime: 'invalid' } });
+    expect(validateRaceDraftWith(base)).toEqual({ isValid: false, issues: { startTime: 'invalid', endDate: 'invalid', endTime: 'invalid' } });
+    expect(validateRaceDraftWith({ ...base, startTime: '20:00', endDate: '2099-01-01', endTime: '20:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
+    expect(validateRaceDraftWith({ ...base, startTime: '20:00', endDate: '2098-12-31', endTime: '23:00' })).toEqual({ isValid: false, issues: { endTime: 'before-start' } });
+    expect(validateRaceDraftWith({ ...base, startTime: '24:00', endDate: '2099-01-01', endTime: '9:00' })).toEqual({ isValid: false, issues: { startTime: 'invalid', endTime: 'invalid' } });
   });
 
   it('al contrario solo con una pista indicata', () => {
-    const base = { championship: 'Cool1 FIE Championship', duration: '6 hours', round: 1, raceDate: '2026-11-01', ...SCHEDULE, endDate: '2026-11-01', results: [] };
-    expect(validateRaceDraft({ ...base, trackId: 4, isTrackReversed: true })).toMatchObject({ isValid: true, race: { trackId: 4, isTrackReversed: true } });
-    expect(validateRaceDraft({ ...base, trackId: null, isTrackReversed: true })).toEqual({ isValid: false, issues: { trackId: 'reverse-unavailable' } });
-    expect(validateRaceDraft({ ...base, trackId: 4, isTrackReversed: 'sì' })).toEqual({ isValid: false, issues: { trackId: 'invalid' } });
-    expect(validateRaceDraft(base)).toMatchObject({ isValid: true, race: { trackId: null, isTrackReversed: false } });
+    const base = { championship: 'Cool1 FIE Championship', duration: 6, round: 1, raceDate: '2026-11-01', ...SCHEDULE, endDate: '2026-11-01', results: [] };
+    expect(validateRaceDraftWith({ ...base, trackId: 4, isTrackReversed: true })).toMatchObject({ isValid: true, race: { trackId: 4, isTrackReversed: true } });
+    expect(validateRaceDraftWith({ ...base, trackId: null, isTrackReversed: true })).toEqual({ isValid: false, issues: { trackId: 'reverse-unavailable' } });
+    expect(validateRaceDraftWith({ ...base, trackId: 4, isTrackReversed: 'sì' })).toEqual({ isValid: false, issues: { trackId: 'invalid' } });
+    expect(validateRaceDraftWith(base)).toMatchObject({ isValid: true, race: { trackId: null, isTrackReversed: false } });
   });
 
   it('legge e scrive il distacco come minuti:secondi,millesimi', () => {
@@ -112,7 +115,7 @@ describe('regole gara', () => {
   });
 
   it('convalida una gara completa e ordina la classifica per posizione', () => {
-    expect(validateRaceDraft(COMPLETE_RACE)).toEqual({
+    expect(validateRaceDraftWith(COMPLETE_RACE)).toEqual({
       isValid: true,
       race: {
         ...COMPLETE_RACE,
@@ -127,11 +130,11 @@ describe('regole gara', () => {
         driverSwaps: [],
       },
     });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, results: [] })).toMatchObject({ isValid: true });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, results: [] })).toMatchObject({ isValid: true });
   });
 
   it('elenca i problemi: campionato, round, data, pista, classifica', () => {
-    expect(validateRaceDraft({ round: 0, raceDate: '2026-13-01', trackId: 'x', results: 'no' })).toEqual({
+    expect(validateRaceDraftWith({ round: 0, raceDate: '2026-13-01', trackId: 'x', results: 'no' })).toEqual({
       isValid: false,
       issues: {
         championship: 'required',
@@ -145,31 +148,34 @@ describe('regole gara', () => {
       },
     });
     // Durata: sempre obbligatoria, tra quelle del campionato; nome facoltativo ma valido.
-    expect(validateRaceDraft({ ...COMPLETE_RACE, duration: undefined })).toEqual({ isValid: false, issues: { duration: 'required' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, duration: '24 hours' })).toEqual({ isValid: false, issues: { duration: 'invalid' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, duration: '3 hours' })).toEqual({ isValid: false, issues: { duration: 'invalid' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: '6 hours', results: [], driverSwaps: [] })).toEqual({
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, duration: undefined })).toEqual({ isValid: false, issues: { duration: 'required' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, duration: 24 })).toEqual({ isValid: false, issues: { duration: 'invalid' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, duration: 3 })).toEqual({ isValid: false, issues: { duration: 'invalid' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: 6, results: [], driverSwaps: [] })).toEqual({
       isValid: false,
       issues: { duration: 'invalid' },
     });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: null, results: [], driverSwaps: [] })).toEqual({
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: null, results: [], driverSwaps: [] })).toEqual({
       isValid: false,
       issues: { duration: 'required' },
     });
     expect(
-      validateRaceDraft({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: '3 hours', results: [], driverSwaps: [] }),
-    ).toMatchObject({ isValid: true, race: { duration: '3 hours' } });
-    expect(raceDurationsFor('Cool1 FIE Championship')).toEqual(['6 hours', '12 hours']);
-    expect(onlyRaceDurationFor('All Japan GT Championship')).toBe('3 hours');
-    expect(onlyRaceDurationFor('Cool1 FIE Championship')).toBeNull();
-    expect(validateRaceDraft({ ...COMPLETE_RACE, name: '<script>' })).toEqual({ isValid: false, issues: { name: 'invalid' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, name: '   ' })).toMatchObject({ isValid: true, race: { name: null } });
+      validateRaceDraftWith({ ...COMPLETE_RACE, championship: 'All Japan GT Championship', duration: 3, results: [], driverSwaps: [] }),
+    ).toMatchObject({ isValid: true, race: { duration: 3 } });
+    expect(championshipDurations(TEST_CHAMPIONSHIPS, 'Cool1 FIE Championship').map((duration) => duration.hours)).toEqual([6, 12]);
+    expect(onlyDurationOf(TEST_CHAMPIONSHIPS, 'All Japan GT Championship')).toBe(3);
+    expect(onlyDurationOf(TEST_CHAMPIONSHIPS, 'Cool1 FIE Championship')).toBeNull();
+    // Un campionato che non esiste non si può usare; il nome si salva com'è scritto nel campionato.
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, championship: 'Campionato inventato' })).toMatchObject({ isValid: false, issues: { championship: 'required' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, championship: 'cool1 fie championship' })).toMatchObject({ isValid: true, race: { championship: 'Cool1 FIE Championship' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, name: '<script>' })).toEqual({ isValid: false, issues: { name: 'invalid' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, name: '   ' })).toMatchObject({ isValid: true, race: { name: null } });
     // Giri totali: facoltativi, interi 1–999, mai meno dei giri completati da un equipaggio.
-    expect(validateRaceDraft({ ...COMPLETE_RACE, totalLaps: 0 })).toEqual({ isValid: false, issues: { totalLaps: 'invalid' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, totalLaps: 1 })).toEqual({ isValid: false, issues: { totalLaps: 'exceeded' } });
-    expect(validateRaceDraft({ ...COMPLETE_RACE, totalLaps: 200 })).toMatchObject({ isValid: true, race: { totalLaps: 200 } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, totalLaps: 0 })).toEqual({ isValid: false, issues: { totalLaps: 'invalid' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, totalLaps: 1 })).toEqual({ isValid: false, issues: { totalLaps: 'exceeded' } });
+    expect(validateRaceDraftWith({ ...COMPLETE_RACE, totalLaps: 200 })).toMatchObject({ isValid: true, race: { totalLaps: 200 } });
     expect(
-      validateRaceDraft({ ...COMPLETE_RACE, results: [{ position: 1, crewId: 5, laps: 3 }, { position: 2, crewId: 5, laps: 3 }] }),
+      validateRaceDraftWith({ ...COMPLETE_RACE, results: [{ position: 1, crewId: 5, laps: 3 }, { position: 2, crewId: 5, laps: 3 }] }),
     ).toEqual({ isValid: false, issues: { results: 'repeated-crew' } });
     for (const invalidResults of [
       [{ position: 15, crewId: 5, laps: 3 }],
@@ -178,7 +184,7 @@ describe('regole gara', () => {
       [{ position: 1, crewId: 5, laps: 1000 }],
       [{ position: 1, crewId: 5, laps: 2.5 }],
     ]) {
-      expect(validateRaceDraft({ ...COMPLETE_RACE, results: invalidResults })).toMatchObject({ isValid: false });
+      expect(validateRaceDraftWith({ ...COMPLETE_RACE, results: invalidResults })).toMatchObject({ isValid: false });
     }
   });
 

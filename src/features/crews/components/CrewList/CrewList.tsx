@@ -6,6 +6,7 @@ import { SelectionDeleteBar, type SelectionDeleteTexts } from '@/components/data
 import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
 import { Button } from '@/components/ui/Button/Button';
 import { useCarCatalog } from '@/features/cars/useCarCatalog';
+import { useChampionships } from '@/features/championships/useChampionships';
 import { useBulkDelete } from '@/hooks/useBulkDelete';
 import { useRowSelection } from '@/hooks/useRowSelection';
 import { useI18n } from '@/i18n/useI18n';
@@ -40,6 +41,7 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
   const [sort, setSort] = useState(DEFAULT_CREW_SORT);
   // Auto dal server: nomi per tabella e ordinamento, voci del filtro (ricaricate a ogni uso del menu).
   const carCatalog = useCarCatalog();
+  const championshipCatalog = useChampionships();
   const { selectedIds, toggleSelection, clearSelection } = useRowSelection();
   const { deleteState, isDeleting, deleteSelected } = useBulkDelete(deleteCrews, () => {
     clearSelection();
@@ -78,7 +80,7 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
   return (
     <div className={styles.crewList}>
       {deleteFeedback}
-      <CrewFilterBar filters={filters} onFiltersChange={setFilters} carCatalog={carCatalog} />
+      <CrewFilterBar filters={filters} onFiltersChange={setFilters} carCatalog={carCatalog} championshipCatalog={championshipCatalog} />
       <div className={tableStyles.tableCaption}>
         <p aria-live="polite">{listTexts.resultCount(shownCrews.length, crews.length)}</p>
         <p>{listTexts.selectionHint}</p>
