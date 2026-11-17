@@ -63,6 +63,7 @@ export const fr: Messages = {
         'Une autre connexion est déjà en cours ou le port 47823 est utilisé par un autre programme. Fermez les autres onglets de connexion et réessayez.',
       'session-expired': 'La connexion enregistrée n’est plus valide. Reconnectez-vous.',
       network: 'Impossible de joindre Discord. Vérifiez votre connexion et réessayez.',
+      'rate-limited': 'Discord reçoit trop de demandes de ce compte : patientez quelques secondes et réessayez.',
       'desktop-only': 'La connexion avec Discord n’est disponible que dans l’application de bureau.',
       unexpected: 'Une erreur est survenue pendant la connexion. Réessayez.',
     },

@@ -62,6 +62,7 @@ export const en: Messages = {
         'Another sign-in is already in progress, or port 47823 is being used by another program. Close any other sign-in tabs and try again.',
       'session-expired': 'Your saved sign-in is no longer valid. Sign in again.',
       network: "Couldn't reach Discord. Check your connection and try again.",
+      'rate-limited': 'Discord is receiving too many requests from this account: wait a few seconds and try again.',
       'desktop-only': 'Signing in with Discord is only available in the desktop app.',
       unexpected: 'Something went wrong while signing in. Try again.',
     },

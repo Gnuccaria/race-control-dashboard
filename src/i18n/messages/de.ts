@@ -62,6 +62,7 @@ export const de: Messages = {
         'Eine andere Anmeldung läuft bereits oder Port 47823 wird von einem anderen Programm verwendet. Schließe andere Anmelde-Tabs und versuche es erneut.',
       'session-expired': 'Die gespeicherte Anmeldung ist nicht mehr gültig. Melde dich erneut an.',
       network: 'Discord ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.',
+      'rate-limited': 'Discord erhält zu viele Anfragen von diesem Konto: Warte ein paar Sekunden und versuche es erneut.',
       'desktop-only': 'Die Anmeldung mit Discord ist nur in der Desktop-App verfügbar.',
       unexpected: 'Bei der Anmeldung ist etwas schiefgelaufen. Versuche es erneut.',
     },

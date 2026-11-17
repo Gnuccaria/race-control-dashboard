@@ -2,7 +2,7 @@ import { SITE_DISCORD_CALLBACK_PATH, type SiteAuthErrorCode, type SiteSession, t
 import type { Env } from '../env';
 import { jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
-import { fetchWithDiscordRetry, hashToken } from '../discord/discordRateLimit';
+import { describeDiscordFailure, fetchWithDiscordRetry, hashToken, MEMBER_READ_RETRY } from '../discord/discordRateLimit';
 
 /**
  * Accesso con Discord per il sito pubblico. Il server fa da tramite verso Discord (il browser non può chiamare
@@ -51,14 +51,21 @@ function avatarUrl(userId: string, avatar: string | null | undefined): string {
   return `${DISCORD_CDN_URL}/embed/avatars/${Number((BigInt(userId) >> 22n) % 6n)}.png`;
 }
 
+/** POST a Discord: dopo un 429 si riprova (Discord non l'ha eseguita), mai dopo altri errori (il codice vale una volta). */
 async function postToDiscord(discordFetch: DiscordFetch, env: Env, path: string, formFields: Record<string, string>): Promise<Response> {
   try {
-    return await discordFetch(`${DISCORD_API_URL}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: env.DISCORD_APPLICATION_ID, ...formFields }).toString(),
-    });
+    return await fetchWithDiscordRetry(
+      discordFetch,
+      `${DISCORD_API_URL}${path}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: env.DISCORD_APPLICATION_ID, ...formFields }).toString(),
+      },
+      { maxWaitMs: 5000 },
+    );
   } catch {
+    console.warn(`Discord non raggiungibile su ${path}`);
     throw new SiteAuthError(503, 'discord-unavailable');
   }
 }
@@ -66,7 +73,11 @@ async function postToDiscord(discordFetch: DiscordFetch, env: Env, path: string,
 async function requestTokens(discordFetch: DiscordFetch, env: Env, formFields: Record<string, string>): Promise<DiscordTokenResponse> {
   const tokenResponse = await postToDiscord(discordFetch, env, '/oauth2/token', formFields);
   if (tokenResponse.status === 400 || tokenResponse.status === 401) throw new SiteAuthError(401, 'invalid-grant');
-  if (!tokenResponse.ok) throw new SiteAuthError(503, 'discord-unavailable');
+  if (!tokenResponse.ok) {
+    // Nei log del Worker (npx wrangler tail) resta il codice vero: 429 = limite di frequenza, 5xx = Discord in difficoltà.
+    console.warn(describeDiscordFailure(tokenResponse, '/oauth2/token'));
+    throw new SiteAuthError(503, 'discord-unavailable');
+  }
   return (await tokenResponse.json()) as DiscordTokenResponse;
 }
 
@@ -79,15 +90,22 @@ export interface SiteMember {
 async function fetchSiteMemberFromDiscord(discordFetch: DiscordFetch, env: Env, accessToken: string): Promise<SiteMember> {
   let memberResponse: Response;
   try {
-    memberResponse = await fetchWithDiscordRetry(discordFetch, `${DISCORD_API_URL}/users/@me/guilds/${env.DISCORD_GUILD_ID}/member`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    memberResponse = await fetchWithDiscordRetry(
+      discordFetch,
+      `${DISCORD_API_URL}/users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+      MEMBER_READ_RETRY,
+    );
   } catch {
+    console.warn('Discord non raggiungibile su /users/@me/guilds/:server/member');
     throw new SiteAuthError(503, 'discord-unavailable');
   }
   if (memberResponse.status === 401) throw new SiteAuthError(401, 'invalid-grant');
   if (memberResponse.status === 404 || memberResponse.status === 403) throw new SiteAuthError(403, 'not-guild-member');
-  if (!memberResponse.ok) throw new SiteAuthError(503, 'discord-unavailable');
+  if (!memberResponse.ok) {
+    console.warn(describeDiscordFailure(memberResponse, '/users/@me/guilds/:server/member'));
+    throw new SiteAuthError(503, 'discord-unavailable');
+  }
 
   const member = (await memberResponse.json()) as DiscordGuildMember;
   const user = member.user;

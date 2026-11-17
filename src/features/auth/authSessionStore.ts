@@ -59,9 +59,10 @@ function signOutWithError(caughtError: unknown) {
 
 const forgetSavedRefreshToken = () => deleteSavedRefreshToken().catch(() => undefined);
 
-const isNetworkError = (caughtError: unknown) => {
+/** Errori passeggeri (rete, limiti di frequenza di Discord): l'accesso ricordato resta valido. */
+const isTransientError = (caughtError: unknown) => {
   const authError = toAuthError(caughtError);
-  return authError instanceof AuthError && authError.kind === 'network';
+  return authError instanceof AuthError && (authError.kind === 'network' || authError.kind === 'rate-limited');
 };
 
 /**
@@ -87,8 +88,8 @@ export async function restoreSavedSession(): Promise<void> {
     sessionTokens = tokens;
     setSession({ status: 'signed-in', user });
   } catch (caughtError) {
-    // Offline: si conserva l'accesso ricordato per il prossimo avvio. Negli altri casi non è più valido.
-    if (!isNetworkError(caughtError)) await forgetSavedRefreshToken();
+    // Offline o Discord che limita le richieste: si conserva l'accesso ricordato. Negli altri casi non è più valido.
+    if (!isTransientError(caughtError)) await forgetSavedRefreshToken();
     signOutWithError(caughtError);
   }
 }

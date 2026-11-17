@@ -78,6 +78,42 @@ describe('accesso al sito con Discord', () => {
     expect(tokenRequest.has('client_secret')).toBe(false);
   });
 
+  it('se Discord limita le richieste o è in difficoltà per un momento, l’accesso riprova invece di fallire', async () => {
+    const realFetch = discord.discordFetch;
+    let tokenCalls = 0;
+    let memberCalls = 0;
+    const busyDiscord = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      const url = String(input);
+      // Primo scambio del codice: 429 con l'attesa indicata (Discord non l'ha eseguito, il codice vale ancora).
+      if (url.endsWith('/oauth2/token') && (tokenCalls += 1) === 1) return new Response(JSON.stringify({ retry_after: 0.01 }), { status: 429 });
+      // Prima lettura del profilo: 429 e poi 503 (si legge di nuovo, la lettura si può ripetere).
+      if (url.endsWith('/member')) {
+        memberCalls += 1;
+        if (memberCalls === 1) return new Response(JSON.stringify({ retry_after: 0.01 }), { status: 429 });
+      }
+      return realFetch(input, init);
+    }) as typeof fetch;
+    handleRequest = createApp(undefined, busyDiscord);
+
+    const response = await handleRequest(post('/public/discord/session', { code: 'code-member', codeVerifier: 'verifier', redirectUri: `${SITE}/accesso/discord` }), env);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ accessToken: 'access-member', profile: { username: 'niko_rc' } });
+    expect(tokenCalls).toBe(2);
+    expect(memberCalls).toBe(2);
+  });
+
+  it('un errore del server di Discord nello scambio del codice non si ripete (il codice vale una volta sola)', async () => {
+    let tokenCalls = 0;
+    handleRequest = createApp(undefined, (async (input: Parameters<typeof fetch>[0]) => {
+      if (String(input).endsWith('/oauth2/token')) tokenCalls += 1;
+      return new Response('{}', { status: 502 });
+    }) as typeof fetch);
+    const response = await handleRequest(post('/public/discord/session', { code: 'code-member', codeVerifier: 'verifier', redirectUri: `${SITE}/accesso/discord` }), env);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: { code: 'discord-unavailable' } });
+    expect(tokenCalls).toBe(1);
+  });
+
   it('rifiuta chi non fa parte del server e revoca subito i suoi token', async () => {
     const response = await handleRequest(post('/public/discord/session', { code: 'code-outsider', codeVerifier: 'v', redirectUri: `${SITE}/accesso/discord` }), env);
     expect(response.status).toBe(403);

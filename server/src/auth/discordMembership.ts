@@ -4,7 +4,7 @@
  * manomessa, il server no.
  */
 
-import { fetchWithDiscordRetry, hashToken } from '../discord/discordRateLimit';
+import { describeDiscordFailure, fetchWithDiscordRetry, hashToken, MEMBER_READ_RETRY } from '../discord/discordRateLimit';
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 const VERIFIED_MEMBERSHIP_TTL_MS = 5 * 60 * 1000;
@@ -57,16 +57,23 @@ export async function checkDiscordMembership(
 
   let memberResponse: Response;
   try {
-    memberResponse = await fetchWithDiscordRetry(fetchFromDiscord, `${DISCORD_API_URL}/users/@me/guilds/${guildId}/member`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    memberResponse = await fetchWithDiscordRetry(
+      fetchFromDiscord,
+      `${DISCORD_API_URL}/users/@me/guilds/${guildId}/member`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+      MEMBER_READ_RETRY,
+    );
   } catch {
+    console.warn('Discord non raggiungibile su /users/@me/guilds/:server/member (app)');
     return { status: 'discord-unavailable' };
   }
 
   if (memberResponse.status === 401) return { status: 'invalid-token' };
   if (memberResponse.status === 404 || memberResponse.status === 403) return { status: 'missing-role' };
-  if (!memberResponse.ok) return { status: 'discord-unavailable' };
+  if (!memberResponse.ok) {
+    console.warn(`${describeDiscordFailure(memberResponse, '/users/@me/guilds/:server/member')} (app)`);
+    return { status: 'discord-unavailable' };
+  }
 
   const guildMember = (await memberResponse.json()) as DiscordGuildMember;
   const discordUserId = guildMember.user?.id;

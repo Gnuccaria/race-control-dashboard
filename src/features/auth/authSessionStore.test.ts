@@ -111,6 +111,18 @@ describe('sessione Discord', () => {
     expect(desktopBridge.deleteSavedRefreshToken).not.toHaveBeenCalled();
   });
 
+  it("se Discord limita le richieste conserva l'accesso ricordato", async () => {
+    vi.mocked(desktopBridge.readSavedRefreshToken).mockResolvedValue('refresh-saved');
+    vi.mocked(discordApi.refreshTokens).mockResolvedValue({ accessToken: 'access-2', refreshToken: 'refresh-2' });
+    vi.mocked(discordApi.fetchGuildMember).mockRejectedValue(new AuthError('rate-limited'));
+
+    await restoreSavedSession();
+
+    expect(getAuthSession()).toEqual({ status: 'signed-out', errorKind: 'rate-limited' });
+    expect(desktopBridge.saveRefreshToken).toHaveBeenCalledWith('refresh-2');
+    expect(desktopBridge.deleteSavedRefreshToken).not.toHaveBeenCalled();
+  });
+
   it('il logout invalida i token della sessione, cancella l\'accesso ricordato e torna al login', async () => {
     replaceAuthSessionForTests(
       { status: 'signed-in', user: { id: '1', username: 'niko_99', displayName: 'Niko', avatarUrl: '', access: { organization: false, raceControl: true, stewards: false } } },

@@ -6,6 +6,7 @@ export type AuthErrorKind =
   | 'port-in-use'
   | 'session-expired'
   | 'network'
+  | 'rate-limited'
   | 'desktop-only'
   | 'unexpected';
 

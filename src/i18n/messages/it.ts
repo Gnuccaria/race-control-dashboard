@@ -69,6 +69,7 @@ export const it = {
         'Un altro accesso è già in corso oppure la porta 47823 è occupata da un altro programma. Chiudi le altre schede di accesso e riprova.',
       'session-expired': "L'accesso salvato non è più valido. Accedi di nuovo.",
       network: 'Impossibile contattare Discord. Controlla la connessione e riprova.',
+      'rate-limited': 'Discord sta ricevendo troppe richieste da questo account: attendi qualche secondo e riprova.',
       'desktop-only': "L'accesso con Discord è disponibile solo nell'app desktop.",
       unexpected: "Qualcosa è andato storto durante l'accesso. Riprova.",
     },
