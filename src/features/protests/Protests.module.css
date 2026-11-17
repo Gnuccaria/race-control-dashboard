@@ -1,6 +1,10 @@
 .protestsPage {
   display: grid;
   gap: var(--space-5);
+  /* Stessa larghezza delle altre pagine dell'app (equipaggi, gare). */
+  inline-size: 100%;
+  max-inline-size: var(--layout-width-wide);
+  margin-inline: auto;
 }
 
 .crewChips {
@@ -89,4 +93,24 @@
 .reviewActions {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Sezione Penalità sotto l'interruttore, quando la protesta viene accolta. */
+.reviewPenalty {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.reviewPenaltyTitle {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.reviewPenaltyDescription {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }

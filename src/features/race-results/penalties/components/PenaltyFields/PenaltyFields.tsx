@@ -29,13 +29,18 @@ interface PenaltyFieldsProps {
   readonly isReadOnly: boolean;
   /** Reprimende di ogni vettura già date prima di questa penalità (per mostrare 1ª, 2ª o 3ª); senza, non si mostra. */
   readonly reprimandCountsBefore?: ReadonlyMap<number, number> | undefined;
+  /** Vetture già decise (es. quelle di una protesta): l'elenco non si cambia, solo le decisioni. */
+  readonly areCrewsFixed?: boolean;
+  /** Suggerimenti al posto di quelli delle penalità della gara (es. motivazione obbligatoria). */
+  readonly crewsHint?: string;
+  readonly reasonHint?: string;
 }
 
 /**
  * Vetture coinvolte; poi, per ognuna, la sua Decisione (facoltativa); quindi Violazione e Motivazione.
  * Usati sia in "Nuova penalità" sia nel dettaglio.
  */
-export function PenaltyFields({ draft, crews, isReadOnly, reprimandCountsBefore }: PenaltyFieldsProps) {
+export function PenaltyFields({ draft, crews, isReadOnly, reprimandCountsBefore, areCrewsFixed = false, crewsHint, reasonHint }: PenaltyFieldsProps) {
   const { messages } = useI18n();
   const texts = messages.penalties.form;
   const decisionsHeadingId = useId();
@@ -56,7 +61,7 @@ export function PenaltyFields({ draft, crews, isReadOnly, reprimandCountsBefore 
 
   return (
     <div className={styles.penaltyFields}>
-      <FormField label={texts.crews} hint={isReadOnly ? undefined : texts.crewsHint}>
+      <FormField label={texts.crews} hint={isReadOnly ? undefined : (crewsHint ?? texts.crewsHint)}>
         {(controlProps) => (
           <CrewMultiPicker
             id={controlProps.id}
@@ -67,7 +72,7 @@ export function PenaltyFields({ draft, crews, isReadOnly, reprimandCountsBefore 
             listLabel={texts.crews}
             placeholder={texts.crewsPlaceholder}
             crewOptionLabel={(crew) => texts.crewOption(crew.number, crew.name)}
-            disabled={isReadOnly}
+            disabled={isReadOnly || areCrewsFixed}
           />
         )}
       </FormField>
@@ -160,7 +165,7 @@ export function PenaltyFields({ draft, crews, isReadOnly, reprimandCountsBefore 
 
       <FormField
         label={texts.reason}
-        hint={isReadOnly ? undefined : texts.reasonHint}
+        hint={isReadOnly ? undefined : (reasonHint ?? texts.reasonHint)}
         errorMessage={!isReadOnly && check.isReasonTooLong ? texts.reasonTooLong(PENALTY_REASON_MAX_LENGTH) : undefined}
       >
         {({ isInvalid, ...textareaAttributes }) => (

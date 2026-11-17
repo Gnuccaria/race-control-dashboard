@@ -64,7 +64,7 @@ describe('proteste', () => {
     return { status: response.status, body: (await response.json()) as Record<string, unknown> };
   };
   const protest = (overrides: Record<string, unknown> = {}) => ({
-    championship: 'Cool1 FIE Championship',
+    raceId: 1,
     stint: 2,
     lap: 14,
     corner: ' Variante  Ascari ',
@@ -97,6 +97,13 @@ describe('proteste', () => {
       { name: 'Team Kyoto', number: 8, championship: 'All Japan GT Championship', color: '#283593' },
     ];
     for (const crew of crews) await handleRequest(sendJson('POST', '/crews', { ...crew, carId: 1 }, 'token-director'), env);
+    // Gare: 1 e 3 accettano proteste (FIE e All Japan GT), 2 no.
+    await env.CREWS_DB.prepare(
+      `INSERT INTO races (id, name, championship, round, race_date, created_by_discord_id, accepts_protests) VALUES
+        (1, '6 Ore di Monza', 'Cool1 FIE Championship', 1, '2026-10-05', 't', 1),
+        (2, NULL, 'Cool1 FIE Championship', 2, '2026-11-02', 't', 0),
+        (3, NULL, 'All Japan GT Championship', 1, '2026-10-12', 't', 1)`,
+    ).run();
   });
 
   it('legge il link YouTube in tutte le forme comuni', () => {
@@ -116,15 +123,15 @@ describe('proteste', () => {
     }
   });
 
-  it('convalida: stint, giro e curva obbligatori; descrizione, link e altri equipaggi facoltativi', () => {
-    expect(validateProtestDraft({ championship: 'All Japan GT Championship', stint: 1, lap: 1, corner: '3' })).toEqual({
+  it('convalida: gara, stint, giro e curva obbligatori; descrizione, link e altri equipaggi facoltativi', () => {
+    expect(validateProtestDraft({ raceId: 3, stint: 1, lap: 1, corner: '3' })).toEqual({
       isValid: true,
-      protest: { championship: 'All Japan GT Championship', stint: 1, lap: 1, corner: '3', description: '', youtubeVideoId: null, otherCrewIds: [] },
+      protest: { raceId: 3, stint: 1, lap: 1, corner: '3', description: '', youtubeVideoId: null, otherCrewIds: [] },
     });
-    expect(validateProtestDraft({})).toEqual({ isValid: false, issues: { championship: 'required', stint: 'required', lap: 'required', corner: 'required' } });
+    expect(validateProtestDraft({})).toEqual({ isValid: false, issues: { raceId: 'required', stint: 'required', lap: 'required', corner: 'required' } });
     expect(
       validateProtestDraft({
-        championship: 'Serie X',
+        raceId: 'Serie X',
         stint: 21,
         lap: 0,
         corner: 'x'.repeat(41),
@@ -134,25 +141,38 @@ describe('proteste', () => {
       }),
     ).toEqual({
       isValid: false,
-      issues: { championship: 'invalid', stint: 'invalid', lap: 'invalid', corner: 'invalid', description: 'too-long', youtubeUrl: 'invalid', otherCrewIds: 'invalid' },
+      issues: { raceId: 'invalid', stint: 'invalid', lap: 'invalid', corner: 'invalid', description: 'too-long', youtubeUrl: 'invalid', otherCrewIds: 'invalid' },
     });
-    expect(validateProtestDraft({ championship: 'Cool1 FIE Championship', stint: 1, lap: 1, corner: '3', description: 'a'.repeat(500) }).isValid).toBe(true);
+    expect(validateProtestDraft({ raceId: 1, stint: 1, lap: 1, corner: '3', description: 'a'.repeat(500) }).isValid).toBe(true);
   });
 
-  it('il modulo riceve l’equipaggio dal ruolo e gli altri equipaggi di tutti i campionati, da filtrare per campionato', async () => {
+  it('il modulo riceve l’equipaggio dal ruolo, le gare del suo campionato che accettano proteste e gli altri equipaggi', async () => {
     expect(await siteRequest('GET', '/public/protests/form', 'site-vez')).toEqual({
       status: 200,
       body: {
         crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' },
+        races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: '2026-10-05' }],
         otherCrews: [
-          { id: 4, number: 8, name: 'Team Kyoto', championship: 'All Japan GT Championship', color: '#283593' },
-          { id: 3, number: 26, name: 'GT Extreme Drivers', championship: 'Cool1 FIE Championship', color: '#E10600' },
-          { id: 2, number: 44, name: 'Firestarter Project', championship: 'Cool1 FIE Championship', color: '#E10600' },
+          { id: 3, number: 26, name: 'GT Extreme Drivers', color: '#E10600' },
+          { id: 2, number: 44, name: 'Firestarter Project', color: '#E10600' },
         ],
       },
     });
     expect(await siteRequest('GET', '/public/protests/form', 'site-no-crew')).toMatchObject({ status: 422, body: { error: { code: 'no-crew-role' } } });
     expect((await siteRequest('GET', '/public/protests/form', '')).status).toBe(401);
+  });
+
+  it('l’Organizzazione apre e chiude le proteste di una gara', async () => {
+    const setting = (raceId: number, body: unknown, token = 'token-organization') => handleRequest(sendJson('PUT', `/races/${raceId}/protests`, body, token), env);
+    expect(await (await setting(2, { acceptsProtests: true })).json()).toEqual({ acceptsProtests: true });
+    expect(await (await handleRequest(getPath('/races/2', 'token-director'), env)).json()).toMatchObject({ race: { acceptsProtests: true } });
+    expect((await siteRequest('GET', '/public/protests/form', 'site-vez')).body).toMatchObject({ races: [{ id: 2 }, { id: 1 }] });
+    await setting(1, { acceptsProtests: false });
+    expect((await siteRequest('GET', '/public/protests/form', 'site-vez')).body).toMatchObject({ races: [{ id: 2 }] });
+    expect(await submit(protest({ raceId: 1 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
+    expect((await setting(2, { acceptsProtests: 'sì' })).status).toBe(422);
+    expect((await setting(9, { acceptsProtests: true })).status).toBe(404);
+    expect((await setting(2, { acceptsProtests: false }, 'token-steward')).status).toBe(403);
   });
 
   it('salva la protesta e i Commissari la leggono nell’app', async () => {
@@ -162,6 +182,7 @@ describe('proteste', () => {
       id: 1,
       crew: { id: 1, number: 16, name: 'Vez Team Lime' },
       championship: 'Cool1 FIE Championship',
+      race: { id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship' },
       stint: 2,
       lap: 14,
       corner: 'Variante Ascari',
@@ -178,14 +199,13 @@ describe('proteste', () => {
     expect((await handleRequest(getPath('/protests', 'token-no-role'), env)).status).toBe(403);
   });
 
-  it('altri equipaggi solo del campionato scelto e mai il proprio', async () => {
+  it('solo gare del proprio campionato che accettano proteste; altri equipaggi della gara e mai il proprio', async () => {
+    expect(await submit(protest({ raceId: 3 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
+    expect(await submit(protest({ raceId: 2 }))).toMatchObject({ status: 422, body: { error: { details: { raceId: 'invalid' } } } });
     expect(await submit(protest({ otherCrewIds: [4] }))).toMatchObject({ status: 422, body: { error: { code: 'invalid-protest', details: { otherCrewIds: 'invalid' } } } });
-    expect(await submit(protest({ championship: 'All Japan GT Championship', otherCrewIds: [4] }))).toMatchObject({ status: 201 });
-    expect(await (await handleRequest(getPath('/protests/1', 'token-director'), env)).json()).toMatchObject({
-      protest: { championship: 'All Japan GT Championship', otherCrews: [{ id: 4, number: 8, name: 'Team Kyoto' }] },
-    });
     expect(await submit(protest({ otherCrewIds: [1] }))).toMatchObject({ status: 422 });
     expect(await submit(protest({ corner: '' }))).toMatchObject({ status: 422, body: { error: { details: { corner: 'required' } } } });
+    expect(await submit(protest({ otherCrewIds: [3, 2] }))).toMatchObject({ status: 201 });
   });
 
   it(`al massimo ${MAX_PROTESTS_PER_DAY} proteste al giorno a persona`, async () => {
@@ -253,7 +273,10 @@ describe('proteste', () => {
     await submit(protest());
     await uploadVideo(1, new Uint8Array([1, 2, 3]));
     const mine = await siteRequest('GET', '/public/protests/mine', 'site-vez-2');
-    expect(mine).toMatchObject({ status: 200, body: { protests: [{ id: 1, status: 'open', rejectionReason: null, canAddVideo: false, canAddYoutube: false }] } });
+    expect(mine).toMatchObject({ status: 200, body: { protests: [{ id: 1, status: 'open', canAddVideo: false, canAddYoutube: false }] } });
+    // Dell'esito il sito vede solo lo stato.
+    expect((mine.body.protests as Record<string, unknown>[])[0]).not.toHaveProperty('rejectionReason');
+    expect((mine.body.protests as Record<string, unknown>[])[0]).not.toHaveProperty('penalty');
     const video = await handleRequest(new Request(`${SITE}/public/protests/1/video`, { headers: { Authorization: 'Bearer site-vez-2' } }), env);
     expect(new Uint8Array(await video.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
     expect((await siteRequest('GET', '/public/protests/1', 'site-no-crew')).status).toBe(404);
@@ -271,34 +294,75 @@ describe('proteste', () => {
     expect((await handleRequest(getPath('/protests/1/video', 'token-director'), env)).status).toBe(410);
   });
 
-  it('i Commissari respingono la protesta con la motivazione facoltativa e l’equipaggio lo vede', async () => {
+  it('i Commissari respingono la protesta con la motivazione obbligatoria; il sito vede solo che è respinta', async () => {
     await submit(protest());
-    const rejected = await review(1, { isRejected: true, reason: '  Contatto di gara: nessuna azione.  ' });
+    expect((await review(1, { decision: 'rejected', reason: '   ' })).status).toBe(422);
+    const rejected = await review(1, { decision: 'rejected', reason: '  Contatto di gara: nessuna azione.  ' });
     expect(rejected.status).toBe(200);
-    expect(await rejected.json()).toMatchObject({ protest: { status: 'rejected', rejectionReason: 'Contatto di gara: nessuna azione.' } });
-    expect(await siteRequest('GET', '/public/protests/1', 'site-vez-2')).toMatchObject({
-      body: { protest: { status: 'rejected', rejectionReason: 'Contatto di gara: nessuna azione.' } },
-    });
+    expect(await rejected.json()).toMatchObject({ protest: { status: 'rejected', rejectionReason: 'Contatto di gara: nessuna azione.', penalty: null } });
+    const onSite = await siteRequest('GET', '/public/protests/1', 'site-vez-2');
+    expect(onSite).toMatchObject({ body: { protest: { status: 'rejected' } } });
+    expect(onSite.body.protest).not.toHaveProperty('rejectionReason');
     const stored = await env.CREWS_DB.prepare('SELECT reviewed_by_discord_id AS reviewedBy FROM protests').first();
     expect(stored).toEqual({ reviewedBy: 'discord-42' });
 
-    // Il rifiuto è definitivo: né un secondo rifiuto né il ritorno in esame.
-    const again = await review(1, { isRejected: true, reason: 'Cambio idea' });
+    // L'esito è definitivo.
+    const again = await review(1, { decision: 'rejected', reason: 'Cambio idea' });
     expect(again.status).toBe(409);
-    expect(await readError(again)).toBe('protest-already-rejected');
-    expect((await review(1, { isRejected: false, reason: '' })).status).toBe(422);
-    expect(await siteRequest('GET', '/public/protests/1', 'site-vez-2')).toMatchObject({
-      body: { protest: { status: 'rejected', rejectionReason: 'Contatto di gara: nessuna azione.' } },
-    });
+    expect(await readError(again)).toBe('protest-already-reviewed');
   });
 
-  it('il rifiuto si convalida prima di salvarlo e solo i Commissari possono darlo', async () => {
+  const acceptedPenalty = (overrides: Record<string, unknown> = {}) => ({
+    crews: [
+      { crewId: 2, decision: 'time-5' },
+      { crewId: 1, decision: null },
+    ],
+    violation: '2.5.1',
+    document: 'code-of-conduct',
+    reason: 'La #44 tampona la #16 alla Variante Ascari.',
+    ...overrides,
+  });
+
+  it('accolta: la penalità si salva tra quelle della gara, tradotta in inglese, e la protesta la mostra', async () => {
+    env = {
+      ...env,
+      AI: { run: (_model, inputs) => Promise.resolve({ response: { reason: `EN(${JSON.parse((inputs.messages as { content: string }[]).at(-1)?.content ?? '{}').reason as string})` } }) },
+    };
     await submit(protest());
-    expect((await review(1, { isRejected: true, reason: 'x'.repeat(501) })).status).toBe(422);
-    expect((await review(1, { reason: 'manca lo stato' })).status).toBe(422);
-    expect((await review(9, { isRejected: true, reason: '' })).status).toBe(404);
-    expect((await review(1, { isRejected: true, reason: '' }, 'token-no-role')).status).toBe(403);
-    expect(await (await review(1, { isRejected: true, reason: '' })).json()).toMatchObject({ protest: { status: 'rejected', rejectionReason: '' } });
+    const accepted = await review(1, { decision: 'accepted', penalty: acceptedPenalty() });
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toMatchObject({
+      protest: {
+        status: 'accepted',
+        rejectionReason: null,
+        penalty: { id: 1, crews: [{ crewId: 1, decision: null }, { crewId: 2, decision: 'time-5' }], violation: '2.5.1', document: 'code-of-conduct' },
+      },
+    });
+    // Tra le penalità della gara, come le altre: va nel referto PDF, con la traduzione automatica.
+    const penalties = (await (await handleRequest(getPath('/races/1/penalties', 'token-director'), env)).json()) as { penalties: Record<string, unknown>[] };
+    expect(penalties.penalties).toHaveLength(1);
+    expect(penalties.penalties[0]).toMatchObject({ violation: '2.5.1', english: { reason: 'EN(La #44 tampona la #16 alla Variante Ascari.)', source: 'automatic' } });
+    const onSite = await siteRequest('GET', '/public/protests/1', 'site-vez');
+    expect(onSite).toMatchObject({ body: { protest: { status: 'accepted' } } });
+    expect(onSite.body.protest).not.toHaveProperty('penalty');
+    expect((await review(1, { decision: 'rejected', reason: 'no' })).status).toBe(409);
+  });
+
+  it('accolta: vetture della protesta, violazione, documento e motivazione obbligatori', async () => {
+    await submit(protest());
+    const invalid = async (penalty: unknown) => ((await (await review(1, { decision: 'accepted', penalty })).json()) as { error: { details: unknown } }).error.details;
+    expect(await invalid(acceptedPenalty({ violation: '', document: '', reason: '' }))).toEqual({ penalty: { violation: 'required', document: 'required' } });
+    expect(await invalid(acceptedPenalty({ reason: '  ' }))).toEqual({ penalty: { reason: 'required' } });
+    expect(await invalid(acceptedPenalty({ crews: [{ crewId: 2, decision: 'time-5' }] }))).toEqual({ penalty: { crews: 'not-protest-crews' } });
+    expect(await invalid(acceptedPenalty({ crews: [{ crewId: 1, decision: null }, { crewId: 2, decision: null }, { crewId: 3, decision: null }] }))).toEqual({
+      penalty: { crews: 'not-protest-crews' },
+    });
+    expect((await review(1, { decision: 'forse' })).status).toBe(422);
+    expect((await review(9, { decision: 'rejected', reason: 'x' })).status).toBe(404);
+    expect((await review(1, { decision: 'rejected', reason: 'x' }, 'token-no-role')).status).toBe(403);
+    // Una protesta senza gara (mandata prima) si può solo respingere.
+    await env.CREWS_DB.prepare('UPDATE protests SET race_id = NULL').run();
+    expect(await readError(await review(1, { decision: 'accepted', penalty: acceptedPenalty() }))).toBe('protest-without-race');
   });
 });
 

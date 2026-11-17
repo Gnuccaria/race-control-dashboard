@@ -1,4 +1,5 @@
-import { type CrewChampionship, isCrewChampionship } from './crewRules';
+import type { CrewChampionship } from './crewRules';
+import { type PenaltyCrewDecision, type PenaltyDocument, type PenaltyDraft, type PenaltyDraftIssues, validatePenaltyDraft } from './penaltyRules';
 
 /**
  * Regole delle proteste mandate dal sito e lette dai Commissari Sportivi nell'app, condivise da sito, server e app:
@@ -34,8 +35,30 @@ export const isProtestVideoWindowOpen = (createdAt: string, now = Date.now()): b
 export const isProtestVideoExpired = (createdAt: string, now = Date.now()): boolean =>
   new Date(createdAt).getTime() + PROTEST_VIDEO_RETENTION_MS < now;
 
-/** In esame finché i Commissari non la respingono. */
-export type ProtestStatus = 'open' | 'rejected';
+/** In esame finché i Commissari non decidono: respinta oppure accolta (con una penalità). Entrambe definitive. */
+export type ProtestStatus = 'open' | 'rejected' | 'accepted';
+
+/** Gara della protesta, come la mostrano app e sito. */
+export interface ProtestRace {
+  readonly id: number;
+  readonly name: string | null;
+  readonly round: number;
+  readonly championship: CrewChampionship;
+}
+
+/** Gara tra cui scegliere nel modulo del sito: accetta proteste ed è del campionato dell'equipaggio. */
+export interface ProtestRaceOption extends ProtestRace {
+  readonly raceDate: string;
+}
+
+/** Penalità decisa accogliendo la protesta (salvata tra le penalità della gara, va nel referto PDF). */
+export interface ProtestPenalty {
+  readonly id: number;
+  readonly crews: readonly PenaltyCrewDecision[];
+  readonly violation: string;
+  readonly document: PenaltyDocument;
+  readonly reason: string;
+}
 
 /** Equipaggio come compare in una protesta (copiato all'invio: resta leggibile anche se l'equipaggio cambia). */
 export interface ProtestCrew {
@@ -46,8 +69,9 @@ export interface ProtestCrew {
 
 /** Dati della protesta scritti dal pilota; l'equipaggio coinvolto lo ricava il server dal ruolo Discord. */
 export interface ProtestDraft {
-  /** Campionato dell'episodio: da qui si scelgono gli altri equipaggi coinvolti. */
-  readonly championship: CrewChampionship;
+  /** Gara dell'episodio (deve accettare proteste ed essere del campionato dell'equipaggio): da qui il campionato
+   * e gli altri equipaggi coinvolti. */
+  readonly raceId: number;
   readonly stint: number;
   readonly lap: number;
   readonly corner: string;
@@ -63,6 +87,8 @@ export interface Protest {
   readonly id: number;
   readonly crew: ProtestCrew;
   readonly championship: string | null;
+  /** null per le proteste mandate prima che si scegliesse la gara (hanno solo il campionato). */
+  readonly race: ProtestRace | null;
   readonly stint: number;
   readonly lap: number;
   readonly corner: string;
@@ -75,8 +101,10 @@ export interface Protest {
    */
   readonly video: { readonly contentType: ProtestVideoType; readonly size: number; readonly isExpired: boolean } | null;
   readonly status: ProtestStatus;
-  /** Motivazione facoltativa del rifiuto ('' = nessuna); null se la protesta non è respinta. */
+  /** Motivazione del rifiuto; null se la protesta non è respinta (prima era facoltativa: può essere ''). */
   readonly rejectionReason: string | null;
+  /** Penalità decisa accogliendo la protesta; null se non è accolta. */
+  readonly penalty: ProtestPenalty | null;
   /** Quando i Commissari hanno salvato l'esito; null se mai. */
   readonly reviewedAt: string | null;
   readonly submittedByName: string;
@@ -85,7 +113,7 @@ export interface Protest {
 }
 
 export interface ProtestDraftIssues {
-  readonly championship?: 'required' | 'invalid';
+  readonly raceId?: 'required' | 'invalid';
   readonly stint?: 'required' | 'invalid';
   readonly lap?: 'required' | 'invalid';
   readonly corner?: 'required' | 'invalid';
@@ -138,9 +166,9 @@ export function validateProtestDraft(input: unknown): ProtestDraftValidation {
   const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
   const issues: { -readonly [Key in keyof ProtestDraftIssues]: ProtestDraftIssues[Key] } = {};
 
-  const { championship, stint, lap } = candidate;
-  if (championship === undefined || championship === null || championship === '') issues.championship = 'required';
-  else if (!isCrewChampionship(championship)) issues.championship = 'invalid';
+  const { raceId, stint, lap } = candidate;
+  if (raceId === undefined || raceId === null || raceId === '') issues.raceId = 'required';
+  else if (!isIntegerBetween(raceId, 1, Number.MAX_SAFE_INTEGER)) issues.raceId = 'invalid';
   if (stint === undefined || stint === null) issues.stint = 'required';
   else if (!isIntegerBetween(stint, PROTEST_STINT_MIN, PROTEST_STINT_MAX)) issues.stint = 'invalid';
   if (lap === undefined || lap === null) issues.lap = 'required';
@@ -172,7 +200,7 @@ export function validateProtestDraft(input: unknown): ProtestDraftValidation {
   return {
     isValid: true,
     protest: {
-      championship: championship as CrewChampionship,
+      raceId: raceId as number,
       stint: stint as number,
       lap: lap as number,
       corner,
@@ -187,8 +215,11 @@ export function validateProtestDraft(input: unknown): ProtestDraftValidation {
 export const youtubeEmbedUrl = (videoId: string) => `https://www.youtube-nocookie.com/embed/${videoId}`;
 export const youtubeWatchUrl = (videoId: string) => `https://www.youtube.com/watch?v=${videoId}`;
 
-/** Protesta come la vede il sito (chi l'ha mandata e il suo equipaggio): cosa può ancora aggiungere chi guarda. */
-export interface SiteProtest extends Protest {
+/**
+ * Protesta come la vede il sito (chi l'ha mandata e il suo equipaggio): dell'esito solo lo stato (in esame,
+ * accolta, respinta), senza motivazione né penalità; e cosa può ancora aggiungere chi guarda.
+ */
+export interface SiteProtest extends Omit<Protest, 'rejectionReason' | 'penalty'> {
   /** Chi guarda l'ha mandata, sono passate meno di 24 ore e non c'è ancora un video caricato. */
   readonly canAddVideo: boolean;
   /** Come sopra, per il link YouTube. */
@@ -196,21 +227,57 @@ export interface SiteProtest extends Protest {
 }
 
 /**
- * Esito salvato dai Commissari: l'unico esito è il rifiuto (con la motivazione facoltativa) ed è definitivo,
- * una protesta respinta non torna più in esame (il server rifiuta un secondo esito con 409).
+ * Esito salvato dai Commissari, definitivo (il server rifiuta un secondo esito con 409):
+ * - respinta: la motivazione è obbligatoria;
+ * - accolta: una penalità come quelle della gara, con le vetture coinvolte già decise (l'equipaggio della protesta
+ *   e gli altri equipaggi coinvolti, ognuno con la sua decisione facoltativa); violazione, documento e motivazione
+ *   obbligatori. La penalità si salva tra quelle della gara (referto PDF, traduzione inglese automatica).
  */
-export interface ProtestReview {
-  readonly isRejected: true;
-  readonly reason: string;
+export type ProtestReview =
+  | { readonly decision: 'rejected'; readonly reason: string }
+  | { readonly decision: 'accepted'; readonly penalty: Omit<PenaltyDraft, 'englishText'> };
+
+export interface ProtestReviewIssues {
+  readonly decision?: 'invalid';
+  readonly reason?: 'required' | 'too-long';
+  readonly penalty?: Omit<PenaltyDraftIssues, 'reason' | 'crews'> & {
+    readonly reason?: 'required' | 'too-long' | 'invalid';
+    readonly crews?: 'required' | 'invalid' | 'not-protest-crews';
+  };
 }
 
-/** Il rifiuto si può salvare solo su una protesta ancora in esame. */
+export type ProtestReviewValidation = { readonly isValid: true; readonly review: ProtestReview } | { readonly isValid: false; readonly issues: ProtestReviewIssues };
+
+/** Si decide solo su una protesta ancora in esame. */
 export const canReviewProtest = (status: ProtestStatus): boolean => status === 'open';
 
-export function validateProtestReview(input: unknown): ProtestReview | null {
+/** Vetture coinvolte di una protesta: l'equipaggio che l'ha mandata e gli altri equipaggi indicati, senza ripetizioni. */
+export const protestCrewIds = (protest: Pick<Protest, 'crew' | 'otherCrews'>): number[] => [...new Set([protest.crew.id, ...protest.otherCrews.map((crew) => crew.id)])];
+
+/** Convalida l'esito; protestCrews = le vetture coinvolte della protesta (protestCrewIds), che la penalità deve avere. */
+export function validateProtestReview(input: unknown, protestCrews: readonly number[]): ProtestReviewValidation {
   const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  if (candidate.isRejected !== true) return null;
-  const reason = typeof candidate.reason === 'string' ? normalizeProtestDescription(candidate.reason).trim() : '';
-  if (reason.length > PROTEST_REJECTION_REASON_MAX_LENGTH) return null;
-  return { isRejected: true, reason };
+  if (candidate.decision === 'rejected') {
+    const reason = typeof candidate.reason === 'string' ? normalizeProtestDescription(candidate.reason).trim() : '';
+    if (reason === '') return { isValid: false, issues: { reason: 'required' } };
+    if (reason.length > PROTEST_REJECTION_REASON_MAX_LENGTH) return { isValid: false, issues: { reason: 'too-long' } };
+    return { isValid: true, review: { decision: 'rejected', reason } };
+  }
+  if (candidate.decision !== 'accepted') return { isValid: false, issues: { decision: 'invalid' } };
+
+  const penaltyInput = typeof candidate.penalty === 'object' && candidate.penalty !== null ? { ...(candidate.penalty as Record<string, unknown>) } : {};
+  delete penaltyInput.englishText;
+  const validation = validatePenaltyDraft(penaltyInput);
+  const issues: { -readonly [Field in keyof NonNullable<ProtestReviewIssues['penalty']>]: NonNullable<ProtestReviewIssues['penalty']>[Field] } = validation.isValid
+    ? {}
+    : { ...validation.issues };
+  if (validation.isValid && validation.penalty.reason === '') issues.reason = 'required';
+  if (validation.isValid) {
+    const crewIds = validation.penalty.crews.map((crew) => crew.crewId).sort((first, second) => first - second);
+    const expected = [...protestCrews].sort((first, second) => first - second);
+    if (crewIds.length !== expected.length || crewIds.some((crewId, index) => crewId !== expected[index])) issues.crews = 'not-protest-crews';
+  }
+  if (!validation.isValid || Object.keys(issues).length > 0) return { isValid: false, issues: { penalty: issues } };
+  const { crews, violation, document, reason } = validation.penalty;
+  return { isValid: true, review: { decision: 'accepted', penalty: { crews, violation, document, reason } } };
 }

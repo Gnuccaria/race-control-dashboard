@@ -44,6 +44,7 @@ const summary = (id: number, round: number, raceDate: string, trackName: string 
   isTrackReversed: false,
   raceDate,
   updatedAt: `2026-11-${String(id).padStart(2, '0')}T10:00:00Z`,
+  acceptsProtests: false,
 });
 
 const RACES = [summary(1, 1, '2026-09-10', 'Monza'), summary(2, 3, '2026-11-05'), summary(3, 2, '2026-10-01', 'Imola')];

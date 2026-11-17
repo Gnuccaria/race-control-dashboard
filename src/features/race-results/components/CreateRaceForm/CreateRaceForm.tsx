@@ -30,7 +30,7 @@ export function CreateRaceForm({ crewsQuery }: CreateRaceFormProps) {
         if (validation.isValid) submitRace(validation.race);
       }}
     >
-      <RaceForm draft={raceDraft} crewsQuery={crewsQuery} isReadOnly={false} raceId={null} />
+      <RaceForm draft={raceDraft} crewsQuery={crewsQuery} isReadOnly={false} />
       {/* Subito sopra il pulsante: il form è lungo e l'esito deve essere visibile dove si è cliccato. */}
       {createErrorKind && <InlineAlert>{messages.serverErrors[createErrorKind]}</InlineAlert>}
       <Button type="submit" variant="confirm" disabled={!raceDraft.check.isComplete || isCreating}>

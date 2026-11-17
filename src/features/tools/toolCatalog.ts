@@ -116,21 +116,6 @@ export const TOOL_SECTIONS: readonly ToolSection[] = [
               },
             },
             {
-              // Prima del dettaglio della penalità: "nuova" non è un id.
-              path: ':raceId/penalita/nuova',
-              loadPage: async () => {
-                const { CreatePenaltyPage } = await import('@/features/race-results');
-                return { Component: CreatePenaltyPage };
-              },
-            },
-            {
-              path: ':raceId/penalita/:penaltyId',
-              loadPage: async () => {
-                const { PenaltyDetailPage } = await import('@/features/race-results');
-                return { Component: PenaltyDetailPage };
-              },
-            },
-            {
               path: ':raceId',
               loadPage: async () => {
                 const { RaceDetailPage } = await import('@/features/race-results');

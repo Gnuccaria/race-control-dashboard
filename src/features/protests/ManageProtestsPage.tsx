@@ -9,6 +9,8 @@ import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import { formatTimestamp } from '@/lib/dateFormatting';
 import { crewLabel } from './crewLabel';
+import { protestRaceLabel } from './protestRaceLabel';
+import { protestStatusTone } from './protestStatus';
 import styles from './Protests.module.css';
 import { fetchProtests } from './services/protestApi';
 
@@ -22,6 +24,7 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
         <thead>
           <tr>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.number}</th>
+            <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.race}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.crew}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.otherCrews}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.stint}</th>
@@ -35,6 +38,7 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
           {protests.map((protest) => (
             <tr key={protest.id} className={tableStyles.dataRow}>
               <td className={tableStyles.numberCell}>{protest.id}</td>
+              <td>{protestRaceLabel(protest, messages) ?? <span className={tableStyles.missingValue}>–</span>}</td>
               <td>{crewLabel(protest.crew)}</td>
               <td>
                 {protest.otherCrews.length === 0 ? (
@@ -53,7 +57,7 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
               <td className={tableStyles.numberCell}>{protest.lap}</td>
               <td>{formatTimestamp(protest.createdAt, locale)}</td>
               <td>
-                <StatusBadge tone={protest.status === 'rejected' ? 'critical' : 'warning'} label={texts.statuses[protest.status]} />
+                <StatusBadge tone={protestStatusTone(protest.status)} label={texts.statuses[protest.status]} />
               </td>
               <td className={tableStyles.actionColumn}>
                 <Link to={String(protest.id)} relative="path" className={tableStyles.detailLink} aria-label={texts.openDetails(protest.id)}>

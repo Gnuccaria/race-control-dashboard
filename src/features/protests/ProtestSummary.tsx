@@ -4,7 +4,7 @@ import { useI18n } from '@/i18n/useI18n';
 import { crewLabel } from './crewLabel';
 
 /** Contenuto compatto di una protesta nella campanella: numero, equipaggio, stint, giro e curva. */
-export function ProtestSummary({ protest, isNew = false }: { readonly protest: Protest; readonly isNew?: boolean }) {
+export function ProtestSummary({ protest, isNew = false }: { readonly protest: Pick<Protest, 'id' | 'crew' | 'stint' | 'lap' | 'corner'>; readonly isNew?: boolean }) {
   const { messages } = useI18n();
   const texts = messages.protests.notifications;
   return (

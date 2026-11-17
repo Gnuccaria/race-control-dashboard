@@ -5,11 +5,15 @@ import {
   type Protest,
   type ProtestCrew,
   type ProtestDraft,
-  type ProtestReview,
+  type ProtestPenalty,
+  type ProtestRace,
+  type ProtestRaceOption,
   type ProtestStatus,
   type SiteProtest,
 } from '../../../shared/protestRules';
+import type { CrewChampionship } from '../../../shared/crewRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
+import { findPenalty } from '../penalties/penaltyRepository';
 
 interface ProtestRow {
   readonly id: number;
@@ -34,14 +38,24 @@ interface ProtestRow {
   readonly status: ProtestStatus;
   readonly rejectionReason: string | null;
   readonly reviewedAt: string | null;
+  readonly raceId: number | null;
+  readonly raceName: string | null;
+  readonly raceRound: number | null;
+  readonly raceChampionship: CrewChampionship | null;
+  readonly penaltyId: number | null;
 }
 
-const PROTEST_COLUMNS = `
-  id, crew_id AS crewId, crew_number AS crewNumber, crew_name AS crewName, championship, stint, lap, corner, description,
-  youtube_video_id AS youtubeVideoId, other_crews_json AS otherCrewsJson, video_key AS videoKey,
-  video_content_type AS videoContentType, video_size AS videoSize, submitted_by_name AS submittedByName,
-  submitted_by_username AS submittedByUsername, created_at AS createdAt, submitted_by_discord_id AS submittedBy,
-  crew_role_id AS crewRoleId, status, rejection_reason AS rejectionReason, reviewed_at AS reviewedAt`;
+/** Protesta con la sua gara (se c'è): nome, round e campionato letti dalla gara. */
+const PROTEST_SELECT = `
+  SELECT protests.id, protests.crew_id AS crewId, protests.crew_number AS crewNumber, protests.crew_name AS crewName,
+    protests.championship, protests.stint, protests.lap, protests.corner, protests.description,
+    protests.youtube_video_id AS youtubeVideoId, protests.other_crews_json AS otherCrewsJson, protests.video_key AS videoKey,
+    protests.video_content_type AS videoContentType, protests.video_size AS videoSize, protests.submitted_by_name AS submittedByName,
+    protests.submitted_by_username AS submittedByUsername, protests.created_at AS createdAt,
+    protests.submitted_by_discord_id AS submittedBy, protests.crew_role_id AS crewRoleId, protests.status,
+    protests.rejection_reason AS rejectionReason, protests.reviewed_at AS reviewedAt, protests.penalty_id AS penaltyId,
+    races.id AS raceId, races.name AS raceName, races.round AS raceRound, races.championship AS raceChampionship
+  FROM protests LEFT JOIN races ON races.id = protests.race_id`;
 
 function readOtherCrews(json: string): ProtestCrew[] {
   try {
@@ -52,10 +66,17 @@ function readOtherCrews(json: string): ProtestCrew[] {
   }
 }
 
-const toProtest = (row: ProtestRow): Protest => ({
+const toProtestRace = (row: ProtestRow): ProtestRace | null =>
+  row.raceId !== null && row.raceRound !== null && row.raceChampionship !== null
+    ? { id: row.raceId, name: row.raceName, round: row.raceRound, championship: row.raceChampionship }
+    : null;
+
+/** Dati della protesta che vedono sia l'app sia il sito (dell'esito solo lo stato). */
+const toSharedProtest = (row: ProtestRow): Omit<Protest, 'rejectionReason' | 'penalty'> => ({
   id: row.id,
   crew: { id: row.crewId, number: row.crewNumber, name: row.crewName },
   championship: row.championship,
+  race: toProtestRace(row),
   stint: row.stint,
   lap: row.lap,
   corner: row.corner,
@@ -70,8 +91,14 @@ const toProtest = (row: ProtestRow): Protest => ({
   submittedByUsername: row.submittedByUsername,
   createdAt: row.createdAt,
   status: row.status,
-  rejectionReason: row.status === 'rejected' ? (row.rejectionReason ?? '') : null,
   reviewedAt: row.reviewedAt,
+});
+
+/** Protesta per l'app; penalty: la penalità della protesta accolta, letta a parte (solo nel dettaglio; nell'elenco null). */
+const toProtest = (row: ProtestRow, penalty: ProtestPenalty | null = null): Protest => ({
+  ...toSharedProtest(row),
+  rejectionReason: row.status === 'rejected' ? (row.rejectionReason ?? '') : null,
+  penalty,
 });
 
 /** Chi guarda dal sito: il suo ID Discord e i suoi ruoli nel server della lega. */
@@ -83,7 +110,8 @@ export interface ProtestViewer {
 /** Vista del sito: cosa può ancora aggiungere chi guarda (solo chi l'ha mandata, entro 24 ore dall'invio). */
 function toSiteProtest(row: ProtestRow, viewer: ProtestViewer): SiteProtest {
   const canAdd = row.submittedBy === viewer.discordUserId && isProtestVideoWindowOpen(row.createdAt);
-  return { ...toProtest(row), canAddVideo: canAdd && row.videoKey === null, canAddYoutube: canAdd && row.youtubeVideoId === null };
+  // Dell'esito il sito vede solo lo stato: niente motivazione del rifiuto né penalità.
+  return { ...toSharedProtest(row), canAddVideo: canAdd && row.videoKey === null, canAddYoutube: canAdd && row.youtubeVideoId === null };
 }
 
 /** Visibile a chi l'ha mandata e a chi ha lo stesso ruolo di equipaggio (salvato all'invio). */
@@ -91,7 +119,7 @@ const VISIBLE_TO_VIEWER = '(submitted_by_discord_id = ? OR crew_role_id IN (SELE
 
 export async function listProtestsVisibleTo(database: SqlDatabase, viewer: ProtestViewer): Promise<SiteProtest[]> {
   const { results } = await database
-    .prepare(`SELECT ${PROTEST_COLUMNS} FROM protests WHERE ${VISIBLE_TO_VIEWER} ORDER BY id DESC LIMIT 50`)
+    .prepare(`${PROTEST_SELECT} WHERE ${VISIBLE_TO_VIEWER} ORDER BY protests.id DESC LIMIT 50`)
     .bind(viewer.discordUserId, JSON.stringify(viewer.roleIds))
     .all<ProtestRow>();
   return results.map((row) => toSiteProtest(row, viewer));
@@ -99,7 +127,7 @@ export async function listProtestsVisibleTo(database: SqlDatabase, viewer: Prote
 
 export async function findProtestVisibleTo(database: SqlDatabase, protestId: number, viewer: ProtestViewer): Promise<SiteProtest | null> {
   const row = await database
-    .prepare(`SELECT ${PROTEST_COLUMNS} FROM protests WHERE id = ? AND ${VISIBLE_TO_VIEWER}`)
+    .prepare(`${PROTEST_SELECT} WHERE protests.id = ? AND ${VISIBLE_TO_VIEWER}`)
     .bind(protestId, viewer.discordUserId, JSON.stringify(viewer.roleIds))
     .first<ProtestRow>();
   return row ? toSiteProtest(row, viewer) : null;
@@ -117,28 +145,53 @@ export async function findVisibleProtestVideo(
     .first<{ videoKey: string | null; createdAt: string }>();
 }
 
-/** Salva l'esito: respinta con la motivazione, oppure di nuovo in esame. null se la protesta non esiste. */
-/**
- * Respinge la protesta, solo se è ancora in esame (il rifiuto è definitivo): 'already-rejected' se era già respinta,
- * null se non esiste.
- */
-export async function reviewProtest(
-  database: SqlDatabase,
-  protestId: number,
-  review: ProtestReview,
-  reviewedByDiscordId: string,
-): Promise<Protest | 'already-rejected' | null> {
+/** Esito di un tentativo di decidere: fatto, protesta già decisa (definitiva) o inesistente. */
+export type ProtestDecisionOutcome = 'done' | 'already-reviewed' | 'not-found';
+
+async function decisionOutcome(database: SqlDatabase, protestId: number, isDone: boolean): Promise<ProtestDecisionOutcome> {
+  if (isDone) return 'done';
+  const existing = await database.prepare('SELECT id FROM protests WHERE id = ?').bind(protestId).first<{ id: number }>();
+  return existing ? 'already-reviewed' : 'not-found';
+}
+
+/** Respinge la protesta con la motivazione, solo se è ancora in esame (l'esito è definitivo). */
+export async function rejectProtest(database: SqlDatabase, protestId: number, reason: string, reviewedByDiscordId: string): Promise<ProtestDecisionOutcome> {
   const row = await database
     .prepare(
       `UPDATE protests SET status = 'rejected', rejection_reason = ?, reviewed_by_discord_id = ?,
          reviewed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-       WHERE id = ? AND status = 'open' RETURNING ${PROTEST_COLUMNS}`,
+       WHERE id = ? AND status = 'open' RETURNING id`,
     )
-    .bind(review.reason, reviewedByDiscordId, protestId)
-    .first<ProtestRow>();
-  if (row) return toProtest(row);
-  const existing = await database.prepare('SELECT id FROM protests WHERE id = ?').bind(protestId).first<{ id: number }>();
-  return existing ? 'already-rejected' : null;
+    .bind(reason, reviewedByDiscordId, protestId)
+    .first<{ id: number }>();
+  return decisionOutcome(database, protestId, row !== null);
+}
+
+/**
+ * Prima metà dell'accoglimento: segna la protesta come accolta solo se è ancora in esame, così due salvataggi
+ * contemporanei non creano due penalità. Poi si crea la penalità e la si collega (linkProtestPenalty); se la
+ * penalità non si salva, reopenProtest la rimette in esame.
+ */
+export async function claimProtestForAcceptance(database: SqlDatabase, protestId: number, reviewedByDiscordId: string): Promise<ProtestDecisionOutcome> {
+  const row = await database
+    .prepare(
+      `UPDATE protests SET status = 'accepted', reviewed_by_discord_id = ?, reviewed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE id = ? AND status = 'open' AND race_id IS NOT NULL RETURNING id`,
+    )
+    .bind(reviewedByDiscordId, protestId)
+    .first<{ id: number }>();
+  return decisionOutcome(database, protestId, row !== null);
+}
+
+export async function linkProtestPenalty(database: SqlDatabase, protestId: number, penaltyId: number): Promise<void> {
+  await database.prepare('UPDATE protests SET penalty_id = ? WHERE id = ?').bind(penaltyId, protestId).run();
+}
+
+export async function reopenProtest(database: SqlDatabase, protestId: number): Promise<void> {
+  await database
+    .prepare("UPDATE protests SET status = 'open', reviewed_by_discord_id = NULL, reviewed_at = NULL, penalty_id = NULL WHERE id = ?")
+    .bind(protestId)
+    .run();
 }
 
 /** Aggiunge il link YouTube, solo se non ce n'era già uno; false altrimenti. */
@@ -189,6 +242,8 @@ export async function countRecentProtestsBy(database: SqlDatabase, discordUserId
 
 interface ProtestSubmission {
   readonly crew: ProtestCrew & { readonly championship: string | null };
+  /** La gara scelta (ne copia il campionato nella protesta). */
+  readonly race: ProtestRaceOption;
   readonly crewRoleId: string;
   readonly otherCrews: readonly ProtestCrew[];
   readonly discordUserId: string;
@@ -199,16 +254,17 @@ interface ProtestSubmission {
 export async function insertProtest(database: SqlDatabase, protest: ProtestDraft, submission: ProtestSubmission): Promise<number> {
   const row = await database
     .prepare(
-      `INSERT INTO protests (crew_id, crew_number, crew_name, crew_role_id, championship, stint, lap, corner, description,
+      `INSERT INTO protests (crew_id, crew_number, crew_name, crew_role_id, championship, race_id, stint, lap, corner, description,
          youtube_video_id, other_crews_json, submitted_by_discord_id, submitted_by_name, submitted_by_username)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
       submission.crew.id,
       submission.crew.number,
       submission.crew.name,
       submission.crewRoleId,
-      protest.championship,
+      submission.race.championship,
+      protest.raceId,
       protest.stint,
       protest.lap,
       protest.corner,
@@ -251,13 +307,38 @@ export async function attachProtestVideo(database: SqlDatabase, protestId: numbe
 
 /** Tutte le proteste, dalla più recente. */
 export async function listProtests(database: SqlDatabase): Promise<Protest[]> {
-  const { results } = await database.prepare(`SELECT ${PROTEST_COLUMNS} FROM protests ORDER BY id DESC`).all<ProtestRow>();
-  return results.map(toProtest);
+  const { results } = await database.prepare(`${PROTEST_SELECT} ORDER BY protests.id DESC`).all<ProtestRow>();
+  return results.map((row) => toProtest(row));
+}
+
+/** Gare che accettano proteste in un campionato, dalla più recente: il menu "Gara" del modulo del sito. */
+export async function listRacesAcceptingProtests(database: SqlDatabase, championship: string): Promise<ProtestRaceOption[]> {
+  const { results } = await database
+    .prepare(
+      `SELECT id, name, round, championship, race_date AS raceDate FROM races
+       WHERE accepts_protests = 1 AND championship = ? ORDER BY race_date DESC, round DESC`,
+    )
+    .bind(championship)
+    .all<ProtestRaceOption>();
+  return results;
 }
 
 export async function findProtest(database: SqlDatabase, protestId: number): Promise<Protest | null> {
-  const row = await database.prepare(`SELECT ${PROTEST_COLUMNS} FROM protests WHERE id = ?`).bind(protestId).first<ProtestRow>();
-  return row ? toProtest(row) : null;
+  const row = await database.prepare(`${PROTEST_SELECT} WHERE protests.id = ?`).bind(protestId).first<ProtestRow>();
+  if (!row) return null;
+  const penalty = row.penaltyId !== null && row.raceId !== null ? await findPenalty(database, row.raceId, row.penaltyId) : null;
+  return toProtest(
+    row,
+    penalty
+      ? {
+          id: penalty.id,
+          crews: penalty.crews.map(({ crewId, decision }) => ({ crewId, decision })),
+          violation: penalty.violation,
+          document: penalty.document,
+          reason: penalty.reason,
+        }
+      : null,
+  );
 }
 
 export async function findProtestVideo(database: SqlDatabase, protestId: number): Promise<{ readonly videoKey: string | null; readonly createdAt: string } | null> {

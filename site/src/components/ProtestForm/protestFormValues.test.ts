@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkProtestForm, chooseVideo, EMPTY_PROTEST_VALUES } from './protestFormValues';
 
-const values = (overrides: Partial<typeof EMPTY_PROTEST_VALUES>) => ({ ...EMPTY_PROTEST_VALUES, championship: 'Cool1 FIE Championship', stint: '2', lap: '14', corner: 'Curva 3', ...overrides });
+const values = (overrides: Partial<typeof EMPTY_PROTEST_VALUES>) => ({ ...EMPTY_PROTEST_VALUES, raceId: '3', stint: '2', lap: '14', corner: 'Curva 3', ...overrides });
 const file = (name: string, type: string, size: number) => {
   const chosen = new File([new Uint8Array(1)], name, { type });
   Object.defineProperty(chosen, 'size', { value: size });
@@ -10,8 +10,8 @@ const file = (name: string, type: string, size: number) => {
 
 describe('modulo della protesta', () => {
   it('pronto con stint, giro e curva; il resto è facoltativo', () => {
-    expect(checkProtestForm(values({})).submission).toEqual({ championship: 'Cool1 FIE Championship', stint: 2, lap: 14, corner: 'Curva 3', description: '', youtubeUrl: '', otherCrewIds: [] });
-    expect(checkProtestForm(values({ championship: '' })).submission).toBeNull();
+    expect(checkProtestForm(values({})).submission).toEqual({ raceId: 3, stint: 2, lap: 14, corner: 'Curva 3', description: '', youtubeUrl: '', otherCrewIds: [] });
+    expect(checkProtestForm(values({ raceId: '' })).submission).toBeNull();
     expect(checkProtestForm(values({ corner: '  ' })).submission).toBeNull();
     expect(checkProtestForm(values({ stint: '' })).submission).toBeNull();
   });

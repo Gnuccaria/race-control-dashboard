@@ -152,6 +152,14 @@ export interface RaceSummary {
   readonly isTrackReversed: boolean;
   readonly raceDate: string;
   readonly updatedAt: string;
+  /** La gara compare nel menu "Gara" di "Invia protesta" sul sito (interruttore nel dettaglio della gara). */
+  readonly acceptsProtests: boolean;
+}
+
+/** Corpo della richiesta che apre o chiude le proteste di una gara; null se non valido. */
+export function readRaceProtestSetting(input: unknown): { readonly acceptsProtests: boolean } | null {
+  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  return typeof candidate.acceptsProtests === 'boolean' ? { acceptsProtests: candidate.acceptsProtests } : null;
 }
 
 /** Gara completa, con l'ordine di arrivo. */

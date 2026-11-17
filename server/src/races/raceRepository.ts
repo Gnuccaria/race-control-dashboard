@@ -17,11 +17,12 @@ interface RaceRow {
   readonly is_track_reversed: number;
   readonly race_date: string;
   readonly updated_at: string;
+  readonly accepts_protests: number;
 }
 
 const RACE_SUMMARY_SELECT = `
   SELECT races.id, races.name, races.championship, races.duration, races.total_laps, races.round, races.track_id, tracks.name AS track_name, tracks.configuration AS track_configuration,
-         races.is_track_reversed, races.race_date, races.updated_at
+         races.is_track_reversed, races.race_date, races.updated_at, races.accepts_protests
   FROM races LEFT JOIN tracks ON tracks.id = races.track_id`;
 
 const NOW_TIMESTAMP = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
@@ -39,6 +40,7 @@ const toRaceSummary = (row: RaceRow): RaceSummary => ({
   isTrackReversed: row.is_track_reversed === 1,
   raceDate: row.race_date,
   updatedAt: row.updated_at,
+  acceptsProtests: row.accepts_protests === 1,
 });
 
 /** Classifica (con la vettura di ogni riga) come un solo parametro JSON: D1 limita il numero di parametri per query. */
@@ -112,6 +114,15 @@ export async function listRaces(database: SqlDatabase): Promise<RaceSummary[]> {
     .prepare(`${RACE_SUMMARY_SELECT} ORDER BY races.race_date DESC, races.round DESC`)
     .all<RaceRow>();
   return results.map(toRaceSummary);
+}
+
+/** Apre o chiude le proteste della gara (non cambia l'ultima modifica della gara); false se la gara non esiste. */
+export async function setRaceAcceptsProtests(database: SqlDatabase, raceId: number, acceptsProtests: boolean): Promise<boolean> {
+  const row = await database
+    .prepare('UPDATE races SET accepts_protests = ? WHERE id = ? RETURNING id')
+    .bind(acceptsProtests ? 1 : 0, raceId)
+    .first<{ id: number }>();
+  return row !== null;
 }
 
 export async function findRaceSummaryById(database: SqlDatabase, raceId: number): Promise<RaceSummary | null> {

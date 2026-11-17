@@ -8,6 +8,8 @@ import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import { formatTimestamp } from '@/lib/dateFormatting';
 import { crewLabel } from './crewLabel';
+import { protestRaceLabel } from './protestRaceLabel';
+import { protestStatusTone } from './protestStatus';
 import { UploadedProtestVideo, YoutubeProtestVideo } from './ProtestVideo';
 import { ProtestReviewPanel } from './ProtestReviewPanel';
 import { protestStore } from './protestStore';
@@ -45,10 +47,14 @@ export function ProtestDetailPage() {
               items={[
                 {
                   term: texts.columns.status,
-                  description: <StatusBadge tone={protest.status === 'rejected' ? 'critical' : 'warning'} label={texts.statuses[protest.status]} />,
+                  description: <StatusBadge tone={protestStatusTone(protest.status)} label={texts.statuses[protest.status]} />,
                 },
                 { term: texts.columns.crew, description: crewLabel(protest.crew) },
-                ...(protest.championship ? [{ term: texts.detail.championship, description: protest.championship }] : []),
+                ...(protest.race
+                  ? [{ term: texts.columns.race, description: protestRaceLabel(protest, messages) }]
+                  : protest.championship
+                    ? [{ term: texts.detail.championship, description: protest.championship }]
+                    : []),
                 { term: texts.columns.stint, description: protest.stint },
                 { term: texts.columns.lap, description: protest.lap },
                 { term: texts.detail.corner, description: protest.corner },

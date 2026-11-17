@@ -10,6 +10,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge';
 import { useI18n } from '@/i18n/useI18n';
 import { fetchMyProtest, type VideoUploadProblem } from '../api/protests';
 import { endExpiredSiteSession, getFreshSiteAccessToken, signInWithDiscord, useSiteAuth } from '../auth/siteAuthStore';
+import { protestRaceLabel } from '@/features/protests/protestRaceLabel';
+import { protestStatusTone } from '@/features/protests/protestStatus';
 import { FadingNotice } from '../components/FadingNotice/FadingNotice';
 import { ProtestVideoSection } from '../components/ProtestVideoSection/ProtestVideoSection';
 import { PROTEST_PATH, protestPath } from '../sitePaths';
@@ -93,24 +95,16 @@ export function Component() {
           {searchParams.get('inviata') === '1' && (
             <FadingNotice onDone={() => setSearchParams({}, { replace: true })}>{texts.sent(loadedProtest.id)}</FadingNotice>
           )}
-          {loadedProtest.status === 'rejected' && (
-            <section className={styles.rejection} aria-labelledby="protest-rejection-title">
-              <h2 id="protest-rejection-title" className={styles.rejectionTitle}>
-                {texts.rejectedTitle}
-              </h2>
-              <p className={styles.rejectionReason}>{loadedProtest.rejectionReason ? loadedProtest.rejectionReason : texts.noReason}</p>
-              {loadedProtest.reviewedAt && <p className={styles.rejectionDate}>{texts.reviewedAt(formatDateTime(loadedProtest.reviewedAt))}</p>}
-            </section>
-          )}
           <Panel title={texts.dataTitle} description={formatDateTime(loadedProtest.createdAt)}>
             <DefinitionList
               items={[
                 {
                   term: texts.status,
                   description: (
-                    <StatusBadge tone={loadedProtest.status === 'rejected' ? 'critical' : 'warning'} label={siteTexts.myProtests.statuses[loadedProtest.status]} />
+                    <StatusBadge tone={protestStatusTone(loadedProtest.status)} label={siteTexts.myProtests.statuses[loadedProtest.status]} />
                   ),
                 },
+                ...(loadedProtest.race ? [{ term: siteTexts.protest.form.race, description: protestRaceLabel(loadedProtest, messages) }] : []),
                 { term: siteTexts.disconnectionTicket.form.crew, description: crewLabel(loadedProtest.crew) },
                 { term: siteTexts.myTickets.sentBy, description: `${loadedProtest.submittedByName} (@${loadedProtest.submittedByUsername})` },
                 { term: siteTexts.protest.form.stint, description: loadedProtest.stint },

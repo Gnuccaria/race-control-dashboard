@@ -68,7 +68,7 @@ export function SiteNotificationBell({ userId }: { readonly userId: string }) {
               <li key={`protest-${protest.id}`}>
                 <button type="button" className={styles.ticketItem} data-new onClick={() => openItem(() => markRejectionsSeen([protest.id]), protestPath(protest.id))}>
                   <ProtestSummary protest={protest} />
-                  <span className={ownStyles.resultLine}>{texts.protestRejected}</span>
+                  <span className={ownStyles.resultLine}>{protest.status === 'accepted' ? texts.protestAccepted : texts.protestRejected}</span>
                 </button>
               </li>
             ))}

@@ -1,5 +1,4 @@
 import type { SavedCrew } from '@shared/crewRules';
-import type { SavedPenalty } from '@shared/penaltyRules';
 import type { RaceSummary, SavedRace } from '@shared/raceRules';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,14 +7,12 @@ import { fetchCrews } from '@/features/crews/services/crewApi';
 import { renderApp } from '@/test/renderWithRouter';
 import { chooseTrack } from '@/test/chooseTrack';
 import { testCarId } from '@/test/testCars';
-import { createPenalty, deletePenalties, fetchPenalties, fetchPenalty, fetchReprimandCounts, updatePenalty } from './penalties/services/penaltyApi';
-import { createRace, deleteRaces, fetchRace, fetchRaces, updateRace, updateRaceDriverSwaps } from './services/raceApi';
+import { createRace, deleteRaces, fetchRace, fetchRaces, saveRaceProtestSetting, updateRace, updateRaceDriverSwaps } from './services/raceApi';
 
 vi.mock('@/features/auth/services/desktopBridge');
 vi.mock('@/features/auth/services/discordApi');
 vi.mock('@/features/crews/services/crewApi');
 vi.mock('./services/raceApi');
-vi.mock('./penalties/services/penaltyApi');
 
 const LIST_PATH = '/campionato/ordini-di-arrivo';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
@@ -45,6 +42,7 @@ const summary = (id: number, round: number, raceDate: string): RaceSummary => ({
   isTrackReversed: false,
   raceDate,
   updatedAt: '2026-11-13T10:00:00Z',
+  acceptsProtests: false,
 });
 
 const RACES = [summary(1, 1, '2026-09-14'), summary(2, 2, '2026-10-05')];
@@ -58,8 +56,6 @@ const shownRounds = () =>
 beforeEach(() => {
   vi.mocked(fetchCrews).mockResolvedValue({ isSuccess: true, value: CREWS });
   vi.mocked(fetchRaces).mockResolvedValue({ isSuccess: true, value: RACES });
-  vi.mocked(fetchPenalties).mockResolvedValue({ isSuccess: true, value: [] });
-  vi.mocked(fetchReprimandCounts).mockResolvedValue({ isSuccess: true, value: new Map() });
 });
 
 describe('Gestisci ordini di arrivo: elenco', () => {
@@ -365,10 +361,10 @@ describe('Dettaglio gara', () => {
     expect(updateRace).not.toHaveBeenCalled();
   });
 
-  it('Gestisci ordini di arrivo non ha più la scheda Cambi pilota', async () => {
+  it('Gestisci ordini di arrivo non ha più le schede Cambi pilota e Penalità', async () => {
     renderApp(`${LIST_PATH}/1`);
     expect(await screen.findByRole('tab', { name: 'Anagrafica' })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Anagrafica', 'Dettagli', 'Penalità']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Anagrafica', 'Dettagli']);
   });
 
   it('Cambi pilota (Gestisci cambi pilota dei Commissari): cinque cambi nel Cool1 FIE scelti dal menu, tempi formattati, salvati solo i cambi pilota', async () => {
@@ -419,139 +415,23 @@ describe('Dettaglio gara', () => {
     ]);
   });
 
-  it('Penalità: elenco con "Aggiungi penalità", eliminazione multipla e dettaglio modificabile', async () => {
-    const penalty = (id: number, crewIds: number[], violation: string): SavedPenalty => ({
-      id,
-      raceId: 1,
-      // La prima vettura ha +5 secondi, le altre nessuna decisione.
-      crews: crewIds.map((crewId, index) => ({ crewId, decision: index === 0 ? ('time-5' as const) : null, reprimandNumber: null })),
-      // Penalità salvate prima del numero dell'articolo: la violazione è un testo libero.
-      violation,
-      document: 'code-of-conduct',
-      reason: 'Spinta al via.',
-      english: null,
-      updatedAt: '2026-11-14T10:00:00Z',
-    });
-    vi.mocked(fetchPenalties).mockResolvedValue({ isSuccess: true, value: [penalty(1, [1, 2], 'Contatto in curva 1'), penalty(2, [2], 'Track limits')] });
-    vi.mocked(deletePenalties).mockResolvedValue({ isSuccess: true, value: 2 });
+  it('l’interruttore "Accetta proteste" si salva subito, senza "Modifica"', async () => {
+    vi.mocked(saveRaceProtestSetting).mockResolvedValue({ isSuccess: true, value: true });
     const user = userEvent.setup();
     renderApp(`${LIST_PATH}/1`);
 
-    await user.click(await screen.findByRole('tab', { name: 'Penalità' }));
-    const table = await screen.findByRole('table', { name: 'Penalità della gara' });
-    expect(within(table).getAllByRole('row')[1]).toHaveTextContent('#7#12Contatto in curva 1#7+5 secondi');
-    expect(within(table).getAllByRole('row')[2]).toHaveTextContent('#12Track limits#12+5 secondi');
-    expect(screen.getByRole('link', { name: 'Aggiungi penalità' })).toHaveAttribute('href', `${LIST_PATH}/1/penalita/nuova`);
-
-    for (const row of within(table).getAllByRole('row').slice(1)) await user.pointer({ keys: '[MouseRight]', target: row });
-    vi.mocked(fetchPenalties).mockResolvedValue({ isSuccess: true, value: [] });
-    await user.click(screen.getByRole('button', { name: 'Elimina' }));
-    await user.click(within(screen.getByRole('dialog', { name: 'Eliminare 2 penalità?' })).getByRole('button', { name: 'Elimina' }));
-    expect(deletePenalties).toHaveBeenCalledWith(1, [1, 2]);
-    expect(await screen.findByText('2 penalità eliminate.')).toBeInTheDocument();
-  });
-});
-
-describe('Penalità', () => {
-  const savedRace: SavedRace = { ...summary(1, 1, '2026-09-14'), results: [], driverSwaps: [] };
-
-  beforeEach(() => {
-    vi.mocked(fetchRace).mockResolvedValue({ isSuccess: true, value: savedRace });
+    const toggle = await screen.findByRole('switch', { name: /Accetta proteste/ });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+    expect(saveRaceProtestSetting).toHaveBeenCalledWith(1, true);
+    expect(toggle).toBeChecked();
+    expect(screen.getByText(/La gara compare nel menu "Gara"/)).toBeInTheDocument();
+    expect(updateRace).not.toHaveBeenCalled();
   });
 
-  it('aggiunge una penalità: vetture come clip, violazione, decisione e motivazione', async () => {
-    vi.mocked(createPenalty).mockResolvedValue({
-      isSuccess: true,
-      value: {
-        id: 1,
-        raceId: 1,
-        crews: [{ crewId: 2, decision: 'reprimand', reprimandNumber: 3 }],
-        violation: '2.5.1',
-        document: 'code-of-conduct',
-        reason: '',
-        english: null,
-        updatedAt: '2026-11-14T10:00:00Z',
-      },
-    });
-    vi.mocked(fetchReprimandCounts).mockResolvedValue({ isSuccess: true, value: new Map([[2, 2]]) });
-    const user = userEvent.setup();
-    renderApp(`${LIST_PATH}/1/penalita/nuova`);
-
-    const addButton = await screen.findByRole('button', { name: 'Aggiungi' });
-    expect(addButton).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: /Vetture coinvolte/ }));
-    // Solo le vetture del campionato.
-    expect(screen.getAllByRole('checkbox').map((checkbox) => checkbox.getAttribute('aria-label'))).toEqual(['#7 Alfa Racing', '#12 Beta Corse']);
-    await user.click(screen.getByRole('checkbox', { name: '#12 Beta Corse' }));
-    await user.keyboard('{Escape}');
-    expect(screen.getByRole('button', { name: /Vetture coinvolte/ })).toHaveTextContent('#12');
-    // Violazione: solo il numero dell'articolo (cifre e punti), con accanto il documento.
-    await user.type(screen.getByRole('textbox', { name: 'Violazione' }), 'art 2.5.1');
-    expect(screen.getByRole('textbox', { name: 'Violazione' })).toHaveValue('2.5.1');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Documento' }), 'Codice di Condotta');
-    // Ogni vettura coinvolta ha la sua decisione, facoltativa; "Nessuna azione ulteriore" non è nel menu.
-    const decision = screen.getByRole('combobox', { name: 'Decisione per la vettura #12' });
-    expect(decision).toHaveValue('none');
-    expect(within(decision).queryByRole('option', { name: 'Nessuna azione ulteriore' })).not.toBeInTheDocument();
-    expect(within(decision).getByRole('option', { name: '+7 posizioni' })).toBeInTheDocument();
-    await user.selectOptions(decision, 'Reprimenda');
-    // La #12 ha già due reprimende: questa è la terza e porta +1 posizione in griglia.
-    expect(screen.getByText(/3ª reprimenda: in automatico \+1 posizione in griglia/)).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Motivazione' })).toHaveAttribute('rows', '5');
-    await user.click(addButton);
-
-    expect(createPenalty).toHaveBeenCalledWith(1, {
-      crews: [{ crewId: 2, decision: 'reprimand' }],
-      violation: '2.5.1',
-      document: 'code-of-conduct',
-      reason: '',
-    });
-    // Si torna alla gara con la scheda Penalità aperta.
-    expect(await screen.findByRole('tab', { name: 'Penalità', selected: true })).toBeInTheDocument();
-  });
-
-  it('il dettaglio è in sola lettura finché non si preme "Modifica"', async () => {
-    const savedPenalty: SavedPenalty = {
-      id: 4,
-      raceId: 1,
-      crews: [{ crewId: 1, decision: 'time-10', reprimandNumber: null }],
-      violation: '2.4',
-      document: 'code-of-conduct',
-      reason: '',
-      english: null,
-      updatedAt: '2026-11-14T10:00:00Z',
-    };
-    vi.mocked(fetchPenalty).mockResolvedValue({ isSuccess: true, value: savedPenalty });
-    vi.mocked(updatePenalty).mockImplementation((_raceId, _penaltyId, draft) =>
-      Promise.resolve({
-        isSuccess: true,
-        value: {
-          ...savedPenalty,
-          crews: draft.crews.map((crewDecision) => ({ ...crewDecision, reprimandNumber: null })),
-          violation: draft.violation,
-          document: draft.document,
-          reason: draft.reason,
-        },
-      }),
-    );
-    const user = userEvent.setup();
-    renderApp(`${LIST_PATH}/1/penalita/4`);
-
-    expect(await screen.findByRole('heading', { level: 1, name: 'Art. 2.4 – Codice di Condotta' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Violazione' })).toHaveAttribute('readonly');
-    expect(screen.getByRole('button', { name: /Vetture coinvolte/ })).toBeDisabled();
-
-    expect(screen.getByRole('combobox', { name: 'Decisione per la vettura #7' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Modifica' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Decisione per la vettura #7' }), '+20 secondi');
-    await user.click(screen.getByRole('button', { name: 'Salva' }));
-    expect(updatePenalty).toHaveBeenCalledWith(1, 4, {
-      crews: [{ crewId: 1, decision: 'time-20' }],
-      violation: '2.4',
-      document: 'code-of-conduct',
-      reason: '',
-    });
-    expect(fetchReprimandCounts).toHaveBeenCalledWith(1, 4);
-    expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();
+  it('Gestisci cambi pilota non mostra l’interruttore delle proteste', async () => {
+    renderApp('/commissari/cambi-pilota/1');
+    expect(await screen.findByRole('combobox', { name: 'Cambio pilota' })).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /Accetta proteste/ })).not.toBeInTheDocument();
   });
 });

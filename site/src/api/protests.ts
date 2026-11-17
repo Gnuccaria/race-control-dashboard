@@ -1,6 +1,5 @@
-import type { CrewChampionship } from '@shared/crewRules';
 import type { TicketCrewOption, TicketCrewProblem } from '@shared/disconnectionTicketRules';
-import type { ProtestCrew, ProtestDraftIssues, SiteProtest } from '@shared/protestRules';
+import type { ProtestCrew, ProtestDraftIssues, ProtestRaceOption, SiteProtest } from '@shared/protestRules';
 import { API_BASE_URL } from './publicRaces';
 
 /** Motivi per cui una richiesta sulle proteste non va: accesso, equipaggio, dati, limite, video, rete. */
@@ -26,12 +25,15 @@ export type ProtestRequestResult<Value> =
 export interface ProtestFormData {
   readonly crew: TicketCrewOption;
   /** Equipaggi di tutti i campionati (escluso il proprio): il modulo mostra quelli del campionato scelto. */
-  readonly otherCrews: readonly (ProtestCrew & { readonly championship: string; readonly color: string | null })[];
+  /** Gare del campionato dell'equipaggio che accettano proteste, dalla più recente. */
+  readonly races: readonly ProtestRaceOption[];
+  /** Equipaggi del campionato (escluso il proprio). */
+  readonly otherCrews: readonly (ProtestCrew & { readonly color: string | null })[];
 }
 
 /** Dati della protesta come li manda il modulo (il link YouTube lo converte il server). */
 export interface ProtestSubmission {
-  readonly championship: CrewChampionship;
+  readonly raceId: number;
   readonly stint: number;
   readonly lap: number;
   readonly corner: string;

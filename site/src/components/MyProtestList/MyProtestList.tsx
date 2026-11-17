@@ -1,4 +1,5 @@
 import type { SiteProtest } from '@shared/protestRules';
+import { protestStatusTone } from '@/features/protests/protestStatus';
 import { Link } from 'react-router';
 import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge';
 import { useI18n } from '@/i18n/useI18n';
@@ -33,7 +34,7 @@ export function MyProtestList({ protests }: { readonly protests: readonly SitePr
                     {messages.site.myTickets.sentBy} {protest.submittedByName}
                   </span>
                 </span>
-                <StatusBadge tone={protest.status === 'rejected' ? 'critical' : 'warning'} label={texts.statuses[protest.status]} />
+                <StatusBadge tone={protestStatusTone(protest.status)} label={texts.statuses[protest.status]} />
               </Link>
             </li>
           ))}

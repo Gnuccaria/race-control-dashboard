@@ -17,6 +17,7 @@ const protest = (id: number, change: Partial<Protest> = {}): Protest => ({
   id,
   crew: { id: 1, number: 16, name: 'Vez Team Lime' },
   championship: 'Cool1 FIE Championship',
+  race: { id: 7, name: '6 Ore di Monza', round: 3, championship: 'Cool1 FIE Championship' },
   stint: 2,
   lap: 14,
   corner: '7',
@@ -26,6 +27,7 @@ const protest = (id: number, change: Partial<Protest> = {}): Protest => ({
   video: null,
   status: 'open',
   rejectionReason: null,
+  penalty: null,
   reviewedAt: null,
   submittedByName: 'Niko',
   submittedByUsername: 'niko_99',
@@ -34,35 +36,81 @@ const protest = (id: number, change: Partial<Protest> = {}): Protest => ({
 });
 
 describe('Esito della protesta', () => {
-  it('il rifiuto chiede conferma, avvisa che è definitivo e poi il pannello resta in sola lettura', async () => {
-    const rejected = protest(3, { status: 'rejected', rejectionReason: 'Contatto di gara.', reviewedAt: '2026-11-17T10:00:00.000Z' });
+  const withOtherCrew = (change: Partial<Protest> = {}) => protest(3, { otherCrews: [{ id: 2, number: 44, name: 'Firestarter Project' }], ...change });
+
+  it('respinta: la motivazione è obbligatoria; la conferma avvisa che è definitiva e poi il pannello resta in sola lettura', async () => {
+    const rejected = withOtherCrew({ status: 'rejected', rejectionReason: 'Contatto di gara.', reviewedAt: '2026-11-17T10:00:00.000Z' });
     vi.mocked(saveProtestReview).mockResolvedValue({ isSuccess: true, value: rejected });
     const onSaved = vi.fn();
     const user = userEvent.setup();
-    const { rerender } = render(<ProtestReviewPanel protest={protest(3)} onSaved={onSaved} />);
+    const { rerender } = render(<ProtestReviewPanel protest={withOtherCrew()} onSaved={onSaved} />);
 
-    expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    // L'interruttore parte spento: la protesta sarebbe accolta, con la sezione Penalità.
+    expect(screen.getByRole('switch', { name: /Respingi protesta/ })).not.toBeChecked();
+    expect(screen.getByRole('heading', { name: 'Penalità' })).toBeInTheDocument();
     await user.click(screen.getByRole('switch', { name: /Respingi protesta/ }));
-    await user.type(screen.getByRole('textbox', { name: 'Motivazione' }), 'Contatto di gara.');
+    expect(screen.queryByRole('heading', { name: 'Penalità' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: 'Motivazione del rifiuto' }), 'Contatto di gara.');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
     const dialog = screen.getByRole('dialog', { name: 'Respingere la protesta?' });
     expect(dialog).toHaveTextContent('La decisione è definitiva');
     await user.click(within(dialog).getByRole('button', { name: 'Conferma' }));
 
-    expect(saveProtestReview).toHaveBeenCalledWith(3, { isRejected: true, reason: 'Contatto di gara.' });
+    expect(saveProtestReview).toHaveBeenCalledWith(3, { decision: 'rejected', reason: 'Contatto di gara.' });
     expect(onSaved).toHaveBeenCalledWith(rejected);
     rerender(<ProtestReviewPanel protest={rejected} onSaved={onSaved} />);
     expect(screen.getByText('Esito salvato.')).toBeInTheDocument();
     expect(screen.getByText('Protesta respinta: la decisione è definitiva.')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Motivazione' })).toHaveValue('Contatto di gara.');
+    expect(screen.getByRole('textbox', { name: 'Motivazione del rifiuto' })).toHaveValue('Contatto di gara.');
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Salva' })).not.toBeInTheDocument();
   });
 
-  it('una protesta già respinta senza motivazione si mostra in sola lettura', () => {
-    render(<ProtestReviewPanel protest={protest(4, { status: 'rejected', rejectionReason: '' })} onSaved={vi.fn()} />);
-    expect(screen.getByRole('textbox', { name: 'Motivazione' })).toHaveValue('Nessuna motivazione scritta.');
-    expect(screen.queryByRole('button', { name: 'Salva' })).not.toBeInTheDocument();
+  it('accolta: vetture della protesta già compilate; violazione, documento e motivazione obbligatori', async () => {
+    const accepted = withOtherCrew({
+      status: 'accepted',
+      penalty: { id: 9, crews: [{ crewId: 1, decision: null }, { crewId: 2, decision: 'time-5' }], violation: '2.5.1', document: 'code-of-conduct', reason: 'Tamponamento.' },
+    });
+    vi.mocked(saveProtestReview).mockResolvedValue({ isSuccess: true, value: accepted });
+    const user = userEvent.setup();
+    const { rerender } = render(<ProtestReviewPanel protest={withOtherCrew()} onSaved={vi.fn()} />);
+
+    // Le vetture coinvolte sono quelle della protesta e non si cambiano: ognuna ha la sua decisione.
+    expect(screen.getByRole('button', { name: /Vetture coinvolte/ })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Decisione per la vettura #16' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Decisione per la vettura #44' }), '+5 secondi');
+    const saveButton = screen.getByRole('button', { name: 'Salva' });
+    await user.type(screen.getByRole('textbox', { name: 'Violazione' }), '2.5.1');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Documento' }), 'Codice di Condotta');
+    expect(saveButton).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: 'Motivazione' }), 'Tamponamento.');
+    expect(saveButton).toBeEnabled();
+    await user.click(saveButton);
+    await user.click(within(screen.getByRole('dialog', { name: 'Accogliere la protesta?' })).getByRole('button', { name: 'Conferma' }));
+
+    expect(saveProtestReview).toHaveBeenCalledWith(3, {
+      decision: 'accepted',
+      penalty: {
+        crews: [
+          { crewId: 1, decision: null },
+          { crewId: 2, decision: 'time-5' },
+        ],
+        violation: '2.5.1',
+        document: 'code-of-conduct',
+        reason: 'Tamponamento.',
+      },
+    });
+    rerender(<ProtestReviewPanel protest={accepted} onSaved={vi.fn()} />);
+    expect(screen.getByText(/Protesta accolta: la decisione è definitiva/)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Violazione' })).toHaveValue('2.5.1');
+    expect(screen.getByRole('combobox', { name: 'Decisione per la vettura #44' })).toBeDisabled();
+  });
+
+  it('una protesta senza gara (mandata prima) si può solo respingere', () => {
+    render(<ProtestReviewPanel protest={protest(4, { race: null })} onSaved={vi.fn()} />);
+    expect(screen.getByText(/si può solo respingere/)).toBeInTheDocument();
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Motivazione del rifiuto' })).toBeInTheDocument();
   });
 });
 

@@ -1,4 +1,3 @@
-import { isCrewChampionship } from '@shared/crewRules';
 import {
   isProtestVideoType,
   normalizeProtestCorner,
@@ -23,8 +22,8 @@ export interface ChosenVideo {
 
 /** Valori del modulo come sono a schermo. */
 export interface ProtestFormValues {
-  /** Campionato scelto ('' = nessuno): da qui gli altri equipaggi coinvolti. */
-  readonly championship: string;
+  /** Id della gara scelta come testo (valore del menu; '' = nessuna). */
+  readonly raceId: string;
   readonly stint: string;
   readonly lap: string;
   readonly corner: string;
@@ -34,7 +33,7 @@ export interface ProtestFormValues {
   readonly video: ChosenVideo | null;
 }
 
-export const EMPTY_PROTEST_VALUES: ProtestFormValues = { championship: '', stint: '', lap: '', corner: '', description: '', youtubeUrl: '', otherCrewIds: [], video: null };
+export const EMPTY_PROTEST_VALUES: ProtestFormValues = { raceId: '', stint: '', lap: '', corner: '', description: '', youtubeUrl: '', otherCrewIds: [], video: null };
 
 const TYPES_BY_EXTENSION: Readonly<Record<string, ProtestVideoType>> = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
 
@@ -79,8 +78,8 @@ export function checkProtestForm(values: ProtestFormValues): ProtestFormCheck {
       : values.video.file.size > PROTEST_VIDEO_MAX_BYTES
         ? 'too-large'
         : null;
-  const championship = isCrewChampionship(values.championship) ? values.championship : null;
-  const isComplete = championship !== null && stint !== null && lap !== null && corner !== '' && !isCornerInvalid && description.length <= PROTEST_DESCRIPTION_MAX_LENGTH;
+  const raceId = /^\d{1,9}$/.test(values.raceId) ? Number(values.raceId) : null;
+  const isComplete = raceId !== null && stint !== null && lap !== null && corner !== '' && !isCornerInvalid && description.length <= PROTEST_DESCRIPTION_MAX_LENGTH;
   return {
     isStintInvalid: values.stint !== '' && stint === null,
     isLapInvalid: values.lap !== '' && lap === null,
@@ -90,7 +89,7 @@ export function checkProtestForm(values: ProtestFormValues): ProtestFormCheck {
     remainingCharacters: PROTEST_DESCRIPTION_MAX_LENGTH - values.description.length,
     submission:
       isComplete && !isYoutubeInvalid && videoIssue === null
-        ? { championship: championship as NonNullable<typeof championship>, stint: stint as number, lap: lap as number, corner, description, youtubeUrl, otherCrewIds: values.otherCrewIds }
+        ? { raceId: raceId as number, stint: stint as number, lap: lap as number, corner, description, youtubeUrl, otherCrewIds: values.otherCrewIds }
         : null,
   };
 }

@@ -4,12 +4,12 @@ import { createSiteNotificationStore, type SiteItemsState } from '../notificatio
 
 /**
  * Proteste di chi è entrato nel sito e del suo equipaggio (logica in createSiteNotificationStore): una protesta
- * respinta dai Commissari e non ancora vista è una notifica della campanella.
+ * decisa dai Commissari (accolta o respinta) e non ancora letta è una notifica della campanella.
  */
 const siteProtestStore = createSiteNotificationStore<SiteProtest>({
   seenKeyPrefix: 'site-protest-rejections-seen:',
   fetchItems: fetchMyProtests,
-  isNotification: (protest) => protest.status === 'rejected',
+  isNotification: (protest) => protest.status === 'rejected' || protest.status === 'accepted',
 });
 
 export type SiteProtestState = SiteItemsState<SiteProtest>;

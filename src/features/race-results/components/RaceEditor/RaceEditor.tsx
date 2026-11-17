@@ -71,7 +71,7 @@ function RaceEditorForm({
         draft={raceDraft}
         crewsQuery={crewsQuery}
         isReadOnly={!isEditing}
-        raceId={savedRace.id}
+       
         {...(initialTab && { initialTab })}
         {...(visibleTabs && { visibleTabs })}
       />

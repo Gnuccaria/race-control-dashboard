@@ -1,5 +1,5 @@
 import { driverSwapCount, readDriverSwaps } from '../../../shared/driverSwapRules';
-import { type RaceDraft, resolveResultCars, type SavedRaceResult, todayIsoDate, validateRaceDraft } from '../../../shared/raceRules';
+import { type RaceDraft, readRaceProtestSetting, resolveResultCars, type SavedRaceResult, todayIsoDate, validateRaceDraft } from '../../../shared/raceRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
@@ -18,6 +18,7 @@ import {
   listRaceResults,
   listRaces,
   replaceDriverSwaps,
+  setRaceAcceptsProtests,
   updateRace,
 } from './raceRepository';
 
@@ -128,6 +129,16 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
      * PUT /races/:id/driver-swaps con { driverSwaps } — solo i cambi pilota di una gara già creata (Commissari
      * Sportivi): stesse regole della gara intera (numero di cambi del campionato, equipaggi del campionato).
      */
+    /** PUT /races/:id/protests { acceptsProtests } — apre o chiude le proteste della gara (Organizzazione). */
+    async updateProtestSetting(request: Request, env: Env, raceId: number): Promise<Response> {
+      const authorization = await authorizeRequest(request, env, checkMembership);
+      if (authorization instanceof Response) return authorization;
+      const setting = readRaceProtestSetting(await readJsonBody(request).catch(() => null));
+      if (!setting) return errorResponse(422, 'invalid-race', { acceptsProtests: 'invalid' });
+      if (!(await setRaceAcceptsProtests(env.CREWS_DB, raceId, setting.acceptsProtests))) return errorResponse(404, 'not-found');
+      return jsonResponse(200, setting);
+    },
+
     async updateDriverSwaps(request: Request, env: Env, raceId: number): Promise<Response> {
       const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
       if (authorization instanceof Response) return authorization;

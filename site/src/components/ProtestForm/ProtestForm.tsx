@@ -1,4 +1,3 @@
-import { CREW_CHAMPIONSHIPS, type CrewChampionship, isCrewChampionship } from '@shared/crewRules';
 import { PROTEST_DESCRIPTION_COUNTER_FROM, PROTEST_DESCRIPTION_MAX_LENGTH, PROTEST_LAP_MAX, PROTEST_STINT_MAX } from '@shared/protestRules';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog/ConfirmDialog';
@@ -37,13 +36,10 @@ interface ProtestFormProps {
  * chiede conferma, manda i dati e poi, se c'è, carica il video mostrando l'avanzamento.
  */
 export function ProtestForm({ formState, onSent }: ProtestFormProps) {
-  const { messages } = useI18n();
+  const { messages, locale } = useI18n();
   const texts = messages.site.protest.form;
   const crewTexts = messages.site.disconnectionTicket.form;
-  const [enteredValues, setValues] = useState<ProtestFormValues>(EMPTY_PROTEST_VALUES);
-  // Finché non se ne sceglie uno, il campionato è quello dell'equipaggio di chi è entrato.
-  const crewChampionship = formState.status === 'ready' && isCrewChampionship(formState.data.crew.championship) ? formState.data.crew.championship : '';
-  const values = enteredValues.championship === '' ? { ...enteredValues, championship: crewChampionship } : enteredValues;
+  const [values, setValues] = useState<ProtestFormValues>(EMPTY_PROTEST_VALUES);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [uploadFraction, setUploadFraction] = useState<number | null>(null);
@@ -83,8 +79,11 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
 
   const crewValue =
     formState.status === 'ready' ? `#${formState.data.crew.number} ${formState.data.crew.name}` : formState.status === 'loading' ? crewTexts.crewLoading : '';
-  // Gli altri equipaggi sono quelli del campionato scelto.
-  const otherCrews = formState.status === 'ready' ? formState.data.otherCrews.filter((crew) => crew.championship === values.championship) : [];
+  // Gare del campionato dell'equipaggio che accettano proteste; gli altri equipaggi sono quelli dello stesso campionato.
+  const races = formState.status === 'ready' ? formState.data.races : [];
+  const otherCrews = formState.status === 'ready' ? formState.data.otherCrews : [];
+  const raceOptionLabel = (race: (typeof races)[number]) =>
+    `${race.name ?? messages.races.raceLabel(race.round, race.championship)} · ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(`${race.raceDate}T12:00:00`))}`;
   const isDescriptionCounterVisible = check.remainingCharacters <= PROTEST_DESCRIPTION_COUNTER_FROM;
 
   return (
@@ -110,18 +109,20 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
         </FormField>
 
         <div className={styles.fieldRow}>
-          <FormField label={texts.championship}>
+          <FormField
+            label={texts.race}
+            hint={formState.status === 'ready' && races.length > 0 ? texts.raceHint : undefined}
+            errorMessage={formState.status === 'ready' && races.length === 0 ? texts.noRaces : undefined}
+          >
             {(controlProps) => (
               <Select
                 id={controlProps.id}
                 aria-describedby={controlProps['aria-describedby']}
-                placeholderLabel={texts.championshipPlaceholder}
-                value={values.championship as CrewChampionship | ''}
-                options={CREW_CHAMPIONSHIPS.map((championship) => ({ value: championship, label: championship }))}
-                onValueChange={(championship) => {
-                  // Cambiando campionato, gli equipaggi scelti (dell'altro campionato) si tolgono.
-                  setValues((previousValues) => ({ ...previousValues, championship, otherCrewIds: [] }));
-                }}
+                placeholderLabel={texts.racePlaceholder}
+                value={values.raceId}
+                options={races.map((race) => ({ value: String(race.id), label: raceOptionLabel(race) }))}
+                disabled={races.length === 0}
+                onValueChange={(raceId) => change('raceId', raceId)}
               />
             )}
           </FormField>

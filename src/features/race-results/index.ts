@@ -3,5 +3,3 @@ export { CreateRacePage } from './CreateRacePage';
 export { ManageRacesPage } from './ManageRacesPage';
 export { ManageDriverSwapsPage } from './ManageDriverSwapsPage';
 export { DriverSwapRaceDetailPage, RaceDetailPage } from './RaceDetailPage';
-export { CreatePenaltyPage } from './penalties/CreatePenaltyPage';
-export { PenaltyDetailPage } from './penalties/PenaltyDetailPage';

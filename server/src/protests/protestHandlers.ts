@@ -1,5 +1,4 @@
 import { type TicketCrewProblem } from '../../../shared/disconnectionTicketRules';
-import { CREW_CHAMPIONSHIPS } from '../../../shared/crewRules';
 import {
   isProtestVideoExpired,
   isProtestVideoType,
@@ -7,6 +6,7 @@ import {
   MAX_PROTESTS_PER_DAY,
   PROTEST_VIDEO_MAX_BYTES,
   validateProtestDraft,
+  protestCrewIds,
   validateProtestReview,
   youtubeVideoIdFrom,
 } from '../../../shared/protestRules';
@@ -15,7 +15,9 @@ import type { Env, VideoBucket } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
 import { authorizeSiteMember, type DiscordFetch, type SiteMember } from '../siteAuth/siteDiscordAuth';
+import { insertPenalty } from '../penalties/penaltyRepository';
 import { findTicketCrewFromRoles } from '../tickets/ticketCrewFromRoles';
+import { translatePenaltyToEnglish } from '../translation/penaltyTranslation';
 import {
   attachProtestVideo,
   attachProtestYoutube,
@@ -25,13 +27,16 @@ import {
   findProtestVideo,
   findProtestVisibleTo,
   findVisibleProtestVideo,
+  claimProtestForAcceptance,
   insertProtest,
+  linkProtestPenalty,
   listChampionshipCrews,
-  listCrewsOfChampionships,
   listProtests,
   listProtestsVisibleTo,
+  listRacesAcceptingProtests,
   type ProtestViewer,
-  reviewProtest,
+  rejectProtest,
+  reopenProtest,
 } from './protestRepository';
 
 /** Descrizione fino a 1000 caratteri (anche accentati o emoji) più gli altri campi. */
@@ -59,8 +64,9 @@ async function videoResponse(bucket: VideoBucket | undefined, video: { readonly 
 
 /**
  * Proteste.
- *   GET  /public/protests/form          equipaggio di chi è entrato (dal ruolo Discord) e gli altri equipaggi dei campionati (sito)
- *   POST /public/protests               invio dal sito; l'equipaggio lo ricava il server dal ruolo → { protest: { id } }
+ *   GET  /public/protests/form          equipaggio di chi è entrato (dal ruolo Discord), le gare del suo campionato che accettano
+ *                                       proteste e gli altri equipaggi del campionato (sito)
+ *   POST /public/protests               invio dal sito con la gara; l'equipaggio lo ricava il server dal ruolo → { protest: { id } }
  *   GET  /public/protests/mine          proteste di chi è entrato e del suo equipaggio (stesso ruolo), con l'esito
  *   GET  /public/protests/:id           una di quelle proteste
  *   PUT  /public/protests/:id/video     video (corpo = file; Content-Type e Content-Length), entro 24 ore, da chi l'ha mandata
@@ -69,7 +75,9 @@ async function videoResponse(bucket: VideoBucket | undefined, video: { readonly 
  *   GET  /protests                      tutte le proteste (app, Commissari Sportivi)
  *   GET  /protests/:id                  una protesta (app)
  *   GET  /protests/:id/video            il suo video (app)
- *   PUT  /protests/:id/review           { isRejected: true, reason }: respinge la protesta, definitivo (app; 409 se già respinta)
+ *   PUT  /protests/:id/review           { decision: 'rejected', reason } oppure { decision: 'accepted', penalty }: esito
+ *                                       definitivo (app; 409 protest-already-reviewed se già deciso). Accolta: la penalità
+ *                                       si salva tra quelle della gara, con la traduzione inglese automatica (referto PDF).
  */
 export function createProtestHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord, discordFetch: DiscordFetch = fetch) {
   /** Chi ha mandato la protesta, entro 24 ore dall'invio: può ancora aggiungere un video o il link YouTube. */
@@ -87,8 +95,10 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       if (member instanceof Response) return member;
       const lookup = await findTicketCrewFromRoles(discordFetch, env, env.CREWS_DB, member.roleIds);
       if (!('crew' in lookup)) return crewProblemResponse(lookup.problem);
-      const otherCrews = await listCrewsOfChampionships(env.CREWS_DB, CREW_CHAMPIONSHIPS, lookup.crew.id);
-      return jsonResponse(200, { crew: lookup.crew, otherCrews });
+      const championship = lookup.crew.championship;
+      const races = championship ? await listRacesAcceptingProtests(env.CREWS_DB, championship) : [];
+      const otherCrews = championship ? await listChampionshipCrews(env.CREWS_DB, championship, lookup.crew.id) : [];
+      return jsonResponse(200, { crew: lookup.crew, races, otherCrews });
     },
 
     async submitProtest(request: Request, env: Env): Promise<Response> {
@@ -101,13 +111,19 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       const { profile } = member;
       if ((await countRecentProtestsBy(env.CREWS_DB, profile.id)) >= MAX_PROTESTS_PER_DAY) return errorResponse(429, 'too-many-protests');
 
-      // Gli altri equipaggi devono essere del campionato scelto (e non il proprio).
-      const championshipCrews = await listChampionshipCrews(env.CREWS_DB, validation.protest.championship, lookup.crew.id);
+      // La gara deve accettare proteste ed essere del campionato dell'equipaggio.
+      const race = lookup.crew.championship
+        ? (await listRacesAcceptingProtests(env.CREWS_DB, lookup.crew.championship)).find((option) => option.id === validation.protest.raceId)
+        : undefined;
+      if (!race) return errorResponse(422, 'invalid-protest', { raceId: 'invalid' });
+      // Gli altri equipaggi devono essere del campionato della gara (e non il proprio).
+      const championshipCrews = await listChampionshipCrews(env.CREWS_DB, race.championship, lookup.crew.id);
       const otherCrews = validation.protest.otherCrewIds.map((crewId) => championshipCrews.find((crew) => crew.id === crewId));
       if (otherCrews.some((crew) => crew === undefined)) return errorResponse(422, 'invalid-protest', { otherCrewIds: 'invalid' });
 
       const protestId = await insertProtest(env.CREWS_DB, validation.protest, {
         crew: lookup.crew,
+        race,
         crewRoleId: lookup.roleId,
         otherCrews: otherCrews.filter((crew) => crew !== undefined),
         discordUserId: profile.id,
@@ -192,11 +208,35 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
     async reviewProtest(request: Request, env: Env, protestId: number): Promise<Response> {
       const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
       if (authorization instanceof Response) return authorization;
-      const review = validateProtestReview(await readJsonBody(request, MAX_PROTEST_BODY_BYTES).catch(() => null));
-      if (!review) return errorResponse(422, 'invalid-protest', { review: 'invalid' });
-      const protest = await reviewProtest(env.CREWS_DB, protestId, review, authorization.discordUserId);
-      if (protest === 'already-rejected') return errorResponse(409, 'protest-already-rejected');
-      return protest ? jsonResponse(200, { protest }) : errorResponse(404, 'not-found');
+      const protest = await findProtest(env.CREWS_DB, protestId);
+      if (!protest) return errorResponse(404, 'not-found');
+      if (protest.status !== 'open') return errorResponse(409, 'protest-already-reviewed');
+
+      const validation = validateProtestReview(await readJsonBody(request, MAX_PROTEST_BODY_BYTES).catch(() => null), protestCrewIds(protest));
+      if (!validation.isValid) return errorResponse(422, 'invalid-protest', validation.issues);
+      const { review } = validation;
+
+      if (review.decision === 'rejected') {
+        const outcome = await rejectProtest(env.CREWS_DB, protestId, review.reason, authorization.discordUserId);
+        if (outcome !== 'done') return outcome === 'not-found' ? errorResponse(404, 'not-found') : errorResponse(409, 'protest-already-reviewed');
+        return jsonResponse(200, { protest: await findProtest(env.CREWS_DB, protestId) });
+      }
+
+      // Accolta: serve la gara (le proteste di prima hanno solo il campionato).
+      if (!protest.race) return errorResponse(409, 'protest-without-race');
+      const outcome = await claimProtestForAcceptance(env.CREWS_DB, protestId, authorization.discordUserId);
+      if (outcome !== 'done') return outcome === 'not-found' ? errorResponse(404, 'not-found') : errorResponse(409, 'protest-already-reviewed');
+      try {
+        // Come una penalità della gara: traduzione inglese automatica per il referto in inglese.
+        const translated = await translatePenaltyToEnglish(env.AI, review.penalty.reason);
+        const english = translated ? { ...translated, source: 'automatic' as const, isOutdated: false } : null;
+        const penalty = await insertPenalty(env.CREWS_DB, protest.race.id, review.penalty, english, authorization.discordUserId);
+        await linkProtestPenalty(env.CREWS_DB, protestId, penalty.id);
+      } catch (penaltyError) {
+        await reopenProtest(env.CREWS_DB, protestId);
+        throw penaltyError;
+      }
+      return jsonResponse(200, { protest: await findProtest(env.CREWS_DB, protestId) });
     },
   };
 }
