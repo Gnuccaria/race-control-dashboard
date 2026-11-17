@@ -23,17 +23,20 @@ export async function loadRaceReportInput(database: SqlDatabase, raceId: number,
   const penalties = await listPenalties(database, raceId);
   const { results: penaltyCrews } = await database
     .prepare(
-      `SELECT DISTINCT crews.id, crews.number FROM penalty_crews
+      `SELECT crews.id, crews.number FROM penalty_crews
        JOIN penalties ON penalties.id = penalty_crews.penalty_id
        JOIN crews ON crews.id = penalty_crews.crew_id
-       WHERE penalties.race_id = ?`,
+       WHERE penalties.race_id = ?
+       UNION
+       SELECT crews.id, crews.number FROM driver_swaps JOIN crews ON crews.id = driver_swaps.crew_id WHERE driver_swaps.race_id = ?`,
     )
-    .bind(raceId)
+    .bind(raceId, raceId)
     .all<{ id: number; number: number }>();
 
   return {
     title: race.name ?? raceTitle(race.round, race.championship),
     round: race.round,
+    durationHours: race.duration,
     results,
     penalties,
     driverSwaps: await listDriverSwaps(database, raceId),

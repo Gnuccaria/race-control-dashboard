@@ -722,6 +722,7 @@ export const en: Messages = {
       pitOutFor: (crewNumber: number, stint: number) => `Pit Out of car #${crewNumber}, stint ${stint}`,
       cancelledFor: (crewNumber: number, swap: number) => `Penalty cancelled for car #${crewNumber}, swap ${swap}`,
       notesFor: (crewNumber: number, swap: number) => `Notes on car #${crewNumber}, swap ${swap}`,
+      clearRowFor: (crewNumber: number, swap: number) => `Clear the row of car #${crewNumber}, swap ${swap}`,
       invalidTimes: (count: number) =>
         `${count === 1 ? '1 invalid time' : `${count} invalid times`}: write it as HH:MM:SS.DDD, for example 00:47:12.345.`,
     },

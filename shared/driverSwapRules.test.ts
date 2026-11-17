@@ -42,6 +42,12 @@ describe('cambi pilota', () => {
     expect(normalizeTimestampText('13:20.5')).toBe('00:13:20.500');
     expect(normalizeTimestampText('021320642')).toBe('02:13:20.642');
     expect(normalizeTimestampText('021320')).toBe('02:13:20.000');
+    // HH.MM.SS,DDD, HHMMSS,DDD e HHMMSS.DDD.
+    expect(normalizeTimestampText('02.13.20,642')).toBe('02:13:20.642');
+    expect(normalizeTimestampText('021320,642')).toBe('02:13:20.642');
+    expect(normalizeTimestampText('021320.642')).toBe('02:13:20.642');
+    expect(normalizeTimestampText('021320.6')).toBe('02:13:20.600');
+    expect(normalizeTimestampText('026020,642')).toBe('026020,642');
     expect(parseRaceTimestamp('')).toBeNull();
     // Non interpretabili: restano come sono e vengono segnalati.
     for (const text of ['1:0', '1:60:00', '2:13:20,6421', '12345', '1:2:3:4', 'abc', '100:00:00']) expect(isInvalid(text)).toBe(true);

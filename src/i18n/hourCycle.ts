@@ -1,10 +1,9 @@
 /**
- * Orologio della lingua: 24 ore dove si usa (italiano, francese, tedesco…), 12 ore con AM/PM dove si usa
- * (inglese degli Stati Uniti, la variante predefinita di "en"). Lo decide Intl, come il resto della formattazione.
+ * Orologio della lingua dell'app: 12 ore con AM/PM solo in inglese (scelto o predefinito perché è la lingua del
+ * sistema), 24 ore in tutte le altre (italiano, francese, tedesco). Vale per tutti gli orari che si inseriscono.
  */
 export function usesTwelveHourClock(locale: string): boolean {
-  const { hourCycle, hour12 } = new Intl.DateTimeFormat(locale, { hour: 'numeric' }).resolvedOptions();
-  return hourCycle === undefined ? hour12 === true : hourCycle === 'h11' || hourCycle === 'h12';
+  return locale === 'en' || locale.startsWith('en-');
 }
 
 /** "AM"/"PM" nella lingua (es. "AM"/"PM" in inglese). */

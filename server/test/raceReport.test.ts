@@ -44,7 +44,7 @@ describe('dati del referto', () => {
     expect(reportFileName('Round 1 – A/B: "C"')).toBe('Referto di gara - Round 1 – A B C.pdf');
   });
 
-  it('distacco in tempo o in giri e penalità sommate (decisioni a tempo + cambi pilota non annullati)', () => {
+  it('durata per il primo, distacco in tempo o in giri; penalità sommate (decisioni a tempo + cambi pilota per eccesso)', () => {
     const row = (position: number, crewId: number, laps: number, gapMs: number | null) => ({
       position,
       crewId,
@@ -57,6 +57,7 @@ describe('dati del referto', () => {
     const report = buildRaceReport({
       title: '1000 km di Suzuka',
       round: 6,
+      durationHours: 6,
       results: [row(1, 1, 139, null), row(2, 2, 139, 58_196), row(3, 3, 137, null)],
       penalties: [
         { crews: [{ crewId: 2, decision: 'time-30', reprimandNumber: null }, { crewId: 3, decision: 'time-30', reprimandNumber: null }], violation: '2.4', document: 'code-of-conduct' as const, reason: '' },
@@ -65,8 +66,10 @@ describe('dati del referto', () => {
         { crews: [{ crewId: 1, decision: null, reprimandNumber: null }, { crewId: 3, decision: null, reprimandNumber: null }], violation: '2.4', document: 'code-of-conduct' as const, reason: '' },
       ],
       driverSwaps: [
-        { crewId: 3, penaltyMs: 7_500, isCancelled: false },
+        { crewId: 3, penaltyMs: 1_015, isCancelled: false },
+        { crewId: 3, penaltyMs: 500, isCancelled: false },
         { crewId: 1, penaltyMs: 9_000, isCancelled: true },
+        { crewId: 2, penaltyMs: 0, isCancelled: false },
       ],
       crewNumberById: new Map([
         [1, 10],
@@ -75,15 +78,23 @@ describe('dati del referto', () => {
       ]),
     });
     expect(report.classification).toEqual([
-      { position: '1', number: '10', crew: 'Team 1', car: 'Nissan', laps: '139', leader: '-', penalty: '' },
+      { position: '1', number: '10', crew: 'Team 1', car: 'Nissan', laps: '139', leader: '6:00:00.000', penalty: '' },
       { position: '2', number: '20', crew: 'Team 2', car: 'Nissan', laps: '139', leader: '+58.196', penalty: '+35.000' },
-      { position: '3', number: '30', crew: 'Team 3', car: '-', laps: '137', leader: '+2 giri', penalty: '+37.500' },
+      // 30 s di decisione + cambi pilota 1,515 s → 2 s (per eccesso).
+      { position: '3', number: '30', crew: 'Team 3', car: '-', laps: '137', leader: '+2 giri', penalty: '+32.000' },
     ]);
     expect(report.penalties.map((penalty) => [penalty.crews, penalty.decision])).toEqual([
       ['#20, #30', '+30 secondi al tempo di gara delle vetture #20 e #30'],
       ['#10, #20', '+5 secondi al tempo di gara della vettura #20'],
       ['#10, #30', '+2 posizioni in griglia di partenza nel Round 7 per la vettura #10'],
       ['#10, #30', 'Nessuna azione ulteriore'],
+      // In fondo i cambi pilota, una riga per vettura (le annullate e quelle senza penalità no).
+      ['#30', '+2 secondi al tempo di gara della vettura #30'],
+    ]);
+    expect(report.penalties.at(-1)).toMatchObject({ violation: 'Violazione della procedura di driver swap', reason: 'Infrazione: 1.515 secondi' });
+    const english = buildRaceReport({ title: 'x', round: 6, results: [], penalties: [], driverSwaps: [{ crewId: 3, penaltyMs: 8_690, isCancelled: false }], crewNumberById: new Map([[3, 51]]), language: 'en' });
+    expect(english.penalties).toEqual([
+      { crews: '#51', decision: '+9 seconds added to the race time of car #51', violation: 'Breach of the driver swap procedure', reason: 'Infringement: 8.690 seconds' },
     ]);
   });
 

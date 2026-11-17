@@ -51,6 +51,9 @@ export interface ReportTexts {
   readonly thirdReprimand: string;
   /** "Violazione dell’art. 2.4 del C.d.C." */
   readonly violation: (article: string, document: PenaltyDocument) => string;
+  /** Penalità dei cambi pilota: la violazione (in grassetto) e l'infrazione in secondi coi millesimi ("1.515"). */
+  readonly driverSwapViolation: string;
+  readonly driverSwapInfringement: (seconds: string) => string;
 }
 
 const joinWith = (conjunction: string) => (labels: readonly string[]) =>
@@ -77,6 +80,8 @@ const ITALIAN: ReportTexts = {
   reprimand: (cars, isPlural) => `Reprimenda per ${isPlural ? 'le vetture' : 'la vettura'} ${cars}`,
   thirdReprimand: 'terza reprimenda',
   violation: italianViolation,
+  driverSwapViolation: 'Violazione della procedura di driver swap',
+  driverSwapInfringement: (seconds) => `Infrazione: ${seconds} secondi`,
 };
 
 const ENGLISH: ReportTexts = {
@@ -100,6 +105,8 @@ const ENGLISH: ReportTexts = {
   reprimand: (cars, isPlural) => `Reprimand for ${isPlural ? 'cars' : 'car'} ${cars}`,
   thirdReprimand: 'third reprimand',
   violation: (article, document) => `Breach of Art. ${article} of the ${document === 'code-of-conduct' ? 'C. C.' : 'Tech. Reg.'}`,
+  driverSwapViolation: 'Breach of the driver swap procedure',
+  driverSwapInfringement: (seconds) => `Infringement: ${seconds} seconds`,
 };
 
 const TEXTS_BY_LANGUAGE: Record<ReportLanguage, ReportTexts> = { it: ITALIAN, en: ENGLISH };

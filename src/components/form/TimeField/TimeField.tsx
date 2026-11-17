@@ -9,6 +9,8 @@ interface TimeFieldProps {
   readonly label: string;
   readonly hint?: string;
   readonly field: FieldBinding;
+  /** Sola lettura: i menu si vedono ma non si aprono. */
+  readonly isReadOnly?: boolean;
 }
 
 type DayPeriod = 'am' | 'pm';
@@ -30,10 +32,10 @@ function parseTimeValue(value: string): { hour: number; minute: number } | null 
 
 /**
  * Orario (valore sempre "HH:MM" a 24 ore) con un menu per le ore e uno per i minuti, più AM/PM nelle lingue che
- * usano l'orologio a 12 ore (inglese). Non usa <input type="time">, che segue la lingua del sistema e non quella
+ * usano l'orologio a 12 ore (solo l'inglese: usesTwelveHourClock). Non usa <input type="time">, che segue la lingua del sistema e non quella
  * scelta nell'app. Scegliendo una parte, le altre ancora vuote prendono il valore iniziale (ore 0, minuti 00).
  */
-export function TimeField({ label, hint, field }: TimeFieldProps) {
+export function TimeField({ label, hint, field, isReadOnly = false }: TimeFieldProps) {
   const { locale, messages } = useI18n();
   const texts = messages.common.timeField;
   const isTwelveHour = usesTwelveHourClock(locale);
@@ -57,6 +59,7 @@ export function TimeField({ label, hint, field }: TimeFieldProps) {
             className={styles.part}
             aria-label={`${label}: ${texts.hours}`}
             aria-invalid={isInvalid || undefined}
+            disabled={isReadOnly}
             placeholderLabel="--"
             value={time ? String(isTwelveHour ? hour % 12 || 12 : hour) : ''}
             options={isTwelveHour ? HOUR_12_OPTIONS : HOUR_24_OPTIONS}
@@ -71,6 +74,7 @@ export function TimeField({ label, hint, field }: TimeFieldProps) {
             className={styles.part}
             aria-label={`${label}: ${texts.minutes}`}
             aria-invalid={isInvalid || undefined}
+            disabled={isReadOnly}
             placeholderLabel="--"
             value={time ? twoDigits(minute) : ''}
             options={MINUTE_OPTIONS}
@@ -82,6 +86,7 @@ export function TimeField({ label, hint, field }: TimeFieldProps) {
             <Select<DayPeriod>
               className={styles.part}
               aria-label={`${label}: ${texts.dayPeriod}`}
+              disabled={isReadOnly}
               placeholderLabel="--"
               value={time ? period : ''}
               options={[

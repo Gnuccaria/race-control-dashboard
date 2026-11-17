@@ -16,6 +16,9 @@ import { DEFAULT_REPORT_LANGUAGE, type ReportLanguage, type ReportTexts, reportT
  * classifica finale con distacco dal primo e penalità sommate, poi l'elenco delle penalità. I testi fissi sono nella
  * lingua del sito (reportTexts); violazione e motivazione restano come le ha scritte la Direzione Gara, tranne nel
  * referto in inglese, che usa la loro traduzione salvata quando c'è. Giro veloce e pole position non ci sono ancora.
+ * Sul modello del "Referto di gara – 24 Ore di Spa-Francorchamps": il primo della classifica ha nella colonna Leader la
+ * durata della gara, e le penalità dei cambi pilota hanno una riga per vettura in fondo alle penalità, con i secondi
+ * arrotondati per eccesso (gli stessi sommati in classifica).
  */
 
 export interface ReportResultRow {
@@ -51,6 +54,8 @@ export interface RaceReportInput {
   readonly title: string;
   /** Round della gara: le penalità in griglia valgono nel successivo. */
   readonly round: number;
+  /** Durata della gara in ore: colonna Leader del primo ("6:00:00.000"). */
+  readonly durationHours?: number | null;
   readonly results: readonly ReportResultRow[];
   readonly penalties: readonly ReportPenalty[];
   readonly driverSwaps: readonly ReportDriverSwapPenalty[];
@@ -161,7 +166,21 @@ export function describeDecisions(crews: readonly DecisionCrew[], round: number,
   return lines.length > 0 ? lines.join('\n') : texts.noFurtherAction;
 }
 
-/** Secondi di penalità di ogni vettura: decisioni a tempo + cambi pilota non annullati. */
+/** Infrazione dei cambi pilota di ogni vettura in millesimi: somma dei cambi non annullati (solo vetture con penalità). */
+export function driverSwapInfringementByCrew(driverSwaps: readonly ReportDriverSwapPenalty[]): Map<number, number> {
+  const totalByCrew = new Map<number, number>();
+  for (const driverSwap of driverSwaps) {
+    if (driverSwap.penaltyMs !== null && driverSwap.penaltyMs > 0 && !driverSwap.isCancelled) {
+      totalByCrew.set(driverSwap.crewId, (totalByCrew.get(driverSwap.crewId) ?? 0) + driverSwap.penaltyMs);
+    }
+  }
+  return totalByCrew;
+}
+
+/** Secondi della penalità dei cambi pilota: l'infrazione arrotondata per eccesso (1,515 → 2). */
+export const driverSwapPenaltySeconds = (infringementMs: number): number => Math.ceil(infringementMs / 1000);
+
+/** Millesimi di penalità di ogni vettura: decisioni a tempo + cambi pilota (in secondi interi, per eccesso). */
 export function totalPenaltyByCrew(penalties: readonly ReportPenalty[], driverSwaps: readonly ReportDriverSwapPenalty[]): Map<number, number> {
   const totalByCrew = new Map<number, number>();
   const add = (crewId: number, milliseconds: number) => {
@@ -171,23 +190,54 @@ export function totalPenaltyByCrew(penalties: readonly ReportPenalty[], driverSw
     const seconds = crew.decision === null ? null : penaltySeconds(crew.decision);
     if (seconds !== null) add(crew.crewId, seconds * 1000);
   }
-  for (const driverSwap of driverSwaps) {
-    if (driverSwap.penaltyMs !== null && !driverSwap.isCancelled) add(driverSwap.crewId, driverSwap.penaltyMs);
-  }
+  for (const [crewId, infringementMs] of driverSwapInfringementByCrew(driverSwaps)) add(crewId, driverSwapPenaltySeconds(infringementMs) * 1000);
   return totalByCrew;
 }
 
-/** Colonna "Leader": "-" per il primo, poi il distacco in tempo o, se manca, i giri in meno ("+1 giro", "+2 giri"). */
-function describeLeaderGap(row: ReportResultRow, leader: ReportResultRow | undefined, texts: ReportTexts): string {
-  if (!leader || row === leader) return '-';
+/**
+ * Colonna "Leader": per il primo la durata della gara ("6:00:00.000"; "-" se manca), poi il distacco in tempo o,
+ * se manca, i giri in meno ("+1 giro", "+2 giri").
+ */
+function describeLeaderGap(row: ReportResultRow, leader: ReportResultRow | undefined, texts: ReportTexts, durationHours: number | null): string {
+  if (!leader) return '-';
+  if (row === leader) return durationHours ? formatReportTime(durationHours * 3_600_000) : '-';
   if (row.gapMs !== null) return `+${formatReportTime(row.gapMs)}`;
   if (row.laps === null || leader.laps === null || leader.laps <= row.laps) return '-';
   return texts.lapsBehind(leader.laps - row.laps);
 }
 
+/** Millesimi coi tre decimali e il punto, come i tempi del referto: 1515 → "1.515". */
+const formatSecondsWithMilliseconds = (milliseconds: number) => `${Math.floor(milliseconds / 1000)}.${pad(milliseconds % 1000, 3)}`;
+
+/**
+ * Penalità dei cambi pilota: una riga per vettura con penalità, nell'ordine della classifica (poi per numero):
+ * "+2 secondi al tempo di gara della vettura #54" e "Violazione della procedura di driver swap - Infrazione: 1.515 secondi".
+ */
+function describeDriverSwapPenalties(
+  driverSwaps: readonly ReportDriverSwapPenalty[],
+  results: readonly ReportResultRow[],
+  crewNumberById: ReadonlyMap<number, number>,
+  texts: ReportTexts,
+): PenaltyLine[] {
+  const positionOf = (crewId: number) => results.find((row) => row.crewId === crewId)?.position ?? Number.MAX_SAFE_INTEGER;
+  return [...driverSwapInfringementByCrew(driverSwaps)]
+    .flatMap(([crewId, infringementMs]) => {
+      const number = crewNumberById.get(crewId);
+      return number === undefined ? [] : [{ crewId, number, infringementMs }];
+    })
+    .sort((first, second) => positionOf(first.crewId) - positionOf(second.crewId) || first.number - second.number)
+    .map(({ number, infringementMs }) => ({
+      crews: `#${number}`,
+      decision: texts.timePenalty(driverSwapPenaltySeconds(infringementMs), `#${number}`, false),
+      violation: texts.driverSwapViolation,
+      reason: texts.driverSwapInfringement(formatSecondsWithMilliseconds(infringementMs)),
+    }));
+}
+
 export function buildRaceReport({
   title,
   round,
+  durationHours = null,
   results,
   penalties,
   driverSwaps,
@@ -214,11 +264,12 @@ export function buildRaceReport({
         crew: row.crewName,
         car: row.carManufacturer ?? '-',
         laps: row.laps === null ? '-' : String(row.laps),
-        leader: describeLeaderGap(row, leader, texts),
+        leader: describeLeaderGap(row, leader, texts, durationHours),
         penalty: totalMs > 0 ? `+${formatReportTime(totalMs)}` : '',
       };
     }),
-    penalties: penalties.map((penalty) => ({
+    penalties: [
+      ...penalties.map((penalty) => ({
       crews: numbered(penalty.crews)
         .map((crew) => crew.number)
         .sort((first, second) => first - second)
@@ -227,7 +278,9 @@ export function buildRaceReport({
       decision: describeDecisions(numbered(penalty.crews), round, texts),
       violation: isArticleNumber(penalty.violation) ? texts.violation(penalty.violation, penalty.document) : penalty.violation,
       reason: language === 'en' && penalty.english ? penalty.english.reason : penalty.reason,
-    })),
+      })),
+      ...describeDriverSwapPenalties(driverSwaps, results, crewNumberById, texts),
+    ],
   };
 }
 

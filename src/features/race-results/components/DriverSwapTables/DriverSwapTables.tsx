@@ -2,13 +2,14 @@ import type { SavedCrew } from '@shared/crewRules';
 import { DRIVER_SWAP_NOTES_MAX_LENGTH, formatRaceTimestamp } from '@shared/driverSwapRules';
 import { useId, useState } from 'react';
 import { FormField } from '@/components/form/FormField/FormField';
+import { IconButton } from '@/components/ui/IconButton/IconButton';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
 import type { ServerQueryState } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
 import { joinClassNames } from '@/lib/joinClassNames';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
-import { getDriverSwapRow, invalidCellKey } from '../../model/driverSwapDraft';
+import { EMPTY_DRIVER_SWAP_ROW, getDriverSwapRow, invalidCellKey } from '../../model/driverSwapDraft';
 import styles from './DriverSwapTables.module.css';
 import { serverErrorText } from '@/services/serverErrorText';
 
@@ -141,6 +142,7 @@ export function DriverSwapTables({ draft, crewsQuery, isReadOnly }: DriverSwapTa
                   {texts.columns.cancelled}
                 </th>
                 <th scope="col">{texts.columns.notes}</th>
+                {!isReadOnly && <td className={styles.clearColumn} />}
               </tr>
             </thead>
             <tbody>
@@ -217,6 +219,24 @@ export function DriverSwapTables({ draft, crewsQuery, isReadOnly }: DriverSwapTa
                         }}
                       />
                     </td>
+                    {/* La X svuota la riga: tempi, annullata e note (visibile solo in modifica). */}
+                    {!isReadOnly && (
+                      <td className={styles.clearColumn}>
+                        <IconButton
+                          accessibleLabel={texts.clearRowFor(crew.number, swapIndex + 1)}
+                          title={texts.clearRowFor(crew.number, swapIndex + 1)}
+                          className={styles.clearButton}
+                          disabled={row.pitInText === '' && row.pitOutText === '' && !row.isCancelled && row.notes === ''}
+                          onClick={() => {
+                            change({ ...EMPTY_DRIVER_SWAP_ROW });
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="m3.5 3.5 7 7m0-7-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                          </svg>
+                        </IconButton>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

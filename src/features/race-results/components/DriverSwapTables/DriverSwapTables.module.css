@@ -142,3 +142,24 @@
 .checkbox:disabled {
   pointer-events: none;
 }
+
+/* X che svuota la riga, come nell'ordine di arrivo; nascosta sulle righe vuote. */
+.clearColumn {
+  inline-size: 2.5rem;
+}
+
+.clearButton {
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.clearButton:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+.clearButton:disabled {
+  visibility: hidden;
+}

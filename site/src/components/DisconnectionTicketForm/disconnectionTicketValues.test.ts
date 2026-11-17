@@ -24,7 +24,7 @@ describe('modulo del ticket di disconnessione', () => {
     expect(checkTicketForm(EMPTY_TICKET_VALUES)).toMatchObject({ isPositionInvalid: false, isGapInvalid: false, isLapInvalid: false, ticket: null });
   });
 
-  it('distacco: numero intero = secondi, decimali solo dopo punto o virgola, HH:MM:SS o HH.MM.SS', () => {
+  it('distacco: numero intero = secondi (sei cifre = HHMMSS), decimali solo dopo punto o virgola, HH:MM:SS o HH.MM.SS', () => {
     const cases: [string, number][] = [
       ['83', 83_000],
       ['5', 5_000],
@@ -41,14 +41,21 @@ describe('modulo del ticket di disconnessione', () => {
       ['1.23,456', 83_456],
       ['3600', 3_600_000],
       ['12:34.56', 754_560],
+      // HH.MM.SS,DDD, HHMMSS,DDD, HHMMSS.DDD e HHMMSS: sei cifre attaccate sono ore, minuti e secondi.
+      ['00.01.23,456', 83_456],
+      ['000123,456', 83_456],
+      ['000123.456', 83_456],
+      ['000123', 83_000],
+      ['123456', 45_296_000],
     ];
     for (const [text, milliseconds] of cases) expect([text, parseTicketGap(text)]).toEqual([text, milliseconds]);
-    for (const text of ['83.', '83,1234', '1:2', '1:60', '1:23.45.6', '12.34:56', '1,2,3', 'abc', '1:02:03:04', '1234567']) {
+    for (const text of ['83.', '83,1234', '1:2', '1:60', '1:23.45.6', '12.34:56', '1,2,3', 'abc', '1:02:03:04', '1234567', '006000,000', '000060']) {
       expect([text, Number.isNaN(parseTicketGap(text))]).toEqual([text, true]);
     }
     expect(parseTicketGap('  ')).toBeNull();
     expect(normalizeTicketGapText('83,5')).toBe('00:01:23.500');
     expect(normalizeTicketGapText('12.34.56.789')).toBe('12:34:56.789');
+    expect(normalizeTicketGapText('123456,789')).toBe('12:34:56.789');
     expect(normalizeTicketGapText('1:60')).toBe('1:60');
   });
 });

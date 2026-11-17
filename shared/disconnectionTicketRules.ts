@@ -165,7 +165,8 @@ export const TICKET_GAP_MAX_MS = 100 * 3_600_000 - 1;
 /**
  * Legge il distacco scritto dal pilota e lo porta in millisecondi. Forme accettate:
  *   "83" (numero intero = secondi) · "83,5" o "83.5" (secondi con decimali) · "1:23.456" (minuti:secondi) ·
- *   "00:01:23.456" o "00:01:23,456" (HH:MM:SS.DDD) · "00.01.23.456" (HH.MM.SS.DDD, con soli punti).
+ *   "00:01:23.456" o "00:01:23,456" (HH:MM:SS.DDD) · "00.01.23.456" o "00.01.23,456" (HH.MM.SS.DDD, con soli punti) ·
+ *   "000123,456", "000123.456" o "000123" (sei cifre attaccate: HHMMSS, con o senza millesimi).
  * I decimali vanno sempre dopo un punto o una virgola (al massimo tre cifre): con soli punti, l'ultimo punto
  * separa i decimali. Minuti e secondi dopo il primo gruppo hanno sempre due cifre (00–59).
  * Vuoto → null; non interpretabile → NaN.
@@ -195,6 +196,11 @@ export function parseTicketGap(gapText: string): number | null {
   const groups = clock.split(clock.includes(':') ? ':' : '.');
   if (groups.length > 3 || (clock.includes(':') && clock.includes('.'))) return Number.NaN;
   if (groups.length === 1 && !/^\d{1,6}$/.test(groups[0] ?? '')) return Number.NaN;
+  // Sei cifre attaccate sono HHMMSS (minuti e secondi 00–59), non secondi.
+  if (groups.length === 1 && (groups[0] ?? '').length === 6) {
+    const digits = groups[0] ?? '';
+    groups.splice(0, 1, digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6));
+  }
   if (groups.length > 1 && groups.some((group, index) => !(index === 0 ? /^\d{1,2}$/ : /^[0-5]\d$/).test(group))) return Number.NaN;
 
   const totalSeconds = groups.reduce((seconds, group) => seconds * 60 + Number(group), 0);

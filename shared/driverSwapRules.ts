@@ -45,6 +45,7 @@ function toMilliseconds(hours: string, minutes: string, seconds: string, fractio
 /**
  * Legge un tempo scritto in qualunque forma ragionevole e lo porta in millisecondi:
  *   "2:13:20,642" · "02:13:20.642" · "2.13.20,642" (come nel foglio) · "13:20.5" (minuti:secondi) ·
+ *   "02.13.20.642" (HH.MM.SS.DDD) · "021320,642" o "021320.642" (HHMMSS,DDD e HHMMSS.DDD) ·
  *   "021320642" o "021320" (solo cifre: HHMMSSDDD o HHMMSS).
  * La virgola indica sempre i millesimi; con i ":" li indica anche il punto; con soli punti, il quarto gruppo.
  * Vuoto → null; non interpretabile → NaN.
@@ -59,6 +60,9 @@ export function parseRaceTimestamp(timestampText: string): number | null {
     if (text.length === 9) return toMilliseconds(text.slice(0, 2), text.slice(2, 4), text.slice(4, 6), text.slice(6));
     return Number.NaN;
   }
+  // HHMMSS,DDD e HHMMSS.DDD: sei cifre attaccate e i millesimi dopo la virgola o il punto.
+  const compact = /^(\d{2})(\d{2})(\d{2})[.,](\d{1,3})$/.exec(text);
+  if (compact) return toMilliseconds(compact[1] ?? '', compact[2] ?? '', compact[3] ?? '', compact[4] ?? '');
 
   let clock = text;
   let fraction = '';

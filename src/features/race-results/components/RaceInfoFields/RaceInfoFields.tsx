@@ -1,6 +1,7 @@
 import type { SavedCrew } from '@shared/crewRules';
 import { RACE_NAME_MAX_LENGTH } from '@shared/raceRules';
 import { FormField } from '@/components/form/FormField/FormField';
+import { TimeField } from '@/components/form/TimeField/TimeField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
 import { TrackField } from '@/features/tracks/components/TrackField/TrackField';
@@ -117,21 +118,27 @@ export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsPr
 
       {/* Orari in ora italiana: da qui la finestra delle proteste (dall'inizio a 48 ore dopo la fine). */}
       <div className={styles.fieldPair}>
-        <FormField label={formTexts.startTime} hint={isReadOnly ? undefined : formTexts.scheduleHint}>
-          {({ isInvalid, ...inputAttributes }) => (
-            <Input {...inputAttributes} type="time" step={60} readOnly={isReadOnly} isInvalid={isInvalid} value={values.startTime} onValueChange={draft.changeStartTime} />
-          )}
-        </FormField>
+        {/* Orari con i menu di ore e minuti (AM/PM solo in inglese), non con il campo del sistema operativo. */}
+        <TimeField
+          label={formTexts.startTime}
+          hint={isReadOnly ? undefined : formTexts.scheduleHint}
+          isReadOnly={isReadOnly}
+          field={{ value: values.startTime, onValueChange: draft.changeStartTime }}
+        />
         <FormField label={formTexts.endDate}>
           {({ isInvalid, ...inputAttributes }) => (
             <Input {...inputAttributes} type="date" min={values.raceDate || undefined} readOnly={isReadOnly} isInvalid={isInvalid} value={values.endDate} onValueChange={draft.changeEndDate} />
           )}
         </FormField>
-        <FormField label={formTexts.endTime} errorMessage={!isReadOnly && check.isEndBeforeStart ? formTexts.endBeforeStart : undefined}>
-          {({ isInvalid, ...inputAttributes }) => (
-            <Input {...inputAttributes} type="time" step={60} readOnly={isReadOnly} isInvalid={isInvalid} value={values.endTime} onValueChange={draft.changeEndTime} />
-          )}
-        </FormField>
+        <TimeField
+          label={formTexts.endTime}
+          isReadOnly={isReadOnly}
+          field={{
+            value: values.endTime,
+            onValueChange: draft.changeEndTime,
+            errorMessage: !isReadOnly && check.isEndBeforeStart ? formTexts.endBeforeStart : undefined,
+          }}
+        />
       </div>
 
       {/* Tracciato e giri totali, facoltativi entrambi. */}

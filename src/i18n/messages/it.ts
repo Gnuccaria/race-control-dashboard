@@ -778,6 +778,7 @@ export const it = {
       pitOutFor: (crewNumber: number, stint: number) => `Pit Out della vettura #${crewNumber}, stint ${stint}`,
       cancelledFor: (crewNumber: number, swap: number) => `Penalità annullata per la vettura #${crewNumber}, cambio ${swap}`,
       notesFor: (crewNumber: number, swap: number) => `Note sulla vettura #${crewNumber}, cambio ${swap}`,
+      clearRowFor: (crewNumber: number, swap: number) => `Svuota la riga della vettura #${crewNumber}, cambio ${swap}`,
       invalidTimes: (count: number) =>
         `${count === 1 ? '1 tempo non valido' : `${count} tempi non validi`}: scrivilo come HH:MM:SS.DDD, ad esempio 00:47:12.345.`,
     },

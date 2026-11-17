@@ -14,6 +14,13 @@ vi.mock('@/features/auth/services/discordApi');
 vi.mock('@/features/crews/services/crewApi');
 vi.mock('./services/raceApi');
 
+/** Sceglie un orario "HH:MM" nei menu di ore e minuti (orologio a 24 ore dell'italiano). */
+async function chooseTime(user: ReturnType<typeof userEvent.setup>, label: string, time: string) {
+  const [hours = '', minutes = ''] = time.split(':');
+  await user.selectOptions(screen.getByRole('combobox', { name: `${label}: Ore` }), String(Number(hours)));
+  await user.selectOptions(screen.getByRole('combobox', { name: `${label}: Minuti` }), minutes);
+}
+
 const LIST_PATH = '/campionati/gare';
 const CHAMPIONSHIP = 'Cool1 FIE Championship';
 
@@ -141,13 +148,14 @@ describe('Nuova gara', () => {
     // Data e orari in ora italiana, obbligatori; la data di fine segue quella di inizio; la fine dopo l'inizio.
     await user.type(screen.getByLabelText('Data di inizio'), '2026-11-08');
     expect(screen.getByLabelText('Data di fine')).toHaveValue('2026-11-08');
-    await user.type(screen.getByLabelText('Ora di inizio'), '20:00');
-    await user.type(screen.getByLabelText('Ora di fine'), '19:00');
+    // Orari con i menu di ore e minuti, a 24 ore in italiano (niente AM/PM).
+    expect(screen.queryByRole('combobox', { name: 'Ora di inizio: AM/PM' })).not.toBeInTheDocument();
+    await chooseTime(user, 'Ora di inizio', '20:00');
+    await chooseTime(user, 'Ora di fine', '19:00');
     expect(screen.getByText('La fine deve essere dopo l\'inizio.')).toBeInTheDocument();
     await user.clear(screen.getByLabelText('Data di fine'));
     await user.type(screen.getByLabelText('Data di fine'), '2026-11-09');
-    await user.clear(screen.getByLabelText('Ora di fine'));
-    await user.type(screen.getByLabelText('Ora di fine'), '08:00');
+    await chooseTime(user, 'Ora di fine', '08:00');
     expect(saveButton).toBeDisabled();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '12 ore');
     expect(saveButton).toBeEnabled();
@@ -250,7 +258,8 @@ describe('Nuova gara', () => {
     });
     expect(await screen.findByText('Gara salvata.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '6 Ore di Alsazia' })).toBeInTheDocument();
-  });
+    // Test lungo (tutto il form della gara): più tempo del predefinito quando i test girano in parallelo.
+  }, 15_000);
 
   it('blocca il salvataggio se un equipaggio non ha un\'auto', async () => {
     vi.mocked(fetchCrews).mockResolvedValue({ isSuccess: true, value: [...CREWS, crew(4, 'Senza Auto', 30, CHAMPIONSHIP, null)] });
@@ -274,8 +283,8 @@ describe('Nuova gara', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '6 ore');
     await user.type(screen.getByRole('textbox', { name: 'Round' }), '1');
     await user.type(screen.getByLabelText('Data di inizio'), '2099-01-01');
-    await user.type(screen.getByLabelText('Ora di inizio'), '21:00');
-    await user.type(screen.getByLabelText('Ora di fine'), '23:00');
+    await chooseTime(user, 'Ora di inizio', '21:00');
+    await chooseTime(user, 'Ora di fine', '23:00');
     await user.click(screen.getByRole('button', { name: 'Salva gara' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già una gara con questo round nello stesso campionato.');
@@ -399,6 +408,8 @@ describe('Dettaglio gara', () => {
     expect(screen.getByRole('textbox', { name: 'Pit In della vettura #12, stint 1' })).toHaveValue('01:00:10.000');
     expect(screen.getByRole('table', { name: 'Penalità per vettura' })).toHaveTextContent('#1200:00:07.500');
 
+    // In lettura niente X per svuotare le righe.
+    expect(screen.queryByRole('button', { name: /Svuota la riga/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Modifica' }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Cambio pilota' }), 'Da stint 2 a stint 3');
     expect(screen.getByRole('table', { name: 'Cambio 2: stint 2 → stint 3' })).toBeInTheDocument();
@@ -413,6 +424,14 @@ describe('Dettaglio gara', () => {
     expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
     await user.clear(screen.getByRole('textbox', { name: 'Pit Out della vettura #7, stint 3' }));
     await user.type(screen.getByRole('textbox', { name: 'Note sulla vettura #7, cambio 2' }), 'Rientro anticipato');
+    // La X a lato della riga ne svuota il contenuto; sulle righe vuote non c'è.
+    const pitOut12 = screen.getByRole('textbox', { name: 'Pit Out della vettura #12, stint 3' });
+    expect(screen.getByRole('button', { name: 'Svuota la riga della vettura #12, cambio 2' })).toBeDisabled();
+    await user.type(pitOut12, '010000,5');
+    await user.tab();
+    expect(pitOut12).toHaveValue('01:00:00.500');
+    await user.click(screen.getByRole('button', { name: 'Svuota la riga della vettura #12, cambio 2' }));
+    expect(pitOut12).toHaveValue('');
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Cambio pilota' }), 'Da stint 1 a stint 2');
     await user.click(screen.getByRole('checkbox', { name: 'Penalità annullata per la vettura #12, cambio 1' }));

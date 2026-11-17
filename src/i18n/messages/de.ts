@@ -762,6 +762,7 @@ export const de: Messages = {
       pitOutFor: (crewNumber: number, stint: number) => `Pit Out von Auto #${crewNumber}, Stint ${stint}`,
       cancelledFor: (crewNumber: number, swap: number) => `Strafe für Auto #${crewNumber} aufgehoben, Wechsel ${swap}`,
       notesFor: (crewNumber: number, swap: number) => `Notizen zu Auto #${crewNumber}, Wechsel ${swap}`,
+      clearRowFor: (crewNumber: number, swap: number) => `Zeile von Auto #${crewNumber} leeren, Wechsel ${swap}`,
       invalidTimes: (count: number) =>
         `${count === 1 ? '1 ungültige Zeit' : `${count} ungültige Zeiten`}: Schreibe sie als HH:MM:SS.DDD, zum Beispiel 00:47:12.345.`,
     },

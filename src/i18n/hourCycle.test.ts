@@ -7,6 +7,7 @@ describe('orologio della lingua', () => {
     expect(usesTwelveHourClock('fr')).toBe(false);
     expect(usesTwelveHourClock('de')).toBe(false);
     expect(usesTwelveHourClock('en')).toBe(true);
+    expect(usesTwelveHourClock('en-GB')).toBe(true);
     expect(dayPeriodLabels('en')).toEqual({ am: 'AM', pm: 'PM' });
   });
 });
