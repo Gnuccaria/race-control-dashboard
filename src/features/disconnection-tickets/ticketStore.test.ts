@@ -1,6 +1,6 @@
 import type { DisconnectionTicket } from '@shared/disconnectionTicketRules';
 import { describe, expect, it } from 'vitest';
-import { createTicketStore, unseenTickets } from './ticketStoreCore';
+import { createTicketStore, unreadTickets } from './ticketStoreCore';
 
 const ticket = (id: number): DisconnectionTicket => ({
   id,
@@ -21,20 +21,26 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe('ticket da gestire', () => {
-  it('i ticket oltre l’ultimo visto sono notifiche nuove; aprendo la tendina diventano visti e restano visti', async () => {
-    const storage = memoryStorage({ 'disconnection-tickets:seen-up-to': '1' });
-    let serverTickets = [ticket(1), ticket(2)];
+  it('ogni ticket è una notifica non letta finché non la si clicca; le lette si ricordano una per una', async () => {
+    const storage = memoryStorage({ 'disconnection-tickets:read-ids': '[1]' });
+    let serverTickets = [ticket(1), ticket(2), ticket(3)];
     const store = createTicketStore(() => Promise.resolve({ isSuccess: true, value: serverTickets }), storage);
     await store.refresh();
-    expect(unseenTickets(store.getState()).map((item) => item.id)).toEqual([2]);
+    expect(unreadTickets(store.getState()).map((item) => item.id)).toEqual([2, 3]);
 
-    store.markAllSeen();
-    expect(unseenTickets(store.getState())).toEqual([]);
-    expect(storage.values.get('disconnection-tickets:seen-up-to')).toBe('2');
+    // Il clic su una notifica segna come letta solo quella.
+    store.markRead(3);
+    expect(unreadTickets(store.getState()).map((item) => item.id)).toEqual([2]);
+    expect(storage.values.get('disconnection-tickets:read-ids')).toBe('[1,3]');
 
-    serverTickets = [ticket(1), ticket(2), ticket(3)];
+    serverTickets = [ticket(2), ticket(3), ticket(4)];
     await store.refresh();
-    expect(unseenTickets(store.getState()).map((item) => item.id)).toEqual([3]);
+    expect(unreadTickets(store.getState()).map((item) => item.id)).toEqual([2, 4]);
+
+    // Alla prossima apertura dell'app le lette sono ancora lette.
+    const nextStart = createTicketStore(() => Promise.resolve({ isSuccess: true, value: serverTickets }), storage);
+    await nextStart.refresh();
+    expect(unreadTickets(nextStart.getState()).map((item) => item.id)).toEqual([2, 4]);
   });
 
   it('un ticket gestito sparisce subito; un errore di lettura tiene i ticket già letti', async () => {

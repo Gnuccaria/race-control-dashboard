@@ -11,7 +11,6 @@ import { useI18n } from '@/i18n/useI18n';
 import { fetchMyProtest, type VideoUploadProblem } from '../api/protests';
 import { endExpiredSiteSession, getFreshSiteAccessToken, signInWithDiscord, useSiteAuth } from '../auth/siteAuthStore';
 import { FadingNotice } from '../components/FadingNotice/FadingNotice';
-import { markRejectionsSeen } from '../protests/siteProtestStore';
 import { ProtestVideoSection } from '../components/ProtestVideoSection/ProtestVideoSection';
 import { PROTEST_PATH, protestPath } from '../sitePaths';
 import homeStyles from './HomePage.module.css';
@@ -67,13 +66,6 @@ export function Component() {
       isCurrent = false;
     };
   }, [userId, readProtest]);
-
-  // Chi apre una protesta respinta ne ha visto l'esito: la sua notifica nella campanella non serve più.
-  const isRejected = protest !== null && protest !== 'missing' && protest.status === 'rejected';
-  const rejectedProtestId = isRejected ? protest.id : null;
-  useEffect(() => {
-    if (rejectedProtestId !== null) markRejectionsSeen([rejectedProtestId]);
-  }, [rejectedProtestId]);
 
   const formatDateTime = (isoTimestamp: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(isoTimestamp));
   const loadedProtest = protest !== null && protest !== 'missing' ? protest : null;

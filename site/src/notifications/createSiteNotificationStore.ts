@@ -2,13 +2,13 @@ import { useSyncExternalStore } from 'react';
 import { endExpiredSiteSession, getFreshSiteAccessToken } from '../auth/siteAuthStore';
 
 /**
- * Elenco letto dal server per chi è entrato nel sito (i suoi ticket, le sue proteste), riletto ogni 30 secondi
- * (e quando la scheda torna in primo piano) finché è aperta una pagina che lo usa. Serve alla campanella:
- * un elemento "da notificare" e non ancora visto è una notifica. Gli elementi già visti si ricordano per account
- * in questo browser, ognuno con la sua chiave.
+ * Elenco letto dal server per chi è entrato nel sito (i suoi ticket, le sue proteste), riletto ogni 10 secondi
+ * (e subito quando la scheda torna in primo piano) finché è aperta una pagina che lo usa. Serve alla campanella:
+ * un elemento "da notificare" (es. ticket gestito) è una notifica non letta finché non la si clicca; le notifiche
+ * lette si ricordano una per una, per account, in questo browser, ognuno con la sua chiave.
  */
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 10_000;
 const MAX_SEEN_IDS = 200;
 
 export interface SiteItemsState<Item> {
@@ -102,9 +102,9 @@ export function createSiteNotificationStore<Item extends { readonly id: number }
         }
       };
     },
-    /** Notifiche non ancora viste, nell'ordine dell'elenco (dal più recente). */
+    /** Notifiche non lette, nell'ordine dell'elenco (dal più recente). */
     unseen: (itemsState: SiteItemsState<Item>) => itemsState.items.filter((item) => isNotification(item) && !itemsState.seenIds.has(item.id)),
-    /** Segna come viste le notifiche di questi elementi. */
+    /** Segna come lette le notifiche di questi elementi (il clic su una notifica: solo quella). */
     markSeen(ids: readonly number[]) {
       if (!accountId || ids.every((id) => state.seenIds.has(id))) return;
       const seenIds = new Set([...state.seenIds, ...ids]);

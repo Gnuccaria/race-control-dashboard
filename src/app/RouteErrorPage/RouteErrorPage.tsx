@@ -1,4 +1,5 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router';
+import { DocumentTitle } from '@/components/layout/DocumentTitle/DocumentTitle';
 import { StatusMessage } from '@/components/feedback/StatusMessage/StatusMessage';
 import { formatDocumentTitle } from '@/config/appConfig';
 import { useI18n } from '@/i18n/useI18n';
@@ -14,7 +15,7 @@ export function RouteErrorPage() {
 
   return (
     <main>
-      <title>{formatDocumentTitle(messages.pages.errorDocumentTitle)}</title>
+      <DocumentTitle title={formatDocumentTitle(messages.pages.errorDocumentTitle)} />
       <StatusMessage title={messages.pages.errorTitle} description={errorDescription} />
     </main>
   );

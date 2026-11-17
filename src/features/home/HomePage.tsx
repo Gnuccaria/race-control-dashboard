@@ -1,4 +1,5 @@
 import { formatDocumentTitle } from '@/config/appConfig';
+import { DocumentTitle } from '@/components/layout/DocumentTitle/DocumentTitle';
 import { canUseSection, TOOL_SECTIONS } from '@/features/tools/toolCatalog';
 import { useCurrentUser } from '@/features/user/useCurrentUser';
 import { ToolSectionList } from './components/ToolSectionList/ToolSectionList';
@@ -10,7 +11,7 @@ export function HomePage() {
 
   return (
     <div className={styles.homePage}>
-      <title>{formatDocumentTitle()}</title>
+      <DocumentTitle title={formatDocumentTitle()} />
       <WelcomeMessage userName={currentUser.displayName} />
       {/* Strumenti della Direzione Gara e dei Commissari Sportivi solo con il ruolo giusto. */}
       <ToolSectionList sections={TOOL_SECTIONS.filter((section) => canUseSection(section, currentUser.access))} />

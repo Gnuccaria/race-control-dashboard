@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DocumentTitle } from '@/components/layout/DocumentTitle/DocumentTitle';
 import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
 import { BrandMark } from '@/components/ui/BrandMark/BrandMark';
 import { Button } from '@/components/ui/Button/Button';
@@ -36,7 +37,7 @@ export function LoginPage() {
 
   return (
     <main className={styles.loginPage}>
-      <title>{formatDocumentTitle(authTexts.documentTitle)}</title>
+      <DocumentTitle title={formatDocumentTitle(authTexts.documentTitle)} />
       <div className={styles.loginCard}>
         <BrandMark size="large" />
         <header className={styles.loginHeader}>

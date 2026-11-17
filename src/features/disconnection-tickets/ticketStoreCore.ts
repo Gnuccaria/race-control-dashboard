@@ -3,19 +3,22 @@ import type { ServerApiResult } from '@/services/serverApi';
 
 /**
  * Ticket di disconnessione da gestire, condivisi da campanella e calcolatore. Si rileggono dal server ogni
- * 20 secondi finché qualcuno li guarda (campanella sempre presente nella barra in alto) e quando la finestra
- * torna in primo piano. I ticket con numero oltre l'ultimo visto sono le notifiche nuove.
- * La stessa logica serve alle proteste dei Commissari (protestStore), con un'altra chiave per i "visti".
+ * 10 secondi finché qualcuno li guarda (campanella sempre presente nella barra in alto) e subito quando la
+ * finestra torna in primo piano. Ogni ticket è una notifica non letta finché non si clicca nella campanella:
+ * le notifiche lette si ricordano una per una (non "tutte fino a qui").
+ * La stessa logica serve alle proteste dei Commissari (protestStore), con un'altra chiave per le lette.
  */
 
-export const TICKET_POLL_INTERVAL_MS = 20_000;
-const SEEN_STORAGE_KEY = 'disconnection-tickets:seen-up-to';
+export const TICKET_POLL_INTERVAL_MS = 10_000;
+const READ_STORAGE_KEY = 'disconnection-tickets:read-ids';
+/** Notifiche lette ricordate al massimo (le più recenti). */
+const MAX_READ_IDS = 500;
 
 export interface TicketState<Item = DisconnectionTicket> {
   readonly tickets: readonly Item[];
   readonly status: 'idle' | 'ready' | 'error';
-  /** Numero dell'ultimo ticket già visto nella tendina delle notifiche. */
-  readonly seenUpToId: number;
+  /** Notifiche già lette (cliccate nella campanella). */
+  readonly readIds: ReadonlySet<number>;
 }
 
 type TicketFetcher<Item> = () => Promise<ServerApiResult<Item[]>>;
@@ -28,16 +31,17 @@ interface SeenStorage {
 export function createTicketStore<Item extends { readonly id: number } = DisconnectionTicket>(
   fetchTickets: TicketFetcher<Item>,
   storage: SeenStorage | null,
-  seenStorageKey = SEEN_STORAGE_KEY,
+  readStorageKey = READ_STORAGE_KEY,
 ) {
-  const readSeen = () => {
+  const loadReadIds = (): Set<number> => {
     try {
-      return Number(storage?.getItem(seenStorageKey) ?? 0) || 0;
+      const stored = JSON.parse(storage?.getItem(readStorageKey) ?? '[]') as unknown;
+      return new Set(Array.isArray(stored) ? stored.filter((id): id is number => typeof id === 'number') : []);
     } catch {
-      return 0;
+      return new Set();
     }
   };
-  let state: TicketState<Item> = { tickets: [], status: 'idle', seenUpToId: readSeen() };
+  let state: TicketState<Item> = { tickets: [], status: 'idle', readIds: loadReadIds() };
   const listeners = new Set<() => void>();
   let pollerCount = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
@@ -80,16 +84,16 @@ export function createTicketStore<Item extends { readonly id: number } = Disconn
         }
       };
     },
-    /** Aprendo la tendina delle notifiche, tutti i ticket presenti diventano già visti. */
-    markAllSeen() {
-      const seenUpToId = Math.max(state.seenUpToId, ...state.tickets.map((ticket) => ticket.id));
-      if (seenUpToId === state.seenUpToId) return;
+    /** Clic su una notifica nella campanella: diventa letta solo quella. */
+    markRead(itemId: number) {
+      if (state.readIds.has(itemId)) return;
+      const readIds = new Set([...state.readIds, itemId]);
       try {
-        storage?.setItem(seenStorageKey, String(seenUpToId));
+        storage?.setItem(readStorageKey, JSON.stringify([...readIds].slice(-MAX_READ_IDS)));
       } catch {
-        // Archiviazione non disponibile: le notifiche si azzerano solo per questa sessione.
+        // Archiviazione non disponibile: le notifiche lette valgono solo per questa sessione.
       }
-      setState({ ...state, seenUpToId });
+      setState({ ...state, readIds });
     },
     /** Toglie subito un ticket gestito (senza aspettare la prossima lettura). */
     removeTicket(ticketId: number) {
@@ -98,5 +102,6 @@ export function createTicketStore<Item extends { readonly id: number } = Disconn
   };
 }
 
-export const unseenTickets = <Item extends { readonly id: number }>(state: TicketState<Item>) =>
-  state.tickets.filter((ticket) => ticket.id > state.seenUpToId);
+/** Notifiche non lette: elementi dell'elenco non ancora cliccati nella campanella. */
+export const unreadTickets = <Item extends { readonly id: number }>(state: TicketState<Item>) =>
+  state.tickets.filter((ticket) => !state.readIds.has(ticket.id));

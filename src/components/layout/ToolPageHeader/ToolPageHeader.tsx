@@ -1,4 +1,5 @@
 import { BackLink, type BackLinkTarget } from '@/components/navigation/BackLink/BackLink';
+import { DocumentTitle } from '@/components/layout/DocumentTitle/DocumentTitle';
 import { formatDocumentTitle } from '@/config/appConfig';
 import { useI18n } from '@/i18n/useI18n';
 import styles from './ToolPageHeader.module.css';
@@ -19,7 +20,7 @@ export function ToolPageHeader({ name, description, backLink, documentTitle }: T
 
   return (
     <header className={styles.toolPageHeader}>
-      <title>{documentTitle ?? formatDocumentTitle(name)}</title>
+      <DocumentTitle title={documentTitle ?? formatDocumentTitle(name)} />
       {backLinkTarget && (
         <BackLink to={backLinkTarget.to} relative={backLinkTarget.relative}>
           {backLinkTarget.label}

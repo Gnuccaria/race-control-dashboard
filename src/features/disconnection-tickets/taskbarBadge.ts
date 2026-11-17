@@ -1,7 +1,7 @@
 import { isTauri } from '@tauri-apps/api/core';
 import type { AppAccess } from '@/features/auth/model/discordProfile';
-import { protestStore, unseenProtests } from '@/features/protests/protestStore';
-import { ticketStore, unseenTickets } from './ticketStore';
+import { protestStore, unreadProtests } from '@/features/protests/protestStore';
+import { ticketStore, unreadTickets } from './ticketStore';
 
 /** Lato dell'immagine del pallino: Windows la mostra a 16 px, il doppio resta nitido sugli schermi ad alta densità. */
 const BADGE_SIZE = 32;
@@ -57,7 +57,7 @@ export function startTaskbarBadge(access: Pick<AppAccess, 'raceControl' | 'stewa
   const update = () => {
     if (isStopped) return;
     const count =
-      (access.raceControl ? unseenTickets(ticketStore.getState()).length : 0) + (access.stewards ? unseenProtests(protestStore.getState()).length : 0);
+      (access.raceControl ? unreadTickets(ticketStore.getState()).length : 0) + (access.stewards ? unreadProtests(protestStore.getState()).length : 0);
     if (count === shownCount) return;
     shownCount = count;
     show(count);

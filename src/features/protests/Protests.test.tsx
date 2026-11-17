@@ -72,26 +72,27 @@ describe('Campanella delle proteste (Commissari Sportivi)', () => {
     vi.mocked(fetchOpenTickets).mockResolvedValue({ isSuccess: true, value: [] });
   });
 
-  it('conta le proteste nuove ancora in esame, le elenca e aprendo la tendina diventano viste', async () => {
+  it('conta le proteste in esame non lette, le elenca e il clic segna come letta solo quella', async () => {
     vi.mocked(fetchProtests).mockResolvedValue({ isSuccess: true, value: [protest(3), protest(2), protest(1, { status: 'rejected', rejectionReason: '' })] });
     await protestStore.refresh();
     const user = userEvent.setup();
     renderApp('/');
 
-    const bell = await screen.findByRole('button', { name: 'Notifiche: 2 nuove' });
+    expect(await screen.findByRole('button', { name: 'Notifiche: 2 nuove' })).toBeInTheDocument();
+    expect(document.title).toMatch(/^\(2\) /);
     expect(screen.getByText('Proteste in esame')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Protesta #3/ })).toHaveTextContent('#16 Vez Team LimeStint 2 · Giro 14 · Curva 7');
-    expect(screen.queryByRole('button', { name: /Protesta #1/ })).not.toBeInTheDocument();
-
-    // jsdom non apre i popover: si simula l'evento di apertura della tendina.
-    const panel = document.getElementById(bell.getAttribute('popovertarget') ?? '') as HTMLElement;
-    panel.dispatchEvent(Object.assign(new Event('toggle'), { newState: 'open', oldState: 'closed' }));
-    expect(await screen.findByRole('button', { name: 'Notifiche' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Protesta #3/ })).toHaveTextContent('Nuova');
-    expect(localStorage.getItem('protests:seen-up-to')).toBe('3');
+    expect(screen.queryByRole('button', { name: /Protesta #1/ })).not.toBeInTheDocument();
 
     vi.mocked(fetchProtest).mockResolvedValue({ isSuccess: true, value: protest(2) });
     await user.click(screen.getByRole('button', { name: /Protesta #2/ }));
     expect(await screen.findByRole('heading', { level: 1, name: /Protesta #2/ })).toBeInTheDocument();
+    // Letta solo la #2: la #3 resta nuova.
+    expect(screen.getByRole('button', { name: 'Notifiche: 1 nuova' })).toBeInTheDocument();
+    expect(document.title).toMatch(/^\(1\) /);
+    expect(screen.getByRole('button', { name: /Protesta #3/ })).toHaveTextContent('Nuova');
+    expect(screen.getByRole('button', { name: /Protesta #2/ })).not.toHaveTextContent('Nuova');
+    expect(localStorage.getItem('protests:read-ids')).toBe('[2]');
   });
 });

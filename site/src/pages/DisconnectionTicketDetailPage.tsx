@@ -14,7 +14,7 @@ import { getFreshSiteAccessToken, signInWithDiscord, useSiteAuth } from '../auth
 import { FadingNotice } from '../components/FadingNotice/FadingNotice';
 import { TicketResultView } from '../components/TicketResultView/TicketResultView';
 import { DISCONNECTION_TICKET_PATH, disconnectionTicketPath } from '../sitePaths';
-import { markResultsSeen, startSiteTicketPolling, useSiteTickets } from '../tickets/siteTicketStore';
+import { startSiteTicketPolling, useSiteTickets } from '../tickets/siteTicketStore';
 import homeStyles from './HomePage.module.css';
 import pageStyles from './SitePage.module.css';
 
@@ -53,9 +53,6 @@ export function Component() {
   const ticket = listedTicket ?? (loadedTicket === 'missing' ? null : loadedTicket);
 
   const isResolved = ticket?.status === 'resolved';
-  useEffect(() => {
-    if (isResolved) markResultsSeen([ticketId]);
-  }, [isResolved, ticketId]);
 
   const formatDateTime = (isoText: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(isoText));
 
