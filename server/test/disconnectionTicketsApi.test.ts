@@ -117,6 +117,27 @@ describe('ticket di disconnessione', () => {
     expect(botCalls).toBe(1);
   });
 
+  it('con il ruolo collegato nella scheda dell’equipaggio non serve il nome del ruolo né il bot', async () => {
+    await env.CREWS_DB.prepare('UPDATE crews SET discord_role_id = ? WHERE number = 16').bind(VEZ_ROLE).run();
+    clearGuildRoleNamesForTests();
+    isBotWorking = false;
+    expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez')).toEqual({
+      status: 200,
+      body: { crew: { id: 1, number: 16, name: 'Vez Team Lime', championship: 'Cool1 FIE Championship' } },
+    });
+    expect(botCalls).toBe(0);
+    // Il ruolo collegato vale da solo: un altro ruolo "#N" senza equipaggio collegato non crea ambiguità.
+    expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-two-crews')).toMatchObject({ status: 200, body: { crew: { number: 16 } } });
+    // Il ticket ricorda il ruolo collegato, che il bot menzionerà con il risultato.
+    expect((await submit(report(), 'site-vez')).status).toBe(201);
+    expect(await env.CREWS_DB.prepare('SELECT crew_role_id AS crewRoleId FROM disconnection_tickets').first()).toEqual({ crewRoleId: VEZ_ROLE });
+  });
+
+  it('un equipaggio con un altro ruolo collegato non si riconosce più dal nome "#N"', async () => {
+    await env.CREWS_DB.prepare("UPDATE crews SET discord_role_id = '1571641908688500000' WHERE number = 16").run();
+    expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-vez')).toMatchObject({ status: 422, body: { error: { code: 'crew-not-found' } } });
+  });
+
   it('spiega perché non trova l’equipaggio', async () => {
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-no-crew')).toMatchObject({ status: 422, body: { error: { code: 'no-crew-role' } } });
     expect(await siteRequest('GET', '/public/disconnection-tickets/crew', 'site-two-crews')).toMatchObject({ status: 422, body: { error: { code: 'multiple-crew-roles' } } });

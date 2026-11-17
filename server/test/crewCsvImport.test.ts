@@ -30,8 +30,8 @@ describe("piano d'importazione", () => {
     const plan = planCrewImport('Auto,N.,Nome Equipaggio\n ferrari ,007,ScuderiaRossa\nPORSCHE,12,Apex', CARS);
     expect(plan.problems).toEqual([]);
     expect(plan.crews).toEqual([
-      { name: 'ScuderiaRossa', number: 7, carId: 3, championship: null, color: null, discordChannelId: null },
-      { name: 'Apex', number: 12, carId: 6, championship: null, color: null, discordChannelId: null },
+      { name: 'ScuderiaRossa', number: 7, carId: 3, championship: null, color: null, discordChannelId: null, discordRoleId: null },
+      { name: 'Apex', number: 12, carId: 6, championship: null, color: null, discordChannelId: null, discordRoleId: null },
     ]);
   });
 
@@ -39,8 +39,8 @@ describe("piano d'importazione", () => {
     const plan = planCrewImport('Nome;Numero;Campionato\nSim Racing Café;#690;Cool1 FIE Championship\nGT  Tribe Team Yellow ;20;', CARS);
     expect(plan.problems).toEqual([]);
     expect(plan.crews).toEqual([
-      { name: 'Sim Racing Café', number: 690, carId: null, championship: 'Cool1 FIE Championship', color: null, discordChannelId: null },
-      { name: 'GT Tribe Team Yellow', number: 20, carId: null, championship: null, color: null, discordChannelId: null },
+      { name: 'Sim Racing Café', number: 690, carId: null, championship: 'Cool1 FIE Championship', color: null, discordChannelId: null, discordRoleId: null },
+      { name: 'GT Tribe Team Yellow', number: 20, carId: null, championship: null, color: null, discordChannelId: null, discordRoleId: null },
     ]);
   });
 

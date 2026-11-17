@@ -3,14 +3,18 @@ import type { SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
 import { fetchGuildRoleNames } from '../siteAuth/discordGuildRoles';
 import type { DiscordFetch } from '../siteAuth/siteDiscordAuth';
-import { findTicketCrewByNumber } from './ticketRepository';
+import { findTicketCrewByNumber, findTicketCrewsByRoleIds } from './ticketRepository';
 
 /** roleId: il ruolo Discord dell'equipaggio, che il bot menziona quando scrive il risultato. */
 export type TicketCrewLookup = { readonly crew: TicketCrewOption; readonly roleId: string } | { readonly problem: TicketCrewProblem };
 
 /**
- * Equipaggio di chi apre il ticket, dal suo ruolo Discord di equipaggio ("#16 Vez Team Lime" → equipaggio n. 16).
- * Gli ID dei ruoli arrivano dall'accesso dell'utente, i nomi dal bot. Deve esserci un solo ruolo di equipaggio.
+ * Equipaggio di chi apre un ticket o una protesta, dai suoi ruoli Discord (gli ID arrivano dall'accesso dell'utente):
+ * 1. un equipaggio con il ruolo collegato nella sua scheda (discord_role_id): vale qualunque sia il nome del ruolo,
+ *    e non serve il bot;
+ * 2. altrimenti il nome del ruolo, letto dal bot ("#16 Vez Team Lime" → equipaggio n. 16), tra gli equipaggi senza
+ *    ruolo collegato.
+ * In entrambi i casi deve esserci un solo ruolo di equipaggio.
  */
 export async function findTicketCrewFromRoles(
   discordFetch: DiscordFetch,
@@ -18,6 +22,14 @@ export async function findTicketCrewFromRoles(
   database: SqlDatabase,
   roleIds: readonly string[],
 ): Promise<TicketCrewLookup> {
+  const linkedCrews = await findTicketCrewsByRoleIds(database, roleIds);
+  if (linkedCrews.length > 1) return { problem: 'multiple-crew-roles' };
+  const [linkedCrew] = linkedCrews;
+  if (linkedCrew) {
+    const { roleId, ...crew } = linkedCrew;
+    return { crew, roleId };
+  }
+
   const roleNames = await fetchGuildRoleNames(discordFetch, env);
   if (!roleNames) return { problem: 'bot-unavailable' };
   const crewRoles = roleIds.flatMap((roleId) => {

@@ -96,6 +96,16 @@ describe('Aggiungi equipaggio', () => {
     await user.selectOptions(championshipSelect, 'Cool1 FIE Championship');
     await chooseColorFromPalette(user, '#E60000');
     expect(screen.getByRole('button', { name: /Colore #E60000/ })).toHaveStyle({ backgroundColor: '#E60000' });
+    // Ruolo Discord facoltativo: una menzione non valida blocca il salvataggio, l'ID copiato da Discord va bene.
+    const roleInput = screen.getByRole('textbox', { name: 'Ruolo Discord' });
+    await user.type(roleInput, '@Sim Racing');
+    await user.tab();
+    expect(screen.getByText('Incolla l\'ID del ruolo (17–20 cifre) o la sua menzione (<@&…>).')).toBeInTheDocument();
+    expect(createButton).toBeDisabled();
+    await user.clear(roleInput);
+    await user.type(roleInput, '<@&1571641908688588963>');
+    await user.tab();
+    expect(roleInput).toHaveValue('1571641908688588963');
     await user.click(createButton);
 
     expect(await screen.findByRole('status')).toHaveTextContent('Equipaggio «Sim Racing Café» creato.');
@@ -106,6 +116,7 @@ describe('Aggiungi equipaggio', () => {
       championship: 'Cool1 FIE Championship',
       color: '#E60000',
       discordChannelId: null,
+      discordRoleId: '1571641908688588963',
     });
     expect(screen.getByRole('textbox', { name: 'Nome equipaggio' })).toHaveValue('');
     expect(screen.getByRole('button', { name: 'Crea equipaggio' })).toBeDisabled();

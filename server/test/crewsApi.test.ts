@@ -217,6 +217,28 @@ describe('PUT /crews/:id', () => {
     expect(await readError(sameName)).toBe('duplicate-crew-name');
   });
 
+  it('salva il ruolo Discord dell’equipaggio (anche dalla menzione), uno per equipaggio', async () => {
+    const role = '1571641908688588963';
+    const linked = await handleRequest(putCrew(1, { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS, discordRoleId: `<@&${role}>` }, 'token-director'), env);
+    expect(linked.status).toBe(200);
+    expect(await linked.json()).toMatchObject({ crew: { id: 1, discordRoleId: role } });
+    expect(await (await handleRequest(getPath('/crews/1', 'token-director'), env)).json()).toMatchObject({ crew: { discordRoleId: role } });
+
+    // Lo stesso ruolo non può appartenere a un altro equipaggio.
+    const sameRole = await handleRequest(putCrew(2, { name: 'Beta', number: 8, carId: 2, ...REQUIRED_DETAILS, discordRoleId: role }, 'token-director'), env);
+    expect(sameRole.status).toBe(409);
+    expect(await readError(sameRole)).toBe('duplicate-crew-role');
+    const newWithSameRole = await handleRequest(postCrew({ name: 'Gamma', number: 9, carId: 2, ...REQUIRED_DETAILS, discordRoleId: role }, 'token-director'), env);
+    expect(await readError(newWithSameRole)).toBe('duplicate-crew-role');
+
+    const invalid = await handleRequest(putCrew(2, { name: 'Beta', number: 8, carId: 2, ...REQUIRED_DETAILS, discordRoleId: '#8 Beta' }, 'token-director'), env);
+    expect(invalid.status).toBe(422);
+
+    // Senza ruolo il collegamento si toglie.
+    const unlinked = await handleRequest(putCrew(1, { name: 'Alfa', number: 7, carId: 1, ...REQUIRED_DETAILS, discordRoleId: '' }, 'token-director'), env);
+    expect(await unlinked.json()).toMatchObject({ crew: { discordRoleId: null } });
+  });
+
   it('ricontrolla i dati, risponde 404 se l’equipaggio non esiste e richiede il ruolo', async () => {
     expect((await handleRequest(putCrew(1, { name: 'Alfa!', number: 7, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env)).status).toBe(422);
     expect((await handleRequest(putCrew(99, { name: 'Gamma', number: 9, carId: 1, ...REQUIRED_DETAILS }, 'token-director'), env)).status).toBe(404);

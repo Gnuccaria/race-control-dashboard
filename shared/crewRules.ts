@@ -53,6 +53,11 @@ export interface CrewDraft {
    * Facoltativo; assente nei dati che non lo conoscono (es. importazione da CSV, che non lo cambia).
    */
   readonly discordChannelId?: string | null;
+  /**
+   * ID del ruolo Discord dell'equipaggio: chi lo ha appartiene all'equipaggio (ticket e proteste del sito).
+   * Facoltativo (senza, l'equipaggio si riconosce dal nome del ruolo "#N ..."); assente come il canale nei dati da CSV.
+   */
+  readonly discordRoleId?: string | null;
 }
 
 /** Equipaggio come salvato dal server. */
@@ -112,6 +117,19 @@ export function normalizeDiscordChannelId(rawValue: string): string | null {
   return DISCORD_CHANNEL_LINK_PATTERN.exec(text)?.[1] ?? null;
 }
 
+/** Menzione di un ruolo come la scrive Discord: <@&ID>. */
+const DISCORD_ROLE_MENTION_PATTERN = /^<@&(\d{17,20})>$/;
+
+/**
+ * "1571641908688588963", " 1571641908688588963 " o la menzione "<@&1571641908688588963>"
+ * → ID del ruolo; null se non è un ID di ruolo.
+ */
+export function normalizeDiscordRoleId(rawValue: string): string | null {
+  const text = rawValue.trim();
+  if (DISCORD_ID_PATTERN.test(text)) return text;
+  return DISCORD_ROLE_MENTION_PATTERN.exec(text)?.[1] ?? null;
+}
+
 export const isCrewChampionship = (value: unknown): value is CrewChampionship =>
   CREW_CHAMPIONSHIPS.some((championship) => championship === value);
 
@@ -133,6 +151,7 @@ export interface CrewDraftIssues {
   readonly championship?: 'invalid' | 'required';
   readonly color?: 'invalid' | 'required';
   readonly discordChannelId?: 'invalid';
+  readonly discordRoleId?: 'invalid';
 }
 
 export type CrewDraftValidation =
@@ -179,8 +198,11 @@ export function validateCrewDraft(
   // Il canale Discord è sempre facoltativo.
   const discordChannelId = typeof candidate.discordChannelId === 'string' ? normalizeDiscordChannelId(candidate.discordChannelId) : null;
   const channelIssue = findDetailIssue(candidate.discordChannelId, discordChannelId, false);
+  // Anche il ruolo Discord è sempre facoltativo.
+  const discordRoleId = typeof candidate.discordRoleId === 'string' ? normalizeDiscordRoleId(candidate.discordRoleId) : null;
+  const roleIssue = findDetailIssue(candidate.discordRoleId, discordRoleId, false);
 
-  if (nameIssue || crewNumber === null || carIssue || championshipIssue || colorIssue || channelIssue) {
+  if (nameIssue || crewNumber === null || carIssue || championshipIssue || colorIssue || channelIssue || roleIssue) {
     return {
       isValid: false,
       issues: {
@@ -190,8 +212,9 @@ export function validateCrewDraft(
         ...(championshipIssue && { championship: championshipIssue }),
         ...(colorIssue && { color: colorIssue }),
         ...(channelIssue && { discordChannelId: 'invalid' as const }),
+        ...(roleIssue && { discordRoleId: 'invalid' as const }),
       },
     };
   }
-  return { isValid: true, crew: { name, number: crewNumber, carId, championship, color, discordChannelId } };
+  return { isValid: true, crew: { name, number: crewNumber, carId, championship, color, discordChannelId, discordRoleId } };
 }

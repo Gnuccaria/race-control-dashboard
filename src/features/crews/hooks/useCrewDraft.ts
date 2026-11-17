@@ -4,6 +4,7 @@ import {
   type CrewDraft,
   findCrewNameIssue,
   normalizeDiscordChannelId,
+  normalizeDiscordRoleId,
   parseCrewNumber,
   sanitizeCrewNumberInput,
   validateCrewDraft,
@@ -20,9 +21,11 @@ export interface CrewDraftValues {
   readonly color: string;
   /** ID (o link) del canale Discord dell'equipaggio; '' = nessun canale. */
   readonly discordChannelId: string;
+  /** ID (o menzione) del ruolo Discord dell'equipaggio; '' = nessun ruolo collegato. */
+  readonly discordRoleId: string;
 }
 
-const EMPTY_VALUES: CrewDraftValues = { name: '', numberText: '', carId: '', championship: '', color: '', discordChannelId: '' };
+const EMPTY_VALUES: CrewDraftValues = { name: '', numberText: '', carId: '', championship: '', color: '', discordChannelId: '', discordRoleId: '' };
 
 const toDraftValues = (crew: CrewDraft): CrewDraftValues => ({
   name: crew.name,
@@ -31,6 +34,7 @@ const toDraftValues = (crew: CrewDraft): CrewDraftValues => ({
   championship: crew.championship ?? '',
   color: crew.color ?? '',
   discordChannelId: crew.discordChannelId ?? '',
+  discordRoleId: crew.discordRoleId ?? '',
 });
 
 /**
@@ -44,6 +48,8 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
   const nameIssue = findCrewNameIssue(values.name);
   // Il canale è facoltativo: vuoto va bene, altrimenti deve essere un ID o un link a un canale.
   const isChannelInvalid = values.discordChannelId.trim() !== '' && normalizeDiscordChannelId(values.discordChannelId) === null;
+  // Anche il ruolo è facoltativo: vuoto va bene, altrimenti deve essere un ID o una menzione di ruolo.
+  const isRoleInvalid = values.discordRoleId.trim() !== '' && normalizeDiscordRoleId(values.discordRoleId) === null;
   // Tutti i campi sono obbligatori.
   const isComplete =
     nameIssue === null &&
@@ -51,7 +57,8 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
     values.carId !== '' &&
     values.championship !== '' &&
     values.color !== '' &&
-    !isChannelInvalid;
+    !isChannelInvalid &&
+    !isRoleInvalid;
 
   return {
     values,
@@ -80,7 +87,18 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
         discordChannelId: normalizeDiscordChannelId(previousValues.discordChannelId) ?? previousValues.discordChannelId.trim(),
       }));
     },
+    changeDiscordRole: (discordRoleId: string) => {
+      setValues((previousValues) => ({ ...previousValues, discordRoleId }));
+    },
+    /** Uscendo dal campo, una menzione del ruolo diventa il suo ID. */
+    normalizeDiscordRole: () => {
+      setValues((previousValues) => ({
+        ...previousValues,
+        discordRoleId: normalizeDiscordRoleId(previousValues.discordRoleId) ?? previousValues.discordRoleId.trim(),
+      }));
+    },
     isChannelInvalid,
+    isRoleInvalid,
     /** I campi vuoti non mostrano errori: tengono solo disattivato il pulsante. */
     visibleNameIssue: nameIssue === 'required' ? null : nameIssue,
     isComplete,
@@ -93,6 +111,7 @@ export function useCrewDraft(initialCrew?: CrewDraft) {
         championship: values.championship,
         color: values.color,
         discordChannelId: values.discordChannelId,
+        discordRoleId: values.discordRoleId,
       }),
   };
 }

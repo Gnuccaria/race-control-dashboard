@@ -153,6 +153,30 @@ export function CrewFields({ draft, isReadOnly = false }: CrewFieldsProps) {
           />
         )}
       </FormField>
+
+      <FormField
+        label={crewTexts.discordRole}
+        hint={isReadOnly ? undefined : crewTexts.discordRoleHint}
+        errorMessage={!isReadOnly && draft.isRoleInvalid ? crewTexts.discordRoleInvalid : undefined}
+      >
+        {({ isInvalid, ...inputAttributes }) => (
+          <Input
+            {...inputAttributes}
+            type="text"
+            name={CREW_FORM_FIELDS.discordRoleId}
+            inputMode="numeric"
+            maxLength={40}
+            spellCheck={false}
+            autoComplete="off"
+            readOnly={isReadOnly}
+            placeholder={isReadOnly ? crewTexts.noDiscordRole : undefined}
+            isInvalid={isInvalid}
+            value={values.discordRoleId}
+            onValueChange={draft.changeDiscordRole}
+            onBlur={draft.normalizeDiscordRole}
+          />
+        )}
+      </FormField>
     </div>
   );
 }

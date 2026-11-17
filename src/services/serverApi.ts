@@ -14,6 +14,7 @@ export type ServerApiResult<Value> =
 const ERROR_KIND_BY_SERVER_CODE: Record<string, ServerErrorKind> = {
   'duplicate-crew-number': 'duplicate-number',
   'duplicate-crew-name': 'duplicate-name',
+  'duplicate-crew-role': 'duplicate-role',
   'invalid-crew': 'invalid-crew',
   'invalid-request': 'invalid-crew',
   'crew-in-race-results': 'crew-in-race-results',

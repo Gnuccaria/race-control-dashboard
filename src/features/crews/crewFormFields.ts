@@ -6,4 +6,5 @@ export const CREW_FORM_FIELDS = {
   championship: 'crewChampionship',
   color: 'crewColor',
   discordChannelId: 'crewDiscordChannelId',
+  discordRoleId: 'crewDiscordRoleId',
 } as const;

@@ -17,7 +17,7 @@ import {
   updateCrew,
 } from './crewRepository';
 
-const CONFLICT_ERROR_CODES = { number: 'duplicate-crew-number', name: 'duplicate-crew-name' } as const;
+const CONFLICT_ERROR_CODES = { number: 'duplicate-crew-number', name: 'duplicate-crew-name', role: 'duplicate-crew-role' } as const;
 
 const conflictResponse = (conflict: Exclude<CrewConflict, null>) => errorResponse(409, CONFLICT_ERROR_CODES[conflict]);
 

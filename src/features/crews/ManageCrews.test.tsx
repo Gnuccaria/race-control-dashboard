@@ -149,6 +149,7 @@ describe('Gestisci equipaggio: dettaglio', () => {
       championship: 'Cool1 FIE Championship',
       color: '#00A3E0',
       discordChannelId: null,
+      discordRoleId: null,
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Modifiche salvate.');
     expect(screen.getByRole('button', { name: 'Modifica' })).toBeInTheDocument();

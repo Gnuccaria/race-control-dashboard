@@ -6,7 +6,7 @@ import {
   parseCrewNumber,
   sanitizeCrewNumberInput,
   toCrewNameKey,
-  validateCrewDraft, normalizeDiscordChannelId } from './crewRules';
+  validateCrewDraft, normalizeDiscordChannelId, normalizeDiscordRoleId } from './crewRules';
 
 const COMPLETE_CREW = { name: 'Team', number: 1, carId: 1, championship: 'Cool1 FIE Championship', color: '#E10600' };
 
@@ -63,7 +63,7 @@ describe('regole equipaggio', () => {
       validateCrewDraft({ name: ' Team  Rosso ', number: 44, carId: 3, championship: 'Cool1 FIE Championship', color: '#e10600' }),
     ).toEqual({
       isValid: true,
-      crew: { name: 'Team Rosso', number: 44, carId: 3, championship: 'Cool1 FIE Championship', color: '#E10600', discordChannelId: null },
+      crew: { name: 'Team Rosso', number: 44, carId: 3, championship: 'Cool1 FIE Championship', color: '#E10600', discordChannelId: null, discordRoleId: null },
     });
   });
 
@@ -74,7 +74,7 @@ describe('regole equipaggio', () => {
     });
     expect(validateCrewDraft({ name: 'Team', number: 1 }, { areDetailsRequired: false })).toEqual({
       isValid: true,
-      crew: { name: 'Team', number: 1, carId: null, championship: null, color: null, discordChannelId: null },
+      crew: { name: 'Team', number: 1, carId: null, championship: null, color: null, discordChannelId: null, discordRoleId: null },
     });
     expect(validateCrewDraft({ name: 'Team', number: 1, carId: 'Fiat' }, { areDetailsRequired: false })).toEqual({
       isValid: false,
@@ -114,8 +114,20 @@ describe('regole equipaggio', () => {
     expect(normalizeDiscordChannelId('1234')).toBeNull();
     const crewWith = (discordChannelId: unknown) => validateCrewDraft({ ...COMPLETE_CREW, discordChannelId });
     expect(crewWith(channel)).toMatchObject({ isValid: true, crew: { discordChannelId: channel } });
-    expect(crewWith('')).toMatchObject({ isValid: true, crew: { discordChannelId: null } });
-    expect(crewWith(null)).toMatchObject({ isValid: true, crew: { discordChannelId: null } });
+    expect(crewWith('')).toMatchObject({ isValid: true, crew: { discordChannelId: null, discordRoleId: null } });
+    expect(crewWith(null)).toMatchObject({ isValid: true, crew: { discordChannelId: null, discordRoleId: null } });
     expect(crewWith('generale')).toEqual({ isValid: false, issues: { discordChannelId: 'invalid' } });
+  });
+
+  it('ruolo Discord facoltativo: ID o menzione del ruolo, altrimenti non valido', () => {
+    const role = '1571641908688588963';
+    expect(normalizeDiscordRoleId(` ${role} `)).toBe(role);
+    expect(normalizeDiscordRoleId(`<@&${role}>`)).toBe(role);
+    expect(normalizeDiscordRoleId('#16 Vez Team Lime')).toBeNull();
+    expect(normalizeDiscordRoleId(`<@${role}>`)).toBeNull();
+    const crewWith = (discordRoleId: unknown) => validateCrewDraft({ ...COMPLETE_CREW, discordRoleId });
+    expect(crewWith(role)).toMatchObject({ isValid: true, crew: { discordRoleId: role } });
+    expect(crewWith('')).toMatchObject({ isValid: true, crew: { discordRoleId: null } });
+    expect(crewWith('@Vez')).toEqual({ isValid: false, issues: { discordRoleId: 'invalid' } });
   });
 });

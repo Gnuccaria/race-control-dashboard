@@ -7,6 +7,7 @@ export type ApiErrorCode =
   | 'invalid-crew'
   | 'duplicate-crew-number'
   | 'duplicate-crew-name'
+  | 'duplicate-crew-role'
   | 'crew-in-race-results'
   | 'invalid-race'
   | 'duplicate-race-round'

@@ -37,6 +37,7 @@ export function useCreateCrew() {
       championship: readTextField(formData, CREW_FORM_FIELDS.championship),
       color: readTextField(formData, CREW_FORM_FIELDS.color),
       discordChannelId: readTextField(formData, CREW_FORM_FIELDS.discordChannelId),
+      discordRoleId: readTextField(formData, CREW_FORM_FIELDS.discordRoleId),
     });
     if (!validation.isValid) return { status: 'failed', errorKind: 'invalid-crew' };
 

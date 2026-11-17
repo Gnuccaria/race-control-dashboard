@@ -1,7 +1,7 @@
 import { type CrewDraft, type SavedCrew, toCrewNameKey } from '../../../shared/crewRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
-export type CrewConflict = 'number' | 'name' | null;
+export type CrewConflict = 'number' | 'name' | 'role' | null;
 
 interface CrewRow {
   readonly id: number;
@@ -11,10 +11,11 @@ interface CrewRow {
   readonly championship: CrewDraft['championship'];
   readonly color: string | null;
   readonly discord_channel_id: string | null;
+  readonly discord_role_id: string | null;
   readonly created_at: string;
 }
 
-const CREW_COLUMNS = 'id, name, number, car_id, championship, color, discord_channel_id, created_at';
+const CREW_COLUMNS = 'id, name, number, car_id, championship, color, discord_channel_id, discord_role_id, created_at';
 
 const toSavedCrew = (row: CrewRow): SavedCrew => ({
   id: row.id,
@@ -24,6 +25,7 @@ const toSavedCrew = (row: CrewRow): SavedCrew => ({
   championship: row.championship,
   color: row.color,
   discordChannelId: row.discord_channel_id,
+  discordRoleId: row.discord_role_id,
   createdAt: row.created_at,
 });
 
@@ -38,7 +40,7 @@ export async function findCrewById(database: SqlDatabase, crewId: number): Promi
 }
 
 /**
- * Controlla prima il numero, poi il nome (senza distinguere maiuscole e minuscole).
+ * Controlla prima il numero, poi il nome (senza distinguere maiuscole e minuscole), poi il ruolo Discord.
  * In modifica si passa l'id dell'equipaggio stesso, che non è in conflitto con sé.
  */
 export async function findCrewConflict(database: SqlDatabase, crew: CrewDraft, excludedCrewId = -1): Promise<CrewConflict> {
@@ -52,17 +54,24 @@ export async function findCrewConflict(database: SqlDatabase, crew: CrewDraft, e
     .prepare('SELECT id FROM crews WHERE name_key = ? AND id <> ?')
     .bind(toCrewNameKey(crew.name), excludedCrewId)
     .first();
-  return sameName ? 'name' : null;
+  if (sameName) return 'name';
+
+  if (!crew.discordRoleId) return null;
+  const sameRole = await database
+    .prepare('SELECT id FROM crews WHERE discord_role_id = ? AND id <> ?')
+    .bind(crew.discordRoleId, excludedCrewId)
+    .first();
+  return sameRole ? 'role' : null;
 }
 
 export async function insertCrew(database: SqlDatabase, crew: CrewDraft, createdByDiscordId: string): Promise<SavedCrew> {
   const insertedRow = await database
     .prepare(
-      `INSERT INTO crews (name, name_key, number, car_id, championship, color, discord_channel_id, created_by_discord_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO crews (name, name_key, number, car_id, championship, color, discord_channel_id, discord_role_id, created_by_discord_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        RETURNING ${CREW_COLUMNS}`,
     )
-    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, createdByDiscordId)
+    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, createdByDiscordId)
     .first<CrewRow>();
 
   if (!insertedRow) throw new Error('Il database non ha restituito l’equipaggio inserito.');
@@ -73,11 +82,12 @@ export async function insertCrew(database: SqlDatabase, crew: CrewDraft, created
 export async function updateCrew(database: SqlDatabase, crewId: number, crew: CrewDraft): Promise<SavedCrew | null> {
   const updatedRow = await database
     .prepare(
-      `UPDATE crews SET name = ?, name_key = ?, number = ?, car_id = ?, championship = ?, color = ?, discord_channel_id = ?
+      `UPDATE crews SET name = ?, name_key = ?, number = ?, car_id = ?, championship = ?, color = ?, discord_channel_id = ?,
+         discord_role_id = ?
        WHERE id = ?
        RETURNING ${CREW_COLUMNS}`,
     )
-    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, crewId)
+    .bind(crew.name, toCrewNameKey(crew.name), crew.number, crew.carId, crew.championship, crew.color, crew.discordChannelId ?? null, crew.discordRoleId ?? null, crewId)
     .first<CrewRow>();
   return updatedRow ? toSavedCrew(updatedRow) : null;
 }
