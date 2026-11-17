@@ -70,30 +70,72 @@ export function mergeCarSources(official: readonly OfficialCar[], bop: readonly 
   };
 }
 
+/** Chiave del nome come la confronta l'indice unico cars_by_name (costruttore e modello, senza badare a maiuscole). */
+const nameIndexKey = (car: Pick<CarDraft, 'manufacturer' | 'model'>) => `${car.manufacturer.toLowerCase()}|${(car.model ?? '').toLowerCase()}`;
+
+/** Suffisso per un'auto salvata che resta (usata) ma il cui nome serve a una vettura dei siti. */
+const OLD_CAR_SUFFIX = '(vecchia)';
+
+export type CarRefreshPlan = CatalogSyncPlan<RefreshedCar, StoredCar> & {
+  /** Auto che restano ma cambiano modello, perché il loro nome è preso da una vettura dei siti. */
+  readonly renamedKept: readonly { readonly existing: StoredCar; readonly model: string }[];
+};
+
 /**
  * Confronto con le auto salvate, senza perdere i collegamenti con equipaggi e gare: un'auto si ritrova dall'id del
- * catalogo ufficiale; quelle di prima (senza id) dal nome, anche più corto ("Ferrari 296 GT3" = "Ferrari 296 GT3 '23",
- * se è l'unica così). Le auto non più nei siti si eliminano, tranne quelle usate, che restano.
+ * catalogo ufficiale; quelle di prima (senza id) prima dal nome uguale, poi dal nome più corto ("Ferrari 296 GT3" =
+ * "Ferrari 296 GT3 '23", se è l'unica così). Le auto non più nei siti si eliminano, tranne quelle usate, che restano:
+ * se il loro nome serve a una vettura dei siti diventano "… (vecchia)", perché due auto non possono avere lo stesso nome.
  */
-export function planCarRefresh(cars: readonly RefreshedCar[], stored: readonly StoredCar[]): CatalogSyncPlan<RefreshedCar, StoredCar> {
-  return planCatalogSync(
+export function planCarRefresh(cars: readonly RefreshedCar[], stored: readonly StoredCar[]): CarRefreshPlan {
+  const namesOf = (car: RefreshedCar) => [compactName(car.fullName), compactName(formatCarName(car))];
+  // Prima passata: le auto di prima con lo stesso nome di una sola vettura dei siti (non ancora presa).
+  const claimed = new Set(stored.flatMap((car) => (car.sourceId ? [car.sourceId] : [])));
+  const exactKeyByStoredId = new Map<number, string>();
+  for (const storedCar of stored) {
+    if (storedCar.sourceId) continue;
+    const storedName = compactName(formatCarName(storedCar));
+    const exact = cars.filter((car) => !claimed.has(car.officialId) && namesOf(car).includes(storedName));
+    if (exact.length === 1 && exact[0]) {
+      claimed.add(exact[0].officialId);
+      exactKeyByStoredId.set(storedCar.id, `source:${exact[0].officialId}`);
+    }
+  }
+  const plan = planCatalogSync(
     cars,
     stored,
     (car) => `source:${car.officialId}`,
-    (car) => (car.sourceId ? `source:${car.sourceId}` : `stored:${car.id}`),
+    (car) => (car.sourceId ? `source:${car.sourceId}` : (exactKeyByStoredId.get(car.id) ?? `stored:${car.id}`)),
+    // Seconda passata: nome più corto, se il candidato è unico.
     (storedCar, unmatched) => {
       if (storedCar.sourceId) return undefined;
       const storedName = compactName(formatCarName(storedCar));
-      const candidates = unmatched.filter((car) => [compactName(car.fullName), compactName(formatCarName(car))].some((name) => name.startsWith(storedName)));
-      const exact = candidates.filter((car) => compactName(car.fullName) === storedName || compactName(formatCarName(car)) === storedName);
-      if (exact.length === 1) return exact[0];
+      const candidates = unmatched.filter((car) => namesOf(car).some((name) => name.startsWith(storedName)));
       return candidates.length === 1 ? candidates[0] : undefined;
     },
   );
+
+  const takenNames = new Set([...plan.inserts, ...plan.updates.map(({ draft }) => draft)].map(nameIndexKey));
+  const renamedKept: { existing: StoredCar; model: string }[] = [];
+  for (const existing of plan.kept) {
+    if (!takenNames.has(nameIndexKey(existing))) {
+      takenNames.add(nameIndexKey(existing));
+      continue;
+    }
+    // Il modello resta entro i 64 caratteri ammessi anche con il suffisso.
+    const baseModel = (existing.model ?? '').slice(0, 50).trim();
+    let model = `${baseModel} ${OLD_CAR_SUFFIX}`.trim();
+    for (let copy = 2; takenNames.has(nameIndexKey({ manufacturer: existing.manufacturer, model })); copy += 1) {
+      model = `${baseModel} ${OLD_CAR_SUFFIX.replace(')', ` ${copy})`)}`.trim();
+    }
+    takenNames.add(nameIndexKey({ manufacturer: existing.manufacturer, model }));
+    renamedKept.push({ existing, model });
+  }
+  return { ...plan, renamedKept };
 }
 
 export function describeCarRefresh(
-  plan: CatalogSyncPlan<RefreshedCar, StoredCar>,
+  plan: CarRefreshPlan,
   merged: ReturnType<typeof mergeCarSources>,
   bopVersion: string | null,
 ): CarRefreshPreview & { readonly skipped: readonly string[] } {
@@ -121,7 +163,10 @@ export function describeCarRefresh(
     inserted: plan.inserts.map(formatCarName),
     updated,
     deleted: plan.deletes.map(formatCarName),
-    kept: plan.kept.map(formatCarName),
+    kept: plan.kept.map((existing) => {
+      const renamed = plan.renamedKept.find((entry) => entry.existing.id === existing.id);
+      return renamed ? `${formatCarName(existing)} → ${formatCarName({ manufacturer: existing.manufacturer, model: renamed.model })}` : formatCarName(existing);
+    }),
     unmatchedOfficial: merged.unmatchedOfficial,
     unmatchedBop: merged.unmatchedBop,
     skipped: merged.skipped,
@@ -218,9 +263,10 @@ const SET_FROM_CHANGED = CAR_COLUMNS.map(([column]) => `${column} = changed.${co
 /**
  * Applica il piano in un'unica transazione, con poche istruzioni (i dati passano come JSON: D1 limita il numero di
  * istruzioni e di parametri): eliminazioni, nomi provvisori (così due auto che si scambiano il nome non si
- * scontrano sull'indice unico), aggiornamenti, inserimenti, abbinamenti scelti a mano.
+ * scontrano sull'indice unico), auto che restano rinominate "… (vecchia)", aggiornamenti, inserimenti, abbinamenti
+ * scelti a mano.
  */
-export async function applyCarRefresh(database: SqlDatabase, plan: CatalogSyncPlan<RefreshedCar, StoredCar>, requestedMatches: readonly CarSourceMatch[]): Promise<void> {
+export async function applyCarRefresh(database: SqlDatabase, plan: CarRefreshPlan, requestedMatches: readonly CarSourceMatch[]): Promise<void> {
   const deletedIds = JSON.stringify(plan.deletes.map((car) => car.id));
   const updates = JSON.stringify(plan.updates.map(({ existing, draft }) => carJson(draft, existing.id)));
   const inserts = JSON.stringify(plan.inserts.map((car) => carJson(car)));
@@ -228,6 +274,10 @@ export async function applyCarRefresh(database: SqlDatabase, plan: CatalogSyncPl
     database.prepare('DELETE FROM car_championships WHERE car_id IN (SELECT value FROM json_each(?))').bind(deletedIds),
     database.prepare('DELETE FROM cars WHERE id IN (SELECT value FROM json_each(?))').bind(deletedIds),
     database.prepare("UPDATE cars SET manufacturer = '~' || id, source_id = NULL WHERE id IN (SELECT json_extract(value, '$.id') FROM json_each(?))").bind(updates),
+    // Le auto che restano ma lasciano il nome a una vettura dei siti diventano "… (vecchia)".
+    database
+      .prepare("UPDATE cars SET model = json_extract(renamed.value, '$.model') FROM json_each(?) AS renamed WHERE cars.id = json_extract(renamed.value, '$.id')")
+      .bind(JSON.stringify(plan.renamedKept.map(({ existing, model }) => ({ id: existing.id, model })))),
     database
       .prepare(`UPDATE cars SET ${SET_FROM_CHANGED} FROM (SELECT json_extract(value, '$.id') AS id, ${VALUES_FROM_JSON} FROM json_each(?)) AS changed WHERE cars.id = changed.id`)
       .bind(updates),

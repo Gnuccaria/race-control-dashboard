@@ -133,6 +133,21 @@ describe('POST /cars/refresh', () => {
     expect((await call({ matches: [{ officialId: 'nope', bopKey: null }] })).status).toBe(400);
   });
 
+  it("un'auto usata che resta ma ha il nome di una vettura dei siti diventa \"(vecchia)\" e il salvataggio riesce", async () => {
+    // L'auto 2 ha già l'id del catalogo ufficiale di car1, con un altro nome; l'auto 1, usata, ha già il nome di car1.
+    await env.CREWS_DB.prepare("UPDATE cars SET model = 'R8 LMS Evo ''19' WHERE id = 1").run();
+    await env.CREWS_DB.prepare("UPDATE cars SET manufacturer = 'Audi', model = 'R8 vecchio nome', source_id = 'car1' WHERE id = 2").run();
+    const handleRequest = createApp((accessToken) => Promise.resolve(MEMBERSHIPS[accessToken] ?? { status: 'invalid-token' }));
+    await handleRequest(sendJson('POST', '/crews', { name: 'Alfa', number: 1, ...crewDetails(1) }, 'token-organization'), env);
+
+    const { status, body } = await call({ apply: true });
+    expect(status).toBe(200);
+    expect(body.preview.kept).toEqual(["Audi R8 LMS Evo '19 → Audi R8 LMS Evo '19 (vecchia)"]);
+    const cars = await listCars();
+    expect(cars.find((car) => car.id === 1)).toMatchObject({ manufacturer: 'Audi', model: "R8 LMS Evo '19 (vecchia)" });
+    expect(cars.find((car) => car.id === 2)).toMatchObject({ manufacturer: 'Audi', model: "R8 LMS Evo '19", limiter: 79 });
+  });
+
   it('ricalcolo e salvataggio con refetch: false riusano i dati scaricati, senza riscaricare i siti', async () => {
     const requested: string[] = [];
     const sites = fakeSites();
