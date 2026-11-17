@@ -17,13 +17,16 @@ async function callSiteAuth<Value>(path: string, init: RequestInit): Promise<Sit
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/public/discord/${path}`, { ...init, headers: { Accept: 'application/json', ...init.headers } });
-  } catch {
+  } catch (requestError) {
+    // La richiesta al server del sito non è arrivata o è stata interrotta (non è una risposta di Discord).
+    console.warn(`Richiesta di accesso /public/discord/${path} non riuscita`, requestError);
     return { isSuccess: false, errorCode: 'discord-unavailable' };
   }
   if (response.status === 204) return { isSuccess: true, value: undefined as Value };
   const body = (await response.json().catch(() => null)) as { error?: { code?: unknown } } | null;
   if (response.ok && body) return { isSuccess: true, value: body as Value };
   const code = body?.error?.code;
+  console.warn(`Accesso /public/discord/${path}: risposta ${response.status}`, code ?? '');
   if (isKnownErrorCode(code)) return { isSuccess: false, errorCode: code };
   if (response.status === 404 || response.status === 405) return { isSuccess: false, errorCode: 'server-outdated' };
   return { isSuccess: false, errorCode: 'unexpected' };

@@ -109,7 +109,10 @@ async function fetchSiteMemberFromDiscord(discordFetch: DiscordFetch, env: Env, 
 
   const member = (await memberResponse.json()) as DiscordGuildMember;
   const user = member.user;
-  if (!user?.id || !user.username) throw new SiteAuthError(503, 'discord-unavailable');
+  if (!user?.id || !user.username) {
+    console.warn('Discord ha risposto senza i dati dell’utente su /users/@me/guilds/:server/member');
+    throw new SiteAuthError(503, 'discord-unavailable');
+  }
   return {
     profile: {
       id: user.id,
@@ -238,7 +241,11 @@ export function createSiteAuthHandlers(discordFetch: DiscordFetch = fetch) {
     try {
       return await work();
     } catch (handlerError) {
-      if (handlerError instanceof SiteAuthError) return siteAuthError(handlerError);
+      if (handlerError instanceof SiteAuthError) {
+        // Nei log del Worker (npx wrangler tail) l'esito vero dell'accesso, senza token né dati personali.
+        console.warn(`Accesso al sito non riuscito: ${handlerError.status} ${handlerError.code}`);
+        return siteAuthError(handlerError);
+      }
       throw handlerError;
     }
   };
