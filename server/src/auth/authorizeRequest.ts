@@ -10,6 +10,7 @@ export const checkMembershipWithDiscord: MembershipChecker = (accessToken, env) 
     organizationRoleId: env.DISCORD_ORGANIZATION_ROLE_ID,
     raceControlRoleId: env.DISCORD_REQUIRED_ROLE_ID,
     stewardsRoleId: env.DISCORD_STEWARDS_ROLE_ID,
+    botToken: env.DISCORD_BOT_TOKEN,
   });
 
 /**

@@ -120,20 +120,20 @@ describe('verifica del ruolo su Discord', () => {
   });
 
   it('riconosce un membro con il ruolo', async () => {
-    const fetchFromDiscord = discordAnswering(200, { user: { id: 'discord-42' }, roles: [REQUIRED_ROLE_ID] });
+    const fetchFromDiscord = discordAnswering(200, { user: { id: 'discord-42', username: 'niko' }, roles: [REQUIRED_ROLE_ID] });
     expect(await checkDiscordMembership('token-a', settings, fetchFromDiscord)).toEqual({
       status: 'member-with-role',
       discordUserId: 'discord-42',
       access: { organization: false, raceControl: true, stewards: false },
     });
-    const steward = discordAnswering(200, { user: { id: 'discord-44' }, roles: ['role-stewards'] });
+    const steward = discordAnswering(200, { user: { id: 'discord-44', username: 'luca' }, roles: ['role-stewards'] });
     expect(await checkDiscordMembership('token-s', settings, steward)).toMatchObject({ access: { organization: false, raceControl: false, stewards: true } });
-    const organizer = discordAnswering(200, { user: { id: 'discord-45' }, roles: ['role-organization'] });
+    const organizer = discordAnswering(200, { user: { id: 'discord-45', username: 'eva' }, roles: ['role-organization'] });
     expect(await checkDiscordMembership('token-o', settings, organizer)).toMatchObject({ access: { organization: true, raceControl: false, stewards: false } });
   });
 
   it('distingue ruolo mancante, token non valido e utente fuori dal server', async () => {
-    expect(await checkDiscordMembership('token-b', settings, discordAnswering(200, { user: { id: '1' }, roles: [] }))).toEqual({
+    expect(await checkDiscordMembership('token-b', settings, discordAnswering(200, { user: { id: '1', username: 'ale' }, roles: [] }))).toEqual({
       status: 'missing-role',
     });
     expect(await checkDiscordMembership('token-c', settings, discordAnswering(401))).toEqual({ status: 'invalid-token' });
@@ -144,7 +144,7 @@ describe('verifica del ruolo su Discord', () => {
     let discordRequests = 0;
     const countingFetch = () => {
       discordRequests += 1;
-      return Promise.resolve(new Response(JSON.stringify({ user: { id: '1' }, roles: [REQUIRED_ROLE_ID] }), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify({ user: { id: '1', username: 'ale' }, roles: [REQUIRED_ROLE_ID] }), { status: 200 }));
     };
 
     await checkDiscordMembership('token-e', settings, countingFetch);

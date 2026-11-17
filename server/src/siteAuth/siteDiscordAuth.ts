@@ -2,7 +2,8 @@ import { SITE_DISCORD_CALLBACK_PATH, type SiteAuthErrorCode, type SiteSession, t
 import type { Env } from '../env';
 import { jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
-import { describeDiscordFailure, fetchWithDiscordRetry, hashToken, MEMBER_READ_RETRY } from '../discord/discordRateLimit';
+import { describeDiscordFailure, fetchWithDiscordRetry, hashToken } from '../discord/discordRateLimit';
+import { lookupGuildMember } from '../discord/guildMemberLookup';
 
 /**
  * Accesso con Discord per il sito pubblico. Il server fa da tramite verso Discord (il browser non può chiamare
@@ -26,12 +27,6 @@ interface DiscordTokenResponse {
   readonly access_token: string;
   readonly refresh_token: string;
   readonly expires_in: number;
-}
-
-interface DiscordGuildMember {
-  readonly nick?: string | null;
-  readonly roles?: readonly string[];
-  readonly user?: { readonly id: string; readonly username: string; readonly global_name?: string | null; readonly avatar?: string | null };
 }
 
 class SiteAuthError extends Error {
@@ -88,39 +83,19 @@ export interface SiteMember {
 }
 
 async function fetchSiteMemberFromDiscord(discordFetch: DiscordFetch, env: Env, accessToken: string): Promise<SiteMember> {
-  let memberResponse: Response;
-  try {
-    memberResponse = await fetchWithDiscordRetry(
-      discordFetch,
-      `${DISCORD_API_URL}/users/@me/guilds/${env.DISCORD_GUILD_ID}/member`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-      MEMBER_READ_RETRY,
-    );
-  } catch {
-    console.warn('Discord non raggiungibile su /users/@me/guilds/:server/member');
-    throw new SiteAuthError(503, 'discord-unavailable');
-  }
-  if (memberResponse.status === 401) throw new SiteAuthError(401, 'invalid-grant');
-  if (memberResponse.status === 404 || memberResponse.status === 403) throw new SiteAuthError(403, 'not-guild-member');
-  if (!memberResponse.ok) {
-    console.warn(describeDiscordFailure(memberResponse, '/users/@me/guilds/:server/member'));
-    throw new SiteAuthError(503, 'discord-unavailable');
-  }
-
-  const member = (await memberResponse.json()) as DiscordGuildMember;
-  const user = member.user;
-  if (!user?.id || !user.username) {
-    console.warn('Discord ha risposto senza i dati dell’utente su /users/@me/guilds/:server/member');
-    throw new SiteAuthError(503, 'discord-unavailable');
-  }
+  const lookup = await lookupGuildMember(discordFetch, { guildId: env.DISCORD_GUILD_ID, botToken: env.DISCORD_BOT_TOKEN }, accessToken);
+  if (lookup.status === 'invalid-token') throw new SiteAuthError(401, 'invalid-grant');
+  if (lookup.status === 'not-member') throw new SiteAuthError(403, 'not-guild-member');
+  if (lookup.status === 'unavailable') throw new SiteAuthError(503, 'discord-unavailable');
+  const { user, nick, roles } = lookup;
   return {
     profile: {
       id: user.id,
       username: user.username,
-      displayName: member.nick || user.global_name || user.username,
+      displayName: nick || user.global_name || user.username,
       avatarUrl: avatarUrl(user.id, user.avatar),
     },
-    roleIds: member.roles ?? [],
+    roleIds: roles,
   };
 }
 

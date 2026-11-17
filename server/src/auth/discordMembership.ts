@@ -4,9 +4,9 @@
  * manomessa, il server no.
  */
 
-import { describeDiscordFailure, fetchWithDiscordRetry, hashToken, MEMBER_READ_RETRY } from '../discord/discordRateLimit';
+import { hashToken } from '../discord/discordRateLimit';
+import { lookupGuildMember } from '../discord/guildMemberLookup';
 
-const DISCORD_API_URL = 'https://discord.com/api/v10';
 const VERIFIED_MEMBERSHIP_TTL_MS = 5 * 60 * 1000;
 
 /** Quali parti dell'app può usare: Gestisci campionato, strumenti della Direzione Gara, strumenti dei Commissari. */
@@ -30,11 +30,8 @@ interface MembershipSettings {
   readonly raceControlRoleId: string;
   /** Ruolo Commissari Sportivi. */
   readonly stewardsRoleId: string;
-}
-
-interface DiscordGuildMember {
-  readonly user?: { readonly id?: string };
-  readonly roles?: readonly string[];
+  /** Token del bot: i ruoli si leggono con il bot invece che con il token dell'utente (vedi guildMemberLookup). */
+  readonly botToken?: string;
 }
 
 /**
@@ -46,7 +43,7 @@ const verifiedMemberships = new Map<string, { readonly discordUserId: string; re
 
 export async function checkDiscordMembership(
   accessToken: string,
-  { guildId, organizationRoleId, raceControlRoleId, stewardsRoleId }: MembershipSettings,
+  { guildId, organizationRoleId, raceControlRoleId, stewardsRoleId, botToken }: MembershipSettings,
   fetchFromDiscord: typeof fetch = fetch,
 ): Promise<MembershipCheck> {
   const tokenHash = await hashToken(accessToken);
@@ -55,35 +52,19 @@ export async function checkDiscordMembership(
     return { status: 'member-with-role', discordUserId: cachedMembership.discordUserId, access: cachedMembership.access };
   }
 
-  let memberResponse: Response;
-  try {
-    memberResponse = await fetchWithDiscordRetry(
-      fetchFromDiscord,
-      `${DISCORD_API_URL}/users/@me/guilds/${guildId}/member`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-      MEMBER_READ_RETRY,
-    );
-  } catch {
-    console.warn('Discord non raggiungibile su /users/@me/guilds/:server/member (app)');
-    return { status: 'discord-unavailable' };
-  }
+  const lookup = await lookupGuildMember(fetchFromDiscord, { guildId, botToken }, accessToken);
+  if (lookup.status === 'invalid-token') return { status: 'invalid-token' };
+  if (lookup.status === 'not-member') return { status: 'missing-role' };
+  if (lookup.status === 'unavailable') return { status: 'discord-unavailable' };
 
-  if (memberResponse.status === 401) return { status: 'invalid-token' };
-  if (memberResponse.status === 404 || memberResponse.status === 403) return { status: 'missing-role' };
-  if (!memberResponse.ok) {
-    console.warn(`${describeDiscordFailure(memberResponse, '/users/@me/guilds/:server/member')} (app)`);
-    return { status: 'discord-unavailable' };
-  }
-
-  const guildMember = (await memberResponse.json()) as DiscordGuildMember;
-  const discordUserId = guildMember.user?.id;
-  const roles = guildMember.roles ?? [];
+  const discordUserId = lookup.user.id;
+  const { roles } = lookup;
   const access: AppAccess = {
     organization: roles.includes(organizationRoleId),
     raceControl: roles.includes(raceControlRoleId),
     stewards: roles.includes(stewardsRoleId),
   };
-  if (!discordUserId || (!access.organization && !access.raceControl && !access.stewards)) return { status: 'missing-role' };
+  if (!access.organization && !access.raceControl && !access.stewards) return { status: 'missing-role' };
 
   verifiedMemberships.set(tokenHash, { discordUserId, access, expiresAt: Date.now() + VERIFIED_MEMBERSHIP_TTL_MS });
   return { status: 'member-with-role', discordUserId, access };
