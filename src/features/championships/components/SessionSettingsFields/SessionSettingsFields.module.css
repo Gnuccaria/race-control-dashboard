@@ -1,0 +1,115 @@
+.sections {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Barra della sezione con il titolo al centro, come nella creazione della stanza del gioco. */
+.sectionTitle {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+/* Due colonne riempite riga per riga: stesso ordine del gioco. Su schermi stretti una sola. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (width < 48rem) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-group);
+  background: var(--color-surface);
+}
+
+.cardLabel {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Riga di una sessione: "Gara" o "Qualifica" a sinistra, il comando a destra, l'eventuale errore sotto. */
+.sessionRow {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.sessionTag {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.error {
+  grid-column: 2;
+  color: var(--color-text-error);
+  font-size: var(--font-size-small);
+}
+
+.unavailable,
+.locked {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--control-height);
+  color: var(--color-text-muted);
+}
+
+.locked {
+  font-weight: var(--font-weight-semibold);
+}
+
+.range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto);
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--control-height);
+}
+
+.slider {
+  inline-size: 100%;
+  accent-color: var(--color-text);
+}
+
+.rangeValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-semibold);
+  text-align: end;
+}
+
+.compounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-block-size: var(--control-height);
+  align-items: center;
+}

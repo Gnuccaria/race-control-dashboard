@@ -5,7 +5,7 @@ import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDataba
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readIdList } from '../http/readIdList';
-import { readJsonBody } from '../http/readJsonBody';
+import { MAX_CHAMPIONSHIP_BODY_BYTES, readJsonBody } from '../http/readJsonBody';
 import {
   countChampionshipRaces,
   deleteChampionships,
@@ -22,7 +22,7 @@ type ChampionshipDraftReading = { readonly championship: ChampionshipDraft } | {
 
 /** Corpo della richiesta → campionato convalidato con le regole dell'app; le vetture devono essere del catalogo. */
 async function readChampionshipDraft(request: Request, database: SqlDatabase): Promise<ChampionshipDraftReading> {
-  const requestBody = await readJsonBody(request);
+  const requestBody = await readJsonBody(request, MAX_CHAMPIONSHIP_BODY_BYTES);
   if (requestBody === undefined) return { errorResponse: errorResponse(400, 'invalid-request') };
   const validation = validateChampionshipDraft(requestBody);
   if (!validation.isValid) return { errorResponse: errorResponse(422, 'invalid-championship', validation.issues) };

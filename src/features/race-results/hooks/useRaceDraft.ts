@@ -1,4 +1,4 @@
-import { championshipDurations, driverSwapCountOf, onlyDurationOf } from '@shared/championshipRules';
+import { addMinutesToClock, type Championship, championshipDurations, driverSwapCountOf, onlyDurationOf } from '@shared/championshipRules';
 import { type CrewChampionship, crewCarIn, type SavedCrew } from '@shared/crewRules';
 import { DRIVER_SWAP_NOTES_MAX_LENGTH, normalizeTimestampText, sanitizeTimestampInput } from '@shared/driverSwapRules';
 import {
@@ -7,6 +7,7 @@ import {
   sanitizeLapsInput,
   sanitizeRoundInput,
 } from '@shared/raceRules';
+import { isRaceTime, raceEndAfter } from '@shared/raceSchedule';
 import { useState } from 'react';
 import { useChampionships } from '@/features/championships/useChampionships';
 import type { TrackChoice } from '@/features/tracks/model/trackSelection';
@@ -36,16 +37,38 @@ const clearPositionValues = (values: RaceDraftValues, position: number): RaceDra
 const crewIdsWithRows = (driverSwap: DriverSwapValues): number[] =>
   [...new Set(driverSwap.rowsBySwap.flatMap((swapRows) => Object.keys(swapRows).map(Number)))].sort((first, second) => first - second);
 
+/** Fine della gara dall'inizio e dalla durata: con la data anche il giorno di fine, senza solo l'ora. */
+function withComputedEnd(values: RaceDraftValues): RaceDraftValues {
+  if (values.duration === '' || !isRaceTime(values.startTime)) return values;
+  const hours = Number(values.duration);
+  const end = values.raceDate === '' ? null : raceEndAfter(values.raceDate, values.startTime, hours);
+  return end ? { ...values, ...end } : { ...values, endTime: addMinutesToClock(values.startTime, hours * 60) };
+}
+
+/** Gara nuova: scelta la durata, l'orario di partenza del campionato per quella durata (se c'è) e la fine calcolata. */
+function withSuggestedSchedule(values: RaceDraftValues, championships: readonly Championship[]): RaceDraftValues {
+  const startTime = championshipDurations(championships, values.championship).find((duration) => String(duration.hours) === values.duration)?.startTime;
+  return withComputedEnd(startTime ? { ...values, startTime } : values);
+}
+
+interface RaceDraftOptions {
+  /** Gara nuova: orari proposti dal campionato e fine calcolata da inizio e durata. */
+  readonly suggestsSchedule?: boolean;
+}
+
 /**
  * Stato del form di una gara (nuova o esistente). Il round viene ripulito a ogni battitura
  * (solo cifre); validità ed errori sono derivati durante il render da checkRaceDraft.
  * allCrews (quando letti dal server) servono a sapere quale vettura verrà salvata in ogni riga.
  */
-export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES, allCrews?: readonly SavedCrew[]) {
+export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES, allCrews?: readonly SavedCrew[], { suggestsSchedule = false }: RaceDraftOptions = {}) {
   const [values, setValues] = useState<RaceDraftValues>(initialValues);
   // Campionati dal server: durate possibili e, dagli stint, quanti cambi pilota ha la gara.
   const championshipCatalog = useChampionships();
   const { championships } = championshipCatalog;
+  const suggestSchedule = (next: RaceDraftValues, previous: RaceDraftValues): RaceDraftValues =>
+    suggestsSchedule && next.duration !== '' && (next.duration !== previous.duration || next.championship !== previous.championship) ? withSuggestedSchedule(next, championships) : next;
+  const computeEnd = (next: RaceDraftValues): RaceDraftValues => (suggestsSchedule ? withComputedEnd(next) : next);
   // Auto attuale di ogni equipaggio nel campionato della gara (senza campionato, nessuna).
   const currentCarIdByCrewId = allCrews && new Map(allCrews.map((crew) => [crew.id, values.championship === '' ? null : crewCarIn(crew, values.championship)]));
   // Cambi pilota: tante tabelle quanti i cambi della durata (stint − 1), una riga per equipaggio del campionato.
@@ -78,13 +101,13 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
       setValues((previousValues) => ({ ...previousValues, totalLapsText: sanitizeLapsInput(rawTotalLaps) }));
     },
     changeDuration: (duration: string) => {
-      setValues((previousValues) => ({ ...previousValues, duration }));
+      setValues((previousValues) => suggestSchedule({ ...previousValues, duration }, previousValues));
     },
     /** Cambiando campionato si tolgono dalla classifica gli equipaggi che non vi partecipano. */
     changeChampionship: (championship: CrewChampionship, allCrews: readonly SavedCrew[]) => {
       setValues((previousValues) => {
         const crewIdByPosition = keepChampionshipCrews(previousValues.crewIdByPosition, findChampionshipCrews(allCrews, championship));
-        return {
+        return suggestSchedule({
           ...previousValues,
           championship,
           // Resta la durata scelta se il nuovo campionato la prevede; con una sola durata possibile si sceglie da sola.
@@ -100,7 +123,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
           gapTextByPosition: previousValues.gapTextByPosition.map((gapText, index) => (crewIdByPosition[index] === null ? '' : gapText)),
           // I cambi pilota sono per vettura (e numero di cambi) del campionato: con un altro campionato si riparte da zero.
           driverSwap: { rowsBySwap: [] },
-        };
+        }, previousValues);
       });
     },
     changeRound: (typedValue: string) => {
@@ -111,13 +134,16 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
     },
     changeRaceDate: (raceDate: string) => {
       // La data di fine segue quella di inizio finché non se ne sceglie una diversa (gare che finiscono lo stesso giorno).
-      setValues((previousValues) => ({
-        ...previousValues,
-        raceDate,
-        endDate: previousValues.endDate === '' || previousValues.endDate === previousValues.raceDate ? raceDate : previousValues.endDate,
-      }));
-    },    changeStartTime: (startTime: string) => {
-      setValues((previousValues) => ({ ...previousValues, startTime }));
+      setValues((previousValues) =>
+        computeEnd({
+          ...previousValues,
+          raceDate,
+          endDate: previousValues.endDate === '' || previousValues.endDate === previousValues.raceDate ? raceDate : previousValues.endDate,
+        }),
+      );
+    },
+    changeStartTime: (startTime: string) => {
+      setValues((previousValues) => computeEnd({ ...previousValues, startTime }));
     },
     changeEndDate: (endDate: string) => {
       setValues((previousValues) => ({ ...previousValues, endDate }));

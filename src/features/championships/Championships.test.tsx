@@ -1,5 +1,6 @@
+import { DEFAULT_SESSION_SETTINGS } from '@shared/sessionSettingsRules';
 import { TEST_CHAMPIONSHIPS } from '@shared/testChampionships';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '@/test/renderWithRouter';
@@ -13,6 +14,16 @@ vi.mock('@/features/crews/services/crewApi');
 
 const [JAPAN, FIE] = TEST_CHAMPIONSHIPS as [(typeof TEST_CHAMPIONSHIPS)[number], (typeof TEST_CHAMPIONSHIPS)[number]];
 
+type TestUser = ReturnType<typeof userEvent.setup>;
+
+/** Scheda Gestione stint: l'orario di partenza di una durata (menu delle ore e dei minuti). */
+async function chooseStartTime(user: TestUser, durationTitle: string, hour: string, minute: string) {
+  await user.click(screen.getByRole('tab', { name: /Gestione stint/ }));
+  const duration = screen.getByRole('region', { name: durationTitle });
+  await user.selectOptions(within(duration).getByRole('combobox', { name: 'Orario di partenza: Ore' }), hour);
+  await user.selectOptions(within(duration).getByRole('combobox', { name: 'Orario di partenza: Minuti' }), minute);
+}
+
 describe('Crea campionato', () => {
   beforeEach(() => {
     vi.mocked(createChampionship).mockReset();
@@ -21,7 +32,14 @@ describe('Crea campionato', () => {
   it('nome, durate con lo stint (fino a tre) e vetture ammesse con le caselle; poi salva', async () => {
     vi.mocked(createChampionship).mockResolvedValue({
       isSuccess: true,
-      value: { id: 3, name: 'GT3 Sprint', durations: [{ hours: 2, stintMinutes: 60 }], carIds: [1, 3], createdAt: '2026-11-17T00:00:00Z' },
+      value: {
+        id: 3,
+        name: 'GT3 Sprint',
+        durations: [{ hours: 2, stintMinutes: 60, startTime: '21:00' }],
+        carIds: [1, 3],
+        createdAt: '2026-11-17T00:00:00Z',
+        sessionSettings: DEFAULT_SESSION_SETTINGS,
+      },
     });
     const user = userEvent.setup();
     renderApp('/campionati/crea-campionato');
@@ -76,13 +94,62 @@ describe('Crea campionato', () => {
     await user.click(carPicker);
     await user.click(screen.getByRole('checkbox', { name: 'Porsche' }));
     expect(screen.queryByRole('textbox', { name: 'Vetture, una per riga' })).not.toBeInTheDocument();
+    // Senza l'orario di partenza non si crea: la scheda Gestione stint lo segnala.
+    expect(createButton).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Gestione stint/ })).toHaveTextContent('Gestione stint (da completare)');
+
+    // Gestione stint: per ogni durata l'orario di partenza; gli orari degli stint si calcolano da soli.
+    await chooseStartTime(user, 'Gara di 2 ore · stint da 60 minuti', '21', '30');
+    const stints = screen.getByRole('list', { name: 'Orari degli stint della gara di 2 ore' });
+    expect(within(stints).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Stint 121:30', 'Stint 222:30']);
+    expect(createButton).toBeEnabled();
+
+    // Impostazioni di sessione: la prima scelta della gara passa alla qualifica, poi la qualifica resta indipendente.
+    await user.click(screen.getByRole('tab', { name: 'Impostazioni di sessione' }));
+    expect(screen.getByRole('heading', { name: 'Impostazioni gara' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Turbo – Gara' }), 'strong');
+    expect(screen.getByRole('combobox', { name: 'Turbo – Qualifica' })).toHaveValue('strong');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Turbo – Qualifica' }), 'weak');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Turbo – Gara' }), 'off');
+    expect(screen.getByRole('combobox', { name: 'Turbo – Qualifica' })).toHaveValue('weak');
+    // Le voci senza senso in qualifica hanno solo la gara.
+    expect(screen.queryByRole('slider', { name: 'Numero minimo di soste ai box – Qualifica' })).not.toBeInTheDocument();
+    // Rifornimento solo con consumo sopra 0x, come nel gioco.
+    expect(screen.queryByRole('slider', { name: 'Velocità di rifornimento – Gara' })).not.toBeInTheDocument();
+    const fuel = screen.getByRole('slider', { name: 'Consumo carburante – Gara' });
+    expect(fuel).toHaveAttribute('aria-valuetext', 'No');
+    fireEvent.change(fuel, { target: { value: '3' } });
+    expect(fuel).toHaveAttribute('aria-valuetext', '3x');
+    expect(screen.getByRole('slider', { name: 'Velocità di rifornimento – Gara' })).toBeInTheDocument();
+    // Gomme "Da corsa": mescole con "Tutte"; le richieste solo tra quelle utilizzabili.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Gomme utilizzabili – Gara' }), 'racing');
+    const usable = screen.getByRole('group', { name: 'Gomme e tipi utilizzabili – Gara' });
+    expect(within(usable).getByRole('checkbox', { name: 'Tutte' })).toBeChecked();
+    await user.click(within(usable).getByRole('checkbox', { name: 'Morbide' }));
+    expect(within(usable).getByRole('checkbox', { name: 'Tutte' })).not.toBeChecked();
+    const required = screen.getByRole('group', { name: 'Tipo di gomme richieste – Gara' });
+    expect(within(required).getAllByRole('checkbox').map((checkbox) => checkbox.getAttribute('aria-label') ?? checkbox.parentElement?.textContent)).toEqual([
+      'Dure',
+      'Medie',
+    ]);
+    await user.click(within(required).getByRole('checkbox', { name: 'Medie' }));
     await user.click(createButton);
 
     expect(await screen.findByText('Campionato «GT3 Sprint» creato.')).toBeInTheDocument();
-    expect(createChampionship).toHaveBeenCalledWith({ name: 'GT3 Sprint', durations: [{ hours: 2, stintMinutes: 60 }], carIds: [testCarId('Audi')] });
+    const sent = vi.mocked(createChampionship).mock.calls[0]?.[0];
+    expect(sent).toMatchObject({ name: 'GT3 Sprint', durations: [{ hours: 2, stintMinutes: 60, startTime: '21:30' }], carIds: [testCarId('Audi')] });
+    expect(sent?.sessionSettings.race).toMatchObject({
+      boost: 'off',
+      fuelConsumption: 3,
+      usableTyres: 'racing',
+      usableCompounds: ['hard', 'medium'],
+      requiredCompounds: ['medium'],
+    });
+    expect(sent?.sessionSettings.qualifying).toMatchObject({ boost: 'weak', fuelConsumption: 3, usableTyres: 'racing' });
+    expect(sent?.sessionSettings.qualifying).not.toHaveProperty('minPitStops');
     // Il form torna vuoto.
     expect(screen.getByRole('textbox', { name: 'Nome del campionato' })).toHaveValue('');
-  });
+  }, 20_000);
 
   it("mostra l'errore del server (nome già usato) e conserva i dati", async () => {
     vi.mocked(createChampionship).mockResolvedValue({ isSuccess: false, errorKind: 'duplicate-championship-name' });
@@ -93,9 +160,11 @@ describe('Crea campionato', () => {
     await user.type(screen.getByRole('textbox', { name: 'Minuti dello stint della durata 1' }), '60');
     await user.click(screen.getByRole('button', { name: 'Vetture ammesse' }));
     await user.click(await screen.findByRole('checkbox', { name: 'BMW' }));
+    await chooseStartTime(user, 'Gara di 6 ore · stint da 60 minuti', '20', '00');
     await user.click(screen.getByRole('button', { name: 'Crea campionato' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un campionato con questo nome.');
+    await user.click(screen.getByRole('tab', { name: 'Generale' }));
     expect(screen.getByRole('textbox', { name: 'Nome del campionato' })).toHaveValue('Cool1 FIE Championship');
   });
 });
@@ -169,16 +238,21 @@ describe('Gestisci campionato', () => {
     expect(screen.getByRole('button', { name: 'Togli Audi' })).toBeInTheDocument();
     expect(screen.getByText('Usate da almeno un equipaggio, non si possono togliere: Nissan.')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Audi' }));
+    // Le durate salvate prima degli orari vanno completate con l'orario di partenza.
+    expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    await chooseStartTime(user, 'Gara di 3 ore · stint da 90 minuti', '21', '00');
+    await chooseStartTime(user, 'Gara di 6 ore · stint da 120 minuti', '18', '00');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
 
     expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();
     expect(updateChampionship).toHaveBeenCalledWith(JAPAN.id, {
       name: 'Super GT',
       durations: [
-        { hours: 3, stintMinutes: 90 },
-        { hours: 6, stintMinutes: 120 },
+        { hours: 3, stintMinutes: 90, startTime: '21:00' },
+        { hours: 6, stintMinutes: 120, startTime: '18:00' },
       ],
       carIds: [testCarId('Nissan')],
+      sessionSettings: DEFAULT_SESSION_SETTINGS,
     });
   });
 });

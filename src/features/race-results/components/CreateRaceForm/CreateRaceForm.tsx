@@ -17,7 +17,7 @@ interface CreateRaceFormProps {
 export function CreateRaceForm({ crewsQuery }: CreateRaceFormProps) {
   const { messages } = useI18n();
   const formTexts = messages.races.form;
-  const raceDraft = useRaceDraft(undefined, crewsQuery.status === 'loaded' ? crewsQuery.value : undefined);
+  const raceDraft = useRaceDraft(undefined, crewsQuery.status === 'loaded' ? crewsQuery.value : undefined, { suggestsSchedule: true });
   const { createErrorKind, isCreating, submitRace } = useCreateRace();
 
   return (

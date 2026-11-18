@@ -61,6 +61,8 @@ export default defineConfig(({ mode }) => {
       restoreMocks: true,
       // Da Vitest 3 restoreMocks non azzera più le chiamate dei mock di vi.mock: le azzera clearMocks.
       clearMocks: true,
+      // Il primo test di ogni file carica tutta l'app: con i file in parallelo 5 secondi a volte non bastano.
+      testTimeout: 15_000,
       // I test del server girano con la loro configurazione (cd server && npm run test:run): usano node:sqlite.
       exclude: ['**/node_modules/**', 'server/**', 'src-tauri/**'],
     },

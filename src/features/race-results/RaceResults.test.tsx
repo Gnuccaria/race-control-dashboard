@@ -7,6 +7,8 @@ import { fetchCrews } from '@/features/crews/services/crewApi';
 import { renderApp } from '@/test/renderWithRouter';
 import { chooseTrack } from '@/test/chooseTrack';
 import { testCarId } from '@/test/testCars';
+import { TEST_CHAMPIONSHIPS } from '@shared/testChampionships';
+import { fetchChampionships } from '@/features/championships/services/championshipApi';
 import { createRace, deleteRaces, fetchRace, fetchRaces, updateRace, updateRaceDriverSwaps } from './services/raceApi';
 
 vi.mock('@/features/auth/services/desktopBridge');
@@ -272,6 +274,40 @@ describe('Nuova gara', () => {
     expect(resultRow(1)).toHaveTextContent('Senza auto');
     expect(screen.getByRole('alert')).toHaveTextContent("1 equipaggio non ha un'auto: assegnala in Gestisci equipaggio, poi torna qui.");
     expect(screen.getByRole('tab', { name: /Dettagli\s?\(contiene errori\)/ })).toBeInTheDocument();
+  });
+
+  it("scelta la durata, propone l'orario di partenza del campionato e calcola la fine", async () => {
+    // Nel Cool1 FIE le gare di 6 ore partono alle 21:00, quelle di 12 ore alle 18:30.
+    vi.mocked(fetchChampionships).mockResolvedValue({
+      isSuccess: true,
+      value: TEST_CHAMPIONSHIPS.map((championship) =>
+        championship.name === CHAMPIONSHIP
+          ? { ...championship, durations: [{ hours: 6, stintMinutes: 60, startTime: '21:00' }, { hours: 12, stintMinutes: 120, startTime: '18:30' }] }
+          : championship,
+      ),
+    });
+    const user = userEvent.setup();
+    renderApp(`${LIST_PATH}/nuova`);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
+    await user.type(screen.getByLabelText('Data di inizio'), '2026-11-08');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '6 ore');
+    expect(screen.getByRole('combobox', { name: 'Ora di inizio: Ore' })).toHaveValue('21');
+    expect(screen.getByRole('combobox', { name: 'Ora di inizio: Minuti' })).toHaveValue('00');
+    // 21:00 + 6 ore = 03:00 del giorno dopo.
+    expect(screen.getByRole('combobox', { name: 'Ora di fine: Ore' })).toHaveValue('3');
+    expect(screen.getByLabelText('Data di fine')).toHaveValue('2026-11-09');
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '12 ore');
+    expect(screen.getByRole('combobox', { name: 'Ora di inizio: Ore' })).toHaveValue('18');
+    expect(screen.getByRole('combobox', { name: 'Ora di inizio: Minuti' })).toHaveValue('30');
+    expect(screen.getByRole('combobox', { name: 'Ora di fine: Ore' })).toHaveValue('6');
+    expect(screen.getByRole('combobox', { name: 'Ora di fine: Minuti' })).toHaveValue('30');
+
+    // Cambiando l'inizio a mano, la fine si ricalcola.
+    await chooseTime(user, 'Ora di inizio', '10:00');
+    expect(screen.getByRole('combobox', { name: 'Ora di fine: Ore' })).toHaveValue('22');
+    expect(screen.getByLabelText('Data di fine')).toHaveValue('2026-11-08');
+    vi.mocked(fetchChampionships).mockResolvedValue({ isSuccess: true, value: TEST_CHAMPIONSHIPS });
   });
 
   it('mostra l’errore del server vicino al pulsante', async () => {

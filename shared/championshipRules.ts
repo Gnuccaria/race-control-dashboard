@@ -1,9 +1,14 @@
 /**
  * Regole di un campionato, condivise tra app desktop e server.
  * Un campionato ha un nome unico, da una a tre durate di gara (ore intere), ognuna con la durata dello stint
- * (minuti interi: da qui i cambi pilota attesi), e l'elenco delle vetture ammesse, scelte dal catalogo delle auto.
+ * (minuti interi: da qui i cambi pilota attesi) e l'orario di partenza (da qui gli orari di ogni stint e l'orario
+ * proposto alle gare nuove), l'elenco delle vetture ammesse, scelte dal catalogo delle auto, e le impostazioni di
+ * sessione del gioco (shared/sessionSettingsRules.ts).
  * Gare ed equipaggi si collegano al campionato con il nome: rinominarlo aggiorna anche loro.
  */
+
+import { isRaceTime } from './raceSchedule';
+import { readSessionSettings, type SessionSettings } from './sessionSettingsRules';
 
 export const CHAMPIONSHIP_NAME_MAX_LENGTH = 48;
 export const CHAMPIONSHIP_DURATIONS_MAX = 3;
@@ -19,6 +24,11 @@ export const RACE_STINTS_MAX = 12;
 export interface ChampionshipDuration {
   readonly hours: number;
   readonly stintMinutes: number;
+  /**
+   * Orario di partenza ("HH:MM", ora italiana) delle gare di questa durata: obbligatorio nei campionati salvati da ora;
+   * null (o assente) nelle durate salvate prima, finché non si modifica il campionato.
+   */
+  readonly startTime?: string | null;
 }
 
 export interface ChampionshipDraft {
@@ -27,6 +37,8 @@ export interface ChampionshipDraft {
   readonly durations: readonly ChampionshipDuration[];
   /** Vetture ammesse (id del catalogo delle auto), almeno una. */
   readonly carIds: readonly number[];
+  /** Impostazioni della stanza di gioco, per la gara e la qualifica. */
+  readonly sessionSettings: SessionSettings;
 }
 
 export interface Championship extends ChampionshipDraft {
@@ -36,6 +48,21 @@ export interface Championship extends ChampionshipDraft {
 
 /** Quanti stint ha una gara di quella durata. */
 export const stintCount = ({ hours, stintMinutes }: ChampionshipDuration): number => (hours * 60) / stintMinutes;
+
+const twoDigits = (value: number) => String(value).padStart(2, '0');
+
+/** Un orario "HH:MM" spostato di quei minuti, sull'orologio (dopo la mezzanotte si ricomincia da 00:00). */
+export function addMinutesToClock(time: string, minutes: number): string {
+  const [hours = 0, startMinutes = 0] = time.split(':').map(Number);
+  const total = (((hours * 60 + startMinutes + minutes) % 1440) + 1440) % 1440;
+  return `${twoDigits(Math.floor(total / 60))}:${twoDigits(total % 60)}`;
+}
+
+/** Orario di inizio di ogni stint: la partenza, poi una durata dello stint dopo l'altra. Vuoto senza partenza. */
+export const stintStartTimes = (duration: ChampionshipDuration): string[] =>
+  duration.startTime && isRaceTime(duration.startTime)
+    ? Array.from({ length: stintCount(duration) }, (_unused, index) => addMinutesToClock(duration.startTime as string, index * duration.stintMinutes))
+    : [];
 
 /** Cambi pilota attesi: uno in meno degli stint. */
 export const driverSwapCountFor = (duration: ChampionshipDuration): number => Math.max(0, stintCount(duration) - 1);
@@ -99,9 +126,11 @@ export function findDurationIssue(hours: unknown, stintMinutes: unknown): Champi
 export interface ChampionshipDraftIssues {
   readonly name?: ChampionshipNameIssue;
   /** required = nessuna; too-many = più di tre; repeated = stesse ore due volte; gli altri come findDurationIssue. */
-  readonly durations?: 'required' | 'too-many' | 'repeated' | 'invalid' | ChampionshipDurationIssue;
+  readonly durations?: 'required' | 'too-many' | 'repeated' | 'invalid' | ChampionshipDurationIssue | 'start-time';
   /** required = nessuna vettura; invalid = id non valido; repeated = stessa vettura due volte. */
   readonly carIds?: 'required' | 'invalid' | 'repeated';
+  /** La voce (della gara o della qualifica) senza un valore ammesso. */
+  readonly sessionSettings?: { readonly session: 'race' | 'qualifying'; readonly key: string };
 }
 
 export type ChampionshipDraftValidation =
@@ -114,11 +143,12 @@ function readDurations(rawValue: unknown): ChampionshipDuration[] | NonNullable<
   if (rawValue.length > CHAMPIONSHIP_DURATIONS_MAX) return 'too-many';
   const durations: ChampionshipDuration[] = [];
   for (const rawDuration of rawValue as unknown[]) {
-    const { hours, stintMinutes } = (typeof rawDuration === 'object' && rawDuration !== null ? rawDuration : {}) as Record<string, unknown>;
+    const { hours, stintMinutes, startTime } = (typeof rawDuration === 'object' && rawDuration !== null ? rawDuration : {}) as Record<string, unknown>;
     const issue = findDurationIssue(hours, stintMinutes);
     if (issue) return issue;
+    if (!isRaceTime(startTime)) return 'start-time';
     if (durations.some((duration) => duration.hours === hours)) return 'repeated';
-    durations.push({ hours: hours as number, stintMinutes: stintMinutes as number });
+    durations.push({ hours: hours as number, stintMinutes: stintMinutes as number, startTime });
   }
   return durations.sort((first, second) => first.hours - second.hours);
 }
@@ -138,17 +168,19 @@ export function validateChampionshipDraft(input: unknown): ChampionshipDraftVali
   const nameIssue = findChampionshipNameIssue(name);
   const durations = readDurations(candidate.durations);
   const carIds = readCarIds(candidate.carIds);
-  if (nameIssue || typeof durations === 'string' || typeof carIds === 'string') {
+  const sessionSettings = readSessionSettings(candidate.sessionSettings);
+  if (nameIssue || typeof durations === 'string' || typeof carIds === 'string' || !sessionSettings.isValid) {
     return {
       isValid: false,
       issues: {
         ...(nameIssue && { name: nameIssue }),
         ...(typeof durations === 'string' && { durations }),
         ...(typeof carIds === 'string' && { carIds }),
+        ...(!sessionSettings.isValid && { sessionSettings: { session: sessionSettings.session, key: sessionSettings.key } }),
       },
     };
   }
-  return { isValid: true, championship: { name, durations, carIds } };
+  return { isValid: true, championship: { name, durations, carIds, sessionSettings: sessionSettings.settings } };
 }
 
 /** Campionati in ordine alfabetico, senza badare alle maiuscole. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasRaceStarted, isProtestWindowOpen, protestWindow, raceInstants, romeLocalToInstant } from './raceSchedule';
+import { hasRaceStarted, isProtestWindowOpen, protestWindow, raceEndAfter, raceInstants, romeLocalToInstant } from './raceSchedule';
 
 describe('orari delle gare in ora italiana', () => {
   it('converte l’ora italiana nell’istante giusto, d’inverno e d’estate', () => {
@@ -36,5 +36,15 @@ describe('orari delle gare in ora italiana', () => {
     const legacy = { raceDate: '2026-11-20', startTime: null, endDate: null, endTime: null };
     expect(hasRaceStarted(legacy, Date.parse('2026-11-19T22:59:00Z'))).toBe(false);
     expect(hasRaceStarted(legacy, Date.parse('2026-11-19T23:00:00Z'))).toBe(true);
+  });
+});
+
+describe('fine della gara da inizio e durata', () => {
+  it('somma la durata in ora italiana, anche oltre la mezzanotte e al cambio dell\'ora', () => {
+    expect(raceEndAfter('2026-11-18', '21:00', 6)).toEqual({ endDate: '2026-11-19', endTime: '03:00' });
+    expect(raceEndAfter('2026-11-18', '12:00', 24)).toEqual({ endDate: '2026-11-19', endTime: '12:00' });
+    expect(raceEndAfter('', '21:00', 6)).toBeNull();
+    // Notte del 25 ottobre 2026: alle 3 le lancette tornano alle 2, sei ore di gara finiscono alle 2 sull'orologio.
+    expect(raceEndAfter('2026-10-24', '21:00', 6)).toEqual({ endDate: '2026-10-25', endTime: '02:00' });
   });
 });

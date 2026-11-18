@@ -80,3 +80,20 @@ export function hasRaceStarted(schedule: RaceSchedule, now = Date.now()): boolea
   const startOfDay = romeLocalToInstant(schedule.raceDate, '00:00');
   return startOfDay === null || now >= startOfDay;
 }
+
+/** Un istante come data e ora italiane ("2026-11-18", "21:05"). */
+export function instantToRomeLocal(instantMs: number): { readonly date: string; readonly time: string } {
+  const parts = Object.fromEntries(romeParts.formatToParts(new Date(instantMs)).map((part) => [part.type, part.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+/**
+ * Fine di una gara che parte a quella data e ora (italiane) e dura quelle ore: data e ora italiane della fine,
+ * anche a cavallo della mezzanotte e del cambio dell'ora legale. null se data o ora non sono valide.
+ */
+export function raceEndAfter(raceDate: string, startTime: string, hours: number): { readonly endDate: string; readonly endTime: string } | null {
+  const startsAt = romeLocalToInstant(raceDate, startTime);
+  if (startsAt === null) return null;
+  const end = instantToRomeLocal(startsAt + hours * 60 * 60 * 1000);
+  return { endDate: end.date, endTime: end.time };
+}

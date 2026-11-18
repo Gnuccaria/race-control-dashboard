@@ -3,6 +3,11 @@
   gap: var(--space-6);
 }
 
+/* La scheda Generale è anche una griglia: nascosta, deve sparire davvero. */
+.fields[hidden] {
+  display: none;
+}
+
 .group {
   display: grid;
   gap: var(--space-3);

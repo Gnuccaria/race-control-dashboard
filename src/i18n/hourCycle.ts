@@ -13,3 +13,11 @@ export function dayPeriodLabels(locale: string): { readonly am: string; readonly
     format.formatToParts(new Date(Date.UTC(2026, 0, 1, hour))).find((part) => part.type === 'dayPeriod')?.value ?? (hour < 12 ? 'AM' : 'PM');
   return { am: periodAt(9), pm: periodAt(21) };
 }
+
+/** Un orario "HH:MM" come si legge nella lingua: "21:05", in inglese "9:05 PM". */
+export function formatClockTime(time: string, locale: string): string {
+  if (!usesTwelveHourClock(locale)) return time;
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+  const periods = dayPeriodLabels(locale);
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${hours < 12 ? periods.am : periods.pm}`;
+}
