@@ -1,0 +1,33 @@
+.scroller {
+  overflow-x: auto;
+}
+
+.grid {
+  border-collapse: separate;
+  border-spacing: var(--space-2);
+  margin: calc(-1 * var(--space-2));
+}
+
+.slotHeader {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium, 500);
+  text-align: center;
+}
+
+.rowHeader {
+  padding-inline-end: var(--space-3);
+  font-weight: var(--font-weight-semibold);
+  text-align: start;
+  white-space: nowrap;
+}
+
+/* La qualifica separata dagli stint da un po' di spazio. */
+tr[data-qualifying] > * {
+  padding-block-end: var(--space-3);
+}
+
+.slot {
+  min-inline-size: 5.5rem;
+  vertical-align: middle;
+}

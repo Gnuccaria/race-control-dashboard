@@ -1,0 +1,15 @@
+/* Un colore per famiglia: sole giallo, nuvole grigie, pioggia blu (leggibili nei due temi). */
+.weatherIcon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.weatherIcon[data-kind='sun'],
+.weatherIcon[data-kind='sun-fog'] {
+  color: light-dark(#c78a00, #f2c14e);
+}
+
+.weatherIcon[data-kind='light-rain'],
+.weatherIcon[data-kind='heavy-rain'] {
+  color: light-dark(#1f6fb2, #6cb4ee);
+}

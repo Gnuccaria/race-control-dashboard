@@ -7,6 +7,8 @@ export interface TabDefinition<TabId extends string> {
   readonly label: string;
   /** Mostra un segnale di errore sulla scheda (es. un campo non valido al suo interno). */
   readonly hasErrors?: boolean;
+  /** Scheda visibile ma non ancora utilizzabile (es. una sezione in costruzione): non si seleziona. */
+  readonly isDisabled?: boolean;
 }
 
 interface TabsProps<TabId extends string> {
@@ -28,25 +30,28 @@ interface TabsProps<TabId extends string> {
 export function Tabs<TabId extends string>({ idPrefix, label, tabs, selectedTabId, onSelectTab, errorsLabel }: TabsProps<TabId>) {
   const tabListRef = useRef<HTMLDivElement>(null);
 
-  const focusAndSelect = (tabIndex: number) => {
-    const nextTab = tabs[(tabIndex + tabs.length) % tabs.length];
-    if (!nextTab) return;
+  const focusAndSelect = (tabIndex: number, step: number) => {
+    // Le schede disattivate si saltano.
+    let index = tabIndex;
+    for (let attempt = 0; attempt < tabs.length && tabs[(index + tabs.length) % tabs.length]?.isDisabled; attempt += 1) index += step;
+    const nextTab = tabs[(index + tabs.length) % tabs.length];
+    if (!nextTab || nextTab.isDisabled) return;
     onSelectTab(nextTab.id);
     tabListRef.current?.querySelector<HTMLButtonElement>(`#${CSS.escape(getTabElementIds(idPrefix, nextTab.id).tabId)}`)?.focus();
   };
 
   const handleKeyDown = (keyboardEvent: KeyboardEvent<HTMLDivElement>) => {
     const selectedIndex = tabs.findIndex((tab) => tab.id === selectedTabId);
-    const nextIndexByKey: Partial<Record<string, number>> = {
-      ArrowRight: selectedIndex + 1,
-      ArrowLeft: selectedIndex - 1,
-      Home: 0,
-      End: tabs.length - 1,
+    const moveByKey: Partial<Record<string, readonly [number, number]>> = {
+      ArrowRight: [selectedIndex + 1, 1],
+      ArrowLeft: [selectedIndex - 1, -1],
+      Home: [0, 1],
+      End: [tabs.length - 1, -1],
     };
-    const nextIndex = nextIndexByKey[keyboardEvent.key];
-    if (nextIndex === undefined) return;
+    const move = moveByKey[keyboardEvent.key];
+    if (move === undefined) return;
     keyboardEvent.preventDefault();
-    focusAndSelect(nextIndex);
+    focusAndSelect(move[0], move[1]);
   };
 
   return (
@@ -62,6 +67,7 @@ export function Tabs<TabId extends string>({ idPrefix, label, tabs, selectedTabI
             aria-selected={isSelected}
             aria-controls={getTabElementIds(idPrefix, tab.id).panelId}
             tabIndex={isSelected ? 0 : -1}
+            disabled={tab.isDisabled}
             className={styles.tab}
             onClick={() => {
               onSelectTab(tab.id);

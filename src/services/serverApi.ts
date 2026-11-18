@@ -28,6 +28,7 @@ const ERROR_KIND_BY_SERVER_CODE: Record<string, ServerErrorKind> = {
   'championship-car-in-use': 'championship-car-in-use',
   'car-source-unreachable': 'car-source-unreachable',
   'car-source-changed': 'car-source-changed',
+  'invalid-weather': 'invalid-weather',
   'invalid-track': 'invalid-track',
   'duplicate-track': 'duplicate-track',
   'not-signed-in': 'not-signed-in',

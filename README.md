@@ -47,7 +47,7 @@ In tutte le tabelle valgono le stesse regole:
   - **Anagrafica**: nome della gara (facoltativo); **campionato**, da tutti quelli creati; **durata**, solo tra quelle del campionato, scelta da sola se è una sola; **round** (1–99); **data e ora di inizio** e **data e ora di fine**, in ora italiana, obbligatorie (le ore e i minuti si scelgono dai menu, a 24 ore; a 12 ore con AM/PM solo con l'app in inglese), anche nel futuro: le gare si possono inserire in anticipo. Facoltativi il **tracciato** (si sceglie Continente → Tracciato → Configurazione, anche in versione al contrario se prevista) e i **giri totali**.
   - **Dettagli**: l'ordine di arrivo su 14 posizioni, con i soli equipaggi del campionato. Ogni riga ha la vettura (quella che l'equipaggio usa in quel campionato, che resta legata alla gara anche se poi cambia auto), i **giri completati** e il **distacco** facoltativo dal primo (es. `1:05,320`). Le righe vuote sono ammesse; un equipaggio ripetuto viene segnalato.
 
-  Eliminare una gara cancella anche classifica, cambi pilota e penalità. Le proteste per una gara si possono mandare dal sito dall'ora di inizio fino a 48 ore esatte dopo l'ora di fine. Sul sito una gara compare solo quando è iniziata.
+  Eliminare una gara cancella anche classifica, cambi pilota e penalità. Le proteste per una gara si possono mandare dal sito dall'ora di inizio fino a 48 ore esatte dopo l'ora di fine. Sul sito le gare compaiono anche prima di iniziare, con meteo e documentazione.
 
 ### Gestione equipaggi
 
@@ -60,7 +60,8 @@ In tutte le tabelle valgono le stesse regole:
 
 ### Strumenti pre-gara
 
-- **Crea briefing pre-gara** e **Crea pattern meteo**: in costruzione.
+- **Crea briefing pre-gara**: in costruzione.
+- **Crea pattern meteo**: tabella di tutte le gare, anche future. Nel dettaglio di una gara ci sono una riga per la **qualifica**, con 2 slot, e una riga per ogni **stint** della gara (dalla durata e dallo stint del campionato), con 9 slot ciascuna. Ogni slot ha un menu con i valori da S01 a S13, da C01 a C06 e da R01 a R08, e accanto l'icona del meteo scelto: S01–S07 sole, S08–S13 sole con leggera nebbia, C01–C03 nuvole leggere, C04–C06 nuvole dense, R01–R04 pioggia leggera, R05–R08 pioggia pesante. Si salva solo con tutti gli slot compilati; il pattern salvato compare sul sito, nella scheda **Meteo** della gara.
 
 ### Strumenti della Direzione Gara
 
@@ -94,7 +95,11 @@ I valori dei calcolatori restano salvati sul computer: chiudere e riaprire l'app
 
 Si apre nel browser, nella lingua del browser (italiano, inglese, francese o tedesco) e con il tema del sistema.
 
-- **Sessioni di gara**: l'elenco delle gare iniziate, con gli stessi filtri dell'app (filtri e ordinamento restano nell'indirizzo, che si può condividere). La pagina di una gara mostra data, tracciato, durata, giri totali e la classifica con vettura, giri, distacco e penalità. **Visualizza referto** mostra accanto il referto in PDF, **Scarica referto** lo salva: in italiano con il sito in italiano, in inglese con le altre lingue. Nel referto la classifica ha nella colonna Leader la durata della gara per il primo e il distacco per gli altri; le penalità comprendono, in fondo, quelle dei **cambi pilota**: una riga per vettura con l'infrazione totale (es. "Infrazione: 1.515 secondi") e i secondi arrotondati per eccesso (+2 secondi), gli stessi sommati nella colonna Penalità della classifica.
+- **Sessioni di gara**: l'elenco delle gare, comprese quelle inserite in anticipo, con gli stessi filtri dell'app (filtri e ordinamento restano nell'indirizzo, che si può condividere). La pagina di una gara mostra data, tracciato, durata e giri totali, poi quattro schede:
+  - **Qualifiche**: non ancora disponibile.
+  - **Gara** (la scheda iniziale): la classifica con vettura, giri, distacco e penalità (decisioni a tempo più cambi pilota, come nel referto). Per una gara non ancora disputata è vuota.
+  - **Meteo**: il pattern meteo salvato in Crea pattern meteo, con la qualifica e una riga per stint; ogni slot mostra l'icona del meteo e il codice.
+  - **Documentazione**: briefing pre-gara e referto di qualifica (non ancora disponibili) e **referto di gara**. Accanto a ogni documento ci sono "Visualizza" e il pulsante con l'icona per scaricare il PDF. "Visualizza" divide lo spazio: l'elenco si stringe a sinistra e a destra compare il PDF; aprendo un altro documento, il suo PDF prende il posto di quello aperto. Il referto è in italiano con il sito in italiano e in inglese con le altre lingue; la classifica ha nella colonna Leader la durata della gara per il primo e il distacco per gli altri, e le penalità comprendono in fondo quelle dei **cambi pilota** (una riga per vettura, con i secondi arrotondati per eccesso).
 - **Accesso con Discord**: basta far parte del server Discord della lega. L'equipaggio si riconosce dal ruolo Discord.
 - **Invia ticket di disconnessione** (quando la Direzione Gara ha aperto l'invio): posizione, distacco e giro della disconnessione. Il risultato arriva sulla pagina del ticket, che si aggiorna da sola. Al massimo 3 ticket in attesa a persona.
 - **Invia protesta**: la gara, tra quelle dei campionati del proprio equipaggio aperte alle proteste; stint, giro, curva, gli altri equipaggi coinvolti, una descrizione e, se si vuole, un video (MP4, WebM o MOV, fino a 100 MB) o un link YouTube. Il video si può aggiungere anche dopo, entro 24 ore dall'invio. I video caricati si cancellano dopo 30 giorni. Al massimo 10 proteste in 24 ore a persona.

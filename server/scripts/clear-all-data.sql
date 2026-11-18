@@ -5,6 +5,7 @@
 DELETE FROM protests;
 DELETE FROM disconnection_tickets;
 DELETE FROM driver_swaps;
+DELETE FROM race_weather;
 DELETE FROM penalty_crews;
 DELETE FROM penalties;
 DELETE FROM race_results;

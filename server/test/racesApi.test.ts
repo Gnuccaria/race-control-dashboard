@@ -268,14 +268,14 @@ describe('API gare e piste', () => {
     expect((await handleRequest(getPath('/races'), env)).status).toBe(401);
   });
 
-  it('le gare inserite in anticipo non compaiono sul sito finché non cominciano', async () => {
+  it('le gare inserite in anticipo compaiono sul sito (meteo e documentazione), con la classifica vuota', async () => {
     await request('POST', '/races', race());
     await request('POST', '/races', race({ round: 2, name: 'Gara futura', raceDate: '2099-01-01', results: [] }));
     const list = (await (await handleRequest(getPath('/public/races'), env)).json()) as { races: { name: string }[] };
-    expect(list.races.map((saved) => saved.name)).toEqual(['Gara di prova']);
-    expect((await handleRequest(getPath('/public/races/2'), env)).status).toBe(404);
-    expect((await handleRequest(getPath('/public/races/2/report.pdf'), env)).status).toBe(404);
-    // Nell'app invece si vedono tutte.
+    expect(list.races.map((saved) => saved.name)).toEqual(['Gara futura', 'Gara di prova']);
+    const future = (await (await handleRequest(getPath('/public/races/2'), env)).json()) as { race: { results: unknown[]; weather: unknown } };
+    expect(future.race).toMatchObject({ results: [], weather: { stintCount: 6, pattern: null } });
+    expect((await handleRequest(getPath('/public/races/2/report.pdf'), env)).status).toBe(200);
     expect(((await request('GET', '/races')).body.races as unknown[]).length).toBe(2);
   });
 });

@@ -12,6 +12,7 @@ import { createProtestHandlers } from './protests/protestHandlers';
 import { createSiteAuthHandlers, type DiscordFetch } from './siteAuth/siteDiscordAuth';
 import { createTicketHandlers } from './tickets/ticketHandlers';
 import { createTrackHandlers } from './tracks/trackHandlers';
+import { createWeatherHandlers } from './weather/weatherHandlers';
 
 type CollectionHandler = (request: Request, env: Env) => Promise<Response>;
 type ItemHandler = (request: Request, env: Env, itemId: number) => Promise<Response>;
@@ -30,6 +31,8 @@ const RACE_PENALTIES_PATTERN = /^\/races\/(\d{1,9})\/penalties(?:\/(\d{1,9}))?$/
 const RACE_REPRIMANDS_PATTERN = /^\/races\/(\d{1,9})\/reprimands$/;
 /** Solo i cambi pilota di una gara (Commissari Sportivi): /races/42/driver-swaps. */
 const RACE_DRIVER_SWAPS_PATTERN = /^\/races\/(\d{1,9})\/driver-swaps$/;
+/** Pattern meteo di una gara (Direttore Gara): /races/42/weather. */
+const RACE_WEATHER_PATTERN = /^\/races\/(\d{1,9})\/weather$/;
 /** Lettura pubblica per il sito: /public/races, /public/races/42 e il referto /public/races/42/report.pdf. */
 /** Risultato di un ticket di disconnessione: /disconnection-tickets/7/result. */
 const TICKET_RESULT_PATTERN = /^\/disconnection-tickets\/(\d{1,9})\/result$/;
@@ -62,6 +65,7 @@ async function logErrorResponse(request: Request, response: Response): Promise<v
  *   GET · POST · DELETE /races/:id/penalties    GET · PUT /races/:id/penalties/:penaltyId
  *   GET /races/:id/reprimands[?before=:penaltyId]
  *   PUT /races/:id/driver-swaps   (solo i cambi pilota, Commissari Sportivi)
+ *   GET · PUT /races/:id/weather   (pattern meteo; lo salva il Direttore Gara)
  *   GET · POST · DELETE /championships   GET · PUT /championships/:id
  *   GET · POST /tracks
  *   GET /cars   POST /cars/refresh   (vetture; aggiornamento dai siti, Organizzazione)
@@ -82,6 +86,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
   const carHandlers = createCarHandlers(checkMembership, carSourceFetch);
   const championshipHandlers = createChampionshipHandlers(checkMembership);
   const penaltyHandlers = createPenaltyHandlers(checkMembership);
+  const weatherHandlers = createWeatherHandlers(checkMembership);
   const siteAuthHandlers = createSiteAuthHandlers(discordFetch);
   const ticketHandlers = createTicketHandlers(checkMembership, discordFetch);
   const protestHandlers = createProtestHandlers(checkMembership, discordFetch);
@@ -173,6 +178,14 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
       if (raceIdText === undefined) return publicRaceHandlers.listRaces(request, env);
       if (publicMatch[2]) return publicRaceHandlers.getRaceReport(request, env, Number(raceIdText));
       return publicRaceHandlers.getRace(request, env, Number(raceIdText));
+    }
+
+    const weatherMatch = RACE_WEATHER_PATTERN.exec(pathname);
+    if (weatherMatch) {
+      const raceId = Number(weatherMatch[1]);
+      if (request.method === 'GET') return weatherHandlers.getWeather(request, env, raceId);
+      if (request.method === 'PUT') return weatherHandlers.saveWeather(request, env, raceId);
+      return methodNotAllowed();
     }
 
     const driverSwapsMatch = RACE_DRIVER_SWAPS_PATTERN.exec(pathname);

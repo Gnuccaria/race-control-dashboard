@@ -38,6 +38,7 @@ export type ApiErrorCode =
   | 'championship-car-in-use'
   | 'car-source-unreachable'
   | 'car-source-changed'
+  | 'invalid-weather'
   | 'invalid-track'
   | 'duplicate-track'
   | 'not-found'

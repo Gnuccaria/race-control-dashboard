@@ -38,10 +38,10 @@ describe('applicazione', () => {
     expect(main.getByRole('link', { name: /Gestisci disconnessioni/ })).toHaveAttribute('href', '/strumenti/gestisci-disconnessioni');
     expect(main.getByRole('link', { name: /Gestisci proteste/ })).toHaveAttribute('href', '/commissari/proteste');
     expect(main.getByRole('link', { name: /Gestisci cambi pilota/ })).toHaveAttribute('href', '/commissari/cambi-pilota');
-    // Strumenti pre-gara: entrambi in costruzione, quindi non sono link.
+    // Strumenti pre-gara: il briefing è in costruzione (non è un link), il pattern meteo sì.
     expect(main.getByText('Crea briefing pre-gara')).toBeInTheDocument();
-    expect(main.getByText('Crea pattern meteo')).toBeInTheDocument();
-    expect(main.queryByRole('link', { name: /Crea pattern meteo/ })).not.toBeInTheDocument();
+    expect(main.queryByRole('link', { name: /Crea briefing pre-gara/ })).not.toBeInTheDocument();
+    expect(main.getByRole('link', { name: /Crea pattern meteo/ })).toHaveAttribute('href', '/pre-gara/pattern-meteo');
   });
 
   it.each([

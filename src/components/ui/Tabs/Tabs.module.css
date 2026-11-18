@@ -72,3 +72,10 @@
     transition: none;
   }
 }
+
+/* Scheda non ancora utilizzabile: si vede, ma più chiara e senza reazione al passaggio del mouse. */
+.tab:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  opacity: 0.5;
+}

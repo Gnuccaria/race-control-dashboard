@@ -1,9 +1,9 @@
-import { hasRaceStarted } from '../../../shared/raceSchedule';
 import type { Env } from '../env';
 import { errorResponse, publicJsonResponse, publicPdfResponse } from '../http/jsonResponse';
 import { findRaceSummaryById, listPublicRaceResults, listRaces } from '../races/raceRepository';
 import { buildRaceReport, reportFileName, totalPenaltyByCrew } from '../reports/raceReportData';
 import { renderRaceReportPdf } from '../reports/raceReportPdf';
+import { findRaceWeather } from '../weather/weatherRepository';
 import { loadRaceReportInput } from '../reports/raceReportRepository';
 import { readReportLanguage } from '../reports/reportTexts';
 
@@ -15,14 +15,14 @@ const roundTitle = (round: number, championship: string) => `Round ${round} – 
  * e solo i dati da mostrare (nessun id Discord di chi ha inserito la gara).
  */
 export const publicRaceHandlers = {
-  // Le gare inserite in anticipo non si mostrano finché non cominciano.
+  // Anche le gare inserite in anticipo: il sito ne mostra meteo e documentazione prima che comincino.
   async listRaces(_request: Request, env: Env): Promise<Response> {
-    return publicJsonResponse({ races: (await listRaces(env.CREWS_DB)).filter((race) => hasRaceStarted(race)) });
+    return publicJsonResponse({ races: await listRaces(env.CREWS_DB) });
   },
 
   async getRace(_request: Request, env: Env, raceId: number): Promise<Response> {
     const race = await findRaceSummaryById(env.CREWS_DB, raceId);
-    if (!race || !hasRaceStarted(race)) return errorResponse(404, 'not-found');
+    if (!race) return errorResponse(404, 'not-found');
     // Penalità di ogni posizione come nel referto: decisioni a tempo + cambi pilota (secondi per eccesso).
     const [results, reportInput] = await Promise.all([listPublicRaceResults(env.CREWS_DB, raceId), loadRaceReportInput(env.CREWS_DB, raceId, roundTitle)]);
     const totals = reportInput ? totalPenaltyByCrew(reportInput.penalties, reportInput.driverSwaps) : new Map<number, number>();
@@ -31,7 +31,7 @@ export const publicRaceHandlers = {
       const total = totals.get(crewIdByPosition.get(result.position) ?? -1) ?? 0;
       return { ...result, penaltyMs: total > 0 ? total : null };
     });
-    return publicJsonResponse({ race: { ...race, results: withPenalties } });
+    return publicJsonResponse({ race: { ...race, results: withPenalties, weather: await findRaceWeather(env.CREWS_DB, race) } });
   },
 
   /**
@@ -41,7 +41,7 @@ export const publicRaceHandlers = {
    */
   async getRaceReport(request: Request, env: Env, raceId: number): Promise<Response> {
     const race = await findRaceSummaryById(env.CREWS_DB, raceId);
-    const input = race && hasRaceStarted(race) ? await loadRaceReportInput(env.CREWS_DB, raceId, roundTitle) : null;
+    const input = race ? await loadRaceReportInput(env.CREWS_DB, raceId, roundTitle) : null;
     if (!input) return errorResponse(404, 'not-found');
     const language = readReportLanguage(new URL(request.url).searchParams.get('lang'));
     const pdfBytes = await renderRaceReportPdf(buildRaceReport({ ...input, language }));

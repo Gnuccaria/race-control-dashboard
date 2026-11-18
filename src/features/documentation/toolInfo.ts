@@ -4,7 +4,7 @@ export const RACE_BRIEFING_TOOL_INFO = {
   messageKey: 'raceBriefing',
 } as const;
 
-/** "Crea pattern meteo" (testi in messages.tools.weatherPattern); ancora in costruzione. */
+/** "Crea pattern meteo" (testi in messages.tools.weatherPattern): pattern meteo di ogni gara, mostrato sul sito. */
 export const WEATHER_PATTERN_TOOL_INFO = {
   slug: 'pattern-meteo',
   messageKey: 'weatherPattern',

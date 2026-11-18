@@ -1,0 +1,21 @@
+/* Ogni slot è una piccola card con icona e codice. */
+.slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.code {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.missing {
+  color: var(--color-text-muted);
+}

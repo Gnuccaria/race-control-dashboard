@@ -189,7 +189,26 @@ export const TOOL_SECTIONS: readonly ToolSection[] = [
     requiredAccess: 'raceControl',
     tools: [
       { ...RACE_BRIEFING_TOOL_INFO, Icon: RaceBriefingIcon, availability: { status: 'under-construction' } },
-      { ...WEATHER_PATTERN_TOOL_INFO, Icon: WeatherPatternIcon, availability: { status: 'under-construction' } },
+      {
+        ...WEATHER_PATTERN_TOOL_INFO,
+        Icon: WeatherPatternIcon,
+        availability: {
+          status: 'available',
+          loadPage: async () => {
+            const { ManageWeatherPage } = await import('@/features/weather');
+            return { Component: ManageWeatherPage };
+          },
+          subPages: [
+            {
+              path: ':raceId',
+              loadPage: async () => {
+                const { WeatherDetailPage } = await import('@/features/weather');
+                return { Component: WeatherDetailPage };
+              },
+            },
+          ],
+        },
+      },
     ],
   },
   {

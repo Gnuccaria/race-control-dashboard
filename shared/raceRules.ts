@@ -5,6 +5,7 @@
 import { type Championship, championshipDurations, driverSwapCountOf, findChampionship } from './championshipRules';
 import type { CrewChampionship } from './crewRules';
 import { isRaceTime, raceInstants } from './raceSchedule';
+import type { RaceWeather } from './weatherRules';
 import { type DriverSwapEntry, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
 
 /** Righe dell'ordine di arrivo. */
@@ -64,6 +65,8 @@ export interface PublicRaceResult {
 /** Gara come la vede il sito pubblico: dati della gara e classifica completa. */
 export interface PublicRace extends RaceSummary {
   readonly results: readonly PublicRaceResult[];
+  /** Pattern meteo (scheda Meteo del sito), con il numero di stint della gara. */
+  readonly weather: RaceWeather;
 }
 
 /** Durata di una gara in ore intere (tra le durate del suo campionato). */

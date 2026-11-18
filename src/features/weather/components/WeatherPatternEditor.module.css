@@ -1,0 +1,29 @@
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Icona e menu dello slot sulla stessa riga. */
+.slot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: var(--control-height);
+}
+
+.select {
+  min-inline-size: 5rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+}

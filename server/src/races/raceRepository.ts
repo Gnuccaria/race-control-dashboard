@@ -278,8 +278,9 @@ export async function replaceDriverSwaps(database: SqlDatabase, raceId: number, 
 /** Elimina le gare indicate con classifiche, penalità e cambi pilota, tutto insieme; restituisce quante gare sono state eliminate. */
 export async function deleteRaces(database: SqlDatabase, raceIds: readonly number[]): Promise<number> {
   const idsJson = JSON.stringify(raceIds);
-  const [, , , , deletedRaces] = await database.batch<{ id: number }>([
+  const [, , , , , deletedRaces] = await database.batch<{ id: number }>([
     database.prepare('DELETE FROM race_results WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
+    database.prepare('DELETE FROM race_weather WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
     database.prepare('DELETE FROM driver_swaps WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
     database
       .prepare('DELETE FROM penalty_crews WHERE penalty_id IN (SELECT id FROM penalties WHERE race_id IN (SELECT value FROM json_each(?)))')
