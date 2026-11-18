@@ -1,0 +1,244 @@
+__NOTOC__
+{{hatnote|'''Important''': Inserting mentions of Gran Turismo 7 in track pages without confirmation may be subject to reversion. Additionally, the comment section of this page should not be used as a wishlist.}}
+
+This is a list of all circuits currently featured in [[Gran Turismo 7]]. For information on which tracks were added by post-launch updates, see the [[Downloadable Content#Gran Turismo 7 Content|downloadable content]] page.
+
+Information for this page is obtained from this [https://www.gran-turismo.com/us/gt7/tracklist/ list]. Currently, 42 tracks (featuring 85 distinct layouts and 121 total configurations including reverse layouts) are available.
+
+==Tracks==
+
+<!-- QUICK GUIDE
+Courses are listed alphabetically regardless of region. Layouts are listed in the order they are shown in Time Trial/Custom Race layout selection.
+Layouts are named as per the listing in Time Trial/Custom Race layout selection. This can differ from the event entry screen.
+Track type is found in the track selection for split screen or offline arcade mode.
+Tokyo layouts are considered separate, not reverse versions of each other.
+-->
+
+{| class="wikitable sortable" + style="text-align: center;" width=100%;
+|-
+! style="background: linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(45,0,0,1) 100%);" | Course
+! style="background: linear-gradient(90deg, rgba(46,0,0,1) 0%, rgba(80,0,0,1) 100%);" class="unsortable" | Layout
+! style="background: linear-gradient(90deg, rgba(81,0,0,1) 0%, rgba(90,0,0,1) 100%);" | Track type
+! style="background: linear-gradient(90deg, rgba(91,0,0,1) 0%, rgba(100,0,0,1) 100%);" data-sort-type="number" | Length
+! style="background: linear-gradient(90deg, rgba(101,0,0,1) 0%, rgba(110,0,0,1) 100%);" | Reversible
+! style="background: linear-gradient(90deg, rgba(111,0,0,1) 0%, rgba(120,0,0,1) 100%);" | Rain
+! style="background: linear-gradient(90deg, rgba(121,0,0,1) 0%, rgba(130,0,0,1) 100%);" | [[Gran Turismo Sophy|GT Sophy]]
+! style="background: linear-gradient(90deg, rgba(131,0,0,1) 0%, rgba(139,0,0,1) 100%); width: 150px;" class="unsortable" | Track map
+|-
+
+{{CourseWithLayouts|name=24 Heures du Mans Racing Circuit|link=Circuit de la Sarthe|country=FRA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Circuit de la Sarthe|type=Real|length=13,629|rain=Yes|sophy=Yes|image=Circuit de la Sarthe map.png}}
+	{{CourseLayout|name=No Chicane|link=Circuit de la Sarthe|type=Real|length=13,567|rain=Yes|sophy=No}}
+}}
+
+{{CourseWithLayouts|name=Alsace|country=FRA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Village|link=Alsace - Village|type=Original|length=5,423|reversible=y|rain=No|sophy=Forwards only|image=Alsace - Village.jpg}}
+	{{CourseLayout|name=Test Course|link=Alsace - Test Course|type=Original|length=2,118|reversible=y|rain=No|sophy=No|image=Alsace TC.png}}
+}}
+
+{{CourseWithLayouts|name=Autodrome Lago Maggiore|country=ITA|numberoflayouts=6|layouts=
+	{{CourseLayout|name=Full Course|link=Autodrome Lago Maggiore - GP|type=Original|length=5,809|reversible=y|rain=No|sophy=Forwards only|image=Autodrome Lago Maggiore - GP.jpg}}
+	{{CourseLayout|name=Centre|link=Autodrome Lago Maggiore - Center|type=Original|length=1,706|reversible=y|rain=No|sophy=No|image=Autodrome Lago Maggiore - Center.jpg}}
+	{{CourseLayout|name=East End|link=Autodrome Lago Maggiore - East End|type=Original|length=2,010|reversible=y|rain=No|sophy=No|image=Autodrome Lago Maggiore - East End.jpg}}
+	{{CourseLayout|name=West End|link=Autodrome Lago Maggiore - West End|type=Original|length=2,444|reversible=y|rain=No|sophy=No|image=Autodrome Lago Maggiore - West End.jpg}}
+	{{CourseLayout|name=East|link=Autodrome Lago Maggiore - East|type=Original|length=3,643|reversible=y|rain=No|sophy=No|image=Autodrome Lago Maggiore - East.jpg}}
+	{{CourseLayout|name=West|link=Autodrome Lago Maggiore - West|type=Original|length=4,168|reversible=y|rain=No|sophy=No|image=Autodrome Lago Maggiore - West.jpg}}
+}}
+
+{{CourseWithLayouts|name=Autódromo de Interlagos|country=BRA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Autódromo de Interlagos|type=Real|length=4,309|rain=No|sophy=Yes|image=Interlagos.jpg}}
+}}
+
+{{CourseWithLayouts|name=Autodromo Nazionale Monza|country=ITA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Autodromo Nazionale Monza|type=Real|length=5,793|rain=No|sophy=Yes|image=Autodromo Nazionale Monza.jpg}}
+	{{CourseLayout|name=No Chicane|link=Autodromo Nazionale Monza (No Chicane)|type=Real|length=5,755|rain=No|sophy=No|image=Autodromo Nazionale Monza (No Chicane).jpg}}
+}}
+
+{{CourseWithLayouts|name=Autopolis International Racing Course|country=JPN|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Autopolis International Racing Course|type=Real|length=4,674|rain=Yes|sophy=No|image=Autopolis International Racing Course.jpg}}
+	{{CourseLayout|name=Shortcut Course|link=Autopolis International Racing Course - Shortcut Course|type=Real|length=3,022|rain=Yes|sophy=No|image=Autopolis International Racing Course - Shortcut Course.jpg}}
+}}
+
+{{CourseWithLayouts|name=Blue Moon Bay Speedway|country=USA|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Full Course|link=Blue Moon Bay Speedway|type=Original|length=3,200|reversible=y|rain=No|sophy=No|image=Blue Moon Bay Speedway.jpg}}
+	{{CourseLayout|name=Infield A|link=Blue Moon Bay Speedway - Infield A|type=Original|length=3,350|reversible=y|rain=No|sophy=No|image=Blue Moon Bay Speedway - Infield A.jpg}}
+	{{CourseLayout|name=Infield B|link=Blue Moon Bay Speedway - Infield B|type=Original|length=2,860|reversible=y|rain=No|sophy=No|image=Blue Moon Bay Speedway - Infield B.jpg}}
+}}
+
+{{CourseWithLayouts|name=Brands Hatch|country=GBR|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Grand Prix Circuit|link=Brands Hatch GP|type=Real|length=3,946|rain=No|sophy=Yes|image=Brands Hatch GP.jpg}}
+	{{CourseLayout|name=Indy Circuit|link=Brands Hatch Indy|type=Real|length=1,944|rain=No|sophy=No|image=Brands Hatch Indy.jpg}}
+}}
+
+{{CourseWithLayouts|name=Broad Bean Raceway|country=JPN|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Broad Bean Raceway|type=Original|length=1,665|reversible=y|rain=No|sophy=No|image=Bb raceway.jpg}}
+}}
+
+{{CourseWithLayouts|name=Circuit de Barcelona-Catalunya|country=ESP|numberoflayouts=4|layouts=
+	{{CourseLayout|name=Grand Prix Layout|link=Circuit de Barcelona-Catalunya Grand Prix|type=Real|length=4,655|rain=No|sophy=Yes|image=Circuit de Barcelona-Catalunya Grand Prix Layout.jpg}}
+	{{CourseLayout|name=Grand Prix Layout No Chicane|link=Circuit de Barcelona-Catalunya Grand Prix|type=Real|length=4,730|rain=No|sophy=No|image=Circuit de Barcelona-Catalunya Grand Prix Layout No Chicane.png}}
+	{{CourseLayout|name=National Layout|link=Circuit de Barcelona-Catalunya National Layout|type=Real|length=2,977|rain=No|sophy=No|image=Circuit de Barcelona-Catalunya National Layout.png}}
+	{{CourseLayout|name=Rallycross Layout|link=Circuit de Barcelona-Catalunya Rallycross Layout|type=Dirt|length=1,133|rain=No|sophy=No|image=Circuit de Barcelona-Catalunya Rallycross Layout.png}}
+}}
+
+{{CourseWithLayouts|name=Circuit de Sainte-Croix|country=FRA|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Layout A|link=Circuit de Sainte-Croix - A|type=Original|length=9,477|reversible=y|rain=No|sophy=No|image=Circuit de Sainte-Croix - A1.jpg}}
+	{{CourseLayout|name=Layout B|link=Circuit de Sainte-Croix - B|type=Original|length=7,062|reversible=y|rain=No|sophy=No|image=Circuit de Sainte-Croix - B.jpg}}
+	{{CourseLayout|name=Layout C|link=Circuit de Sainte-Croix - C|type=Original|length=10,825|reversible=y|rain=No|sophy=No|image=Circuit de Sainte-Croix - C.jpg}}
+}}
+
+{{CourseWithLayouts|name=Circuit de Spa-Francorchamps|country=BEL|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Circuit de Spa-Francorchamps|type=Real|length=7,044|rain=Yes|sophy=Yes|image=Spa-Francorchamps.jpg}}
+	{{CourseLayout|name=24h Layout|link=Circuit de Spa-Francorchamps|type=Real|length=7,044|rain=Yes|sophy=No|image=Circuit de Spa-Francorchamps - 24h.jpg}}
+}}
+
+{{CourseWithLayouts|name=Circuit Gilles-Villeneuve|country=CAN|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Circuit Gilles-Villeneuve|type=Real|length=4,361|rain=No|sophy=No|image=Circuit Gilles-Villeneuve.png}}
+}}
+
+{{CourseWithLayouts|name=Colorado Springs|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Lake|link=Colorado Springs - Lake|type=Dirt|length=2,990|reversible=y|rain=No|sophy=No|image=Colorado Springs - Lake.jpg}}
+}}
+
+{{CourseWithLayouts|name=Daytona International Speedway|country=USA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Tri-Oval|link=Daytona Superspeedway|type=Real|length=4,023|rain=No|sophy=No|image=Daytona Superspeedway.jpg}}
+	{{CourseLayout|name=Road Course|link=Daytona Road Course|type=Real|length=5,729|rain=No|sophy=No|image=Daytona Road Course.jpg}}
+}}
+
+{{CourseWithLayouts|name=Deep Forest Raceway|country=Switzerland|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Deep Forest Raceway|type=Original|length=4,253|reversible=y|rain=No|sophy=Forwards only|image=Deep Forest Raceway (GT7).png}}
+}}
+
+{{CourseWithLayouts|name=Dragon Trail|country=CRO|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Seaside|link=Dragon Trail - Seaside|type=Original|length=5,209|reversible=y|rain=No|sophy=Forwards only|image=Dragon Trail.jpg}}
+	{{CourseLayout|name=Gardens|link=Dragon Trail - Gardens|type=Original|length=4,352|reversible=y|rain=Yes|sophy=No|image=Dragon Trail - Gardens.jpg}}
+}}
+
+{{CourseWithLayouts|name=Eiger Nordwand|country=Switzerland|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Eiger Nordwand Short Track|type=Original|length=2,436|reversible=y|rain=No|sophy=No|image=Eiger Nordwand (GT7) map.png}}
+}}
+
+{{CourseWithLayouts|name=Fishermans Ranch|link=Fisherman's Ranch|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Fisherman's Ranch|type=Dirt|length=6,893|reversible=y|rain=No|sophy=No|image=Fisherman's Ranch.jpg}}
+}}
+
+{{CourseWithLayouts|name=Fuji International Speedway|country=JPN|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Fuji International Speedway|type=Real|length=4,563|rain=Yes|sophy=No|image=Fuji Speedway 2005.jpg}}
+	{{CourseLayout|name=Short Course|link=Fuji International Speedway (Short)|type=Real|length=4,526|rain=Yes|sophy=No|image=Fuji Speedway 2005 GT.jpg}}
+}}
+
+{{CourseWithLayouts|name=Goodwood Motor Circuit|country=GBR|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Goodwood Motor Circuit|type=Real|length=3,809|rain=No|sophy=No|image=Goodwood Motor Circuit.jpg}}
+}}
+
+{{CourseWithLayouts|name=Grand Valley|country=USA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Highway 1|link=Grand Valley Highway 1|type=Original|length=5,099|reversible=y|rain=No|sophy=Forwards only|image=Grand Valley Highway 1.png}}
+	{{CourseLayout|name=South|link=Grand Valley South|type=Original|length=3,076|reversible=y|rain=No|sophy=No|image=Grand Valley South.png}}
+}}
+
+{{CourseWithLayouts|name=High Speed Ring|country=JPN|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=High Speed Ring|type=Original|length=4,345|reversible=y|rain=Yes|sophy=Forwards only|image=High Speed Ring GT7 Map.png}}
+}}
+
+{{CourseWithLayouts|name=Kyoto Driving Park|country=JPN|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Yamagiwa|link=Kyoto Driving Park - Yamagiwa|type=Original|length=4,912|reversible=y|rain=No|sophy=No|image=Kyoto Driving Park - Yamagiwa.jpg}}
+	{{CourseLayout|name=Miyabi|link=Kyoto Driving Park - Miyabi|type=Original|length=1,953|rain=No|sophy=No|image=Kyoto Driving Park - Miyabi.jpg}}
+	{{CourseLayout|name=Yamagiwa + Miyabi|link=Kyoto Driving Park - Yamagiwa + Miyabi|type=Original|length=6,846|reversible=y|rain=No|sophy=No|image=Kyoto Driving Park - Yamagiwa Miyabi.jpg}}
+}}
+
+{{CourseWithLayouts|name=Lake Louise|country=CAN|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Tri-Oval|link=Lake Louise Tri-Oval|type=Snow|length=3,068|reversible=y|rain=No|sophy=No|image=Lake Louise Tri-Oval.png}}
+	{{CourseLayout|name=Short Track|link=Lake Louise Short Track|type=Snow|length=2,577|reversible=y|rain=No|sophy=No|image=Lake Louise Short Track.png}}
+	{{CourseLayout|name=Long Track|link=Lake Louise Long Track|type=Snow|length=3,694|reversible=y|rain=No|sophy=No|image=Lake Louise Long Track.png}}
+}}
+
+{{CourseWithLayouts|name=Michelin Raceway Road Atlanta|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Michelin Raceway Road Atlanta|type=Real|length=4,088|rain=No|sophy=Yes|image=Michelin Raceway Road Atlanta.png}}
+}}
+
+{{CourseWithLayouts|name=Mount Panorama Circuit|link=Mount Panorama|country=AUS|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Mount Panorama|type=Real|length=6,213|rain=No|sophy=Yes|image=Mount Panorama.jpg}}
+}}
+
+{{CourseWithLayouts|name=Northern Isle Speedway|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Northern Isle Speedway|type=Original|length=900|rain=No|sophy=No|image=Northern Isle Speedway.jpg}}
+}}
+
+{{CourseWithLayouts|name=Nürburgring|country=GER|numberoflayouts=6|layouts=
+	{{CourseLayout|name=Nordschleife|link=Nürburgring Nordschleife|type=Real|length=20,832|rain=Yes|sophy=No|image=Nürburgring Nordschleife.jpg}}
+	{{CourseLayout|name=Nordschleife Tourist|link=Nürburgring Nordschleife|type=Real|length=20,832|rain=Yes|sophy=No}}
+	{{CourseLayout|name=24h|link=Nürburgring 24h|type=Real|length=25,378|rain=Yes|sophy=Yes|image=Nürburgring 24h.jpg}}
+	{{CourseLayout|name=Grand Prix|link=Nürburgring GP/F|type=Real|length=5,148|rain=Yes|sophy=No|image=Nürburgring GPF.jpg}}
+	{{CourseLayout|name=Endurance|link=Nürburgring Endurance|type=Real|length=23,864|reversible=y|rain=Yes|sophy=No|image=Nürburgring typeV.jpg}}
+	{{CourseLayout|name=Sprint|link=Nürburgring Sprint|type=Real|length=3,629|rain=Yes|sophy=No|image=Nürburgring GPD.jpg}}
+}}
+
+{{CourseWithLayouts|name=Red Bull Ring|country=AUT|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Red Bull Ring|type=Real|length=4,318|rain=Yes|sophy=Yes|image=Red Bull Ring.jpg}}
+	{{CourseLayout|name=Short Track|link=Red Bull Ring Short Track|type=Real|length=2,336|rain=Yes|sophy=No|image=Red Bull Ring Short Track.jpg}}
+}}
+
+{{CourseWithLayouts|name=Sardegna - Road Track|link=Sardegna|country=ITA|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Layout A|link=Sardegna - Road Track - A|type=Original|length=5,113|reversible=y|rain=No|sophy=No|image=Sardegna - Road Track - A.jpg}}
+	{{CourseLayout|name=Layout B|link=Sardegna - Road Track - B|type=Original|length=3,893|reversible=y|rain=No|sophy=Forwards only|image=Sardegna - Road Track - B.jpg}}
+	{{CourseLayout|name=Layout C|link=Sardegna - Road Track - C|type=Original|length=2,661|reversible=y|rain=No|sophy=No|image=Sardegna - Road Track - C.jpg}}
+}}
+
+{{CourseWithLayouts|name=Sardegna - Windmills|country=ITA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Sardegna - Windmills|type=Dirt|length=3,310|reversible=y|rain=No|sophy=No|image=Sardegna - Windmills.jpg}}
+}}
+
+{{CourseWithLayouts|name=Special Stage Route X|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Special Stage Route X|type=Original|length=30,283|rain=No|sophy=No|image=Special Stage Route X.jpg}}
+}}
+
+{{CourseWithLayouts|name=SUGO International Racing Course|country=JPN|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=SUGO International Racing Course|type=Real|length=3,586|rain=Yes|sophy=No|image=Sportsland SUGO.png}}
+}}
+
+{{CourseWithLayouts|name=Suzuka Circuit|country=JPN|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Full Course|link=Suzuka Circuit|type=Real|length=5,807|rain=Yes|sophy=Yes|image=Suzuka Circuit.jpg}}
+	{{CourseLayout|name=East Course|link=Suzuka Circuit East|type=Real|length=2,243|rain=Yes|sophy=No|image=Suzuka Circuit East Course.jpg}}
+}}
+
+{{CourseWithLayouts|name=Tokyo Expressway|country=JPN|numberoflayouts=6|layouts=
+	{{CourseLayout|name=Central Clockwise|link=Tokyo Expressway - Central Clockwise|type=City|length=4,405|rain=Yes|sophy=No|image=Tokyo Expressway Central Outer Loop.jpg}}
+	{{CourseLayout|name=East Clockwise|link=Tokyo Expressway - East Clockwise|type=City|length=7,301|rain=Yes|sophy=Yes|image=Tokyo Expressway East Outer Loop.jpg}}
+	{{CourseLayout|name=South Clockwise|link=Tokyo Expressway - South Clockwise|type=City|length=5,201|rain=No|sophy=No|image=Tokyo Expressway South Outer Loop.jpg}}
+	{{CourseLayout|name=Central Counterclockwise|link=Tokyo Expressway - Central Counterclockwise|type=City|length=4,369|rain=Yes|sophy=No|image=Tokyo Expressway Central Inner Loop.jpg}}
+	{{CourseLayout|name=East Counterclockwise|link=Tokyo Expressway - East Counterclockwise|type=City|length=7,192|rain=Yes|sophy=No|image=Tokyo Expressway East Inner Loop.jpg}}
+	{{CourseLayout|name=South Counterclockwise|link=Tokyo Expressway - South Counterclockwise|type=City|length=6,560|rain=No|sophy=No|image=Tokyo Expressway South Inner Loop.jpg}}
+}}
+
+{{CourseWithLayouts|name=Trial Mountain Circuit|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Trial Mountain Circuit|type=Original|length=5,434|reversible=y|rain=No|sophy=Forwards only|image=Trial Mountain GT7 Map.png}}
+}}
+
+{{CourseWithLayouts|name=Tsukuba Circuit|country=JPN|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Tsukuba Circuit|type=Real|length=2,045|rain=Yes|sophy=Yes|image=Tsukuba Circuit.jpg}}
+}}
+
+{{CourseWithLayouts|name=Watkins Glen International|country=USA|numberoflayouts=2|layouts=
+	{{CourseLayout|name=Long Course|link=Watkins Glen International|type=Real|length=5,423|rain=No|sophy=No|image=Watkins Glen International (Long Course).png}}
+	{{CourseLayout|name=Short Course|link=Watkins Glen International|type=Real|length=3,942|rain=No|sophy=No|image=Watkins Glen International (Short Course).png}}
+}}
+
+{{CourseWithLayouts|name=WeatherTech Raceway Laguna Seca|country=USA|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=WeatherTech Raceway Laguna Seca|type=Real|length=3,602|rain=No|sophy=Yes|image=Mazda Raceway Laguna Seca.jpg}}
+}}
+
+{{CourseWithLayouts|name=Willow Springs International Raceway|country=USA|numberoflayouts=3|layouts=
+	{{CourseLayout|name=Big Willow|link=Willow Springs International Raceway: Big Willow|type=Real|length=3,951|rain=No|sophy=No|image=Willow Springs (Big Willow).jpg}}
+	{{CourseLayout|name=Streets of Willow Springs|link=Willow Springs International Raceway: Streets of Willow Springs|type=Real|length=2,675|reversible=y|rain=No|sophy=No|image=Willow Springs (Streets of Willow).jpg}}
+	{{CourseLayout|name=Horse Thief Mile|link=Willow Springs International Raceway: Horse Thief Mile|type=Real|length=1,624|reversible=y|rain=No|sophy=No|image=Willow Springs Horse Thief Mile.jpg}}
+}}
+
+{{CourseWithLayouts|name=Yas Marina Circuit|country=UAE|numberoflayouts=1|layouts=
+	{{CourseLayout|name=Full Course|link=Yas Marina Circuit|type=Real|length=5,281|rain=No|sophy=No|image=Yas Marina Circuit.png}}
+}}
+
+|}
+
+{{Track lists}}
+
+[[Category:Gran Turismo 7]]

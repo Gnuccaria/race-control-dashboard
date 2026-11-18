@@ -9,10 +9,10 @@ import type { TrackCatalog } from '../../useTrackCatalog';
 import {
   canReverse,
   chooseConfiguration,
-  chooseContinent,
+  chooseCountry,
   chooseTrackName,
   listConfigurations,
-  listContinents,
+  listCountries,
   listTrackNames,
   type TrackChoice,
   type TrackPickerDraft,
@@ -32,19 +32,18 @@ interface TrackPickerPanelProps {
 
 /** Contenuto del popup: tre menu a cascata, la casella "al contrario" e i pulsanti. */
 export function TrackPickerPanel({ catalog, initialChoice, onConfirm, onRemove, onCancel }: TrackPickerPanelProps) {
-  const { messages, locale } = useI18n();
+  const { messages } = useI18n();
   const trackTexts = messages.tracks;
-  const { continentLabel, configurationLabel } = useTrackLabels();
+  const { countryLabel, configurationLabel, lengthLabel } = useTrackLabels();
   const { tracks } = catalog;
   // null = l'utente non ha ancora toccato i menu: si mostra la scelta attuale appena le piste sono pronte.
   const [editedDraft, setEditedDraft] = useState<TrackPickerDraft | null>(null);
   const draft = editedDraft ?? toPickerDraft(tracks, initialChoice);
 
-  const continents = listContinents(tracks);
-  const trackNames = draft.continent === '' ? [] : listTrackNames(tracks, draft.continent);
-  const configurations = draft.trackName === '' ? [] : listConfigurations(tracks, draft.continent, draft.trackName);
+  const countries = listCountries(tracks, countryLabel);
+  const trackNames = draft.country === '' ? [] : listTrackNames(tracks, draft.country);
+  const configurations = draft.trackName === '' ? [] : listConfigurations(tracks, draft.country, draft.trackName);
   const selectedTrack = configurations.find((track) => track.id === draft.trackId);
-  const lengthFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
 
   const catalogMessage = catalog.errorKind
     ? serverErrorText(messages, catalog.errorKind)
@@ -63,28 +62,28 @@ export function TrackPickerPanel({ catalog, initialChoice, onConfirm, onRemove, 
       )}
 
       <div className={styles.pickerFields}>
-        <FormField label={trackTexts.continent}>
+        <FormField label={trackTexts.country}>
           {(controlProps) => (
             <Select
               id={controlProps.id}
               aria-describedby={controlProps['aria-describedby']}
-              disabled={continents.length === 0}
-              placeholderLabel={trackTexts.continentPlaceholder}
-              value={draft.continent}
-              options={continents.map((continent) => ({ value: continent, label: continentLabel(continent) }))}
-              onValueChange={(continent) => {
-                setEditedDraft(chooseContinent(continent));
+              disabled={countries.length === 0}
+              placeholderLabel={trackTexts.countryPlaceholder}
+              value={draft.country}
+              options={countries.map((country) => ({ value: country, label: countryLabel(country) }))}
+              onValueChange={(country) => {
+                setEditedDraft(chooseCountry(country));
               }}
             />
           )}
         </FormField>
 
-        <FormField label={trackTexts.track} hint={draft.continent === '' ? trackTexts.chooseContinentFirst : undefined}>
+        <FormField label={trackTexts.track} hint={draft.country === '' ? trackTexts.chooseCountryFirst : undefined}>
           {(controlProps) => (
             <Select
               id={controlProps.id}
               aria-describedby={controlProps['aria-describedby']}
-              disabled={draft.continent === ''}
+              disabled={draft.country === ''}
               placeholderLabel={trackTexts.trackPlaceholder}
               value={draft.trackName}
               options={trackNames.map((trackName) => ({ value: trackName, label: trackName }))}
@@ -118,7 +117,7 @@ export function TrackPickerPanel({ catalog, initialChoice, onConfirm, onRemove, 
       {selectedTrack && (
         <div className={styles.trackDetails}>
           {selectedTrack.lengthMeters !== null && (
-            <p className={styles.trackLength}>{trackTexts.lengthLabel(lengthFormatter.format(selectedTrack.lengthMeters / 1000))}</p>
+            <p className={styles.trackLength}>{trackTexts.lengthLabel(lengthLabel(selectedTrack.lengthMeters))}</p>
           )}
           {canReverse(selectedTrack) && (
             <Checkbox

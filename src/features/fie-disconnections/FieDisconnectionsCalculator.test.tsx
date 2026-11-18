@@ -14,7 +14,7 @@ describe('<FieDisconnectionsCalculator />', () => {
 
     expect(screen.getByText('Scegli un tracciato: la sua lunghezza serve per il calcolo.')).toBeInTheDocument();
 
-    await chooseTrack(user, { continent: 'Asia', track: 'Suzuka Circuit', configuration: 'Completo' });
+    await chooseTrack(user, { country: 'Giappone', track: 'Suzuka Circuit', configuration: 'Completo' });
     expect(screen.getByRole('button', { name: 'Tracciato' })).toHaveTextContent('Suzuka Circuit - Completo');
     expect(screen.getByText('Lunghezza usata nel calcolo: 5,807 km')).toBeInTheDocument();
     // Cifra e unità sono elementi separati (lo spazio lo fa il CSS): il testo è "3min53s".
@@ -26,14 +26,14 @@ describe('<FieDisconnectionsCalculator />', () => {
     const user = userEvent.setup();
     renderWithRouter(<FieDisconnectionsCalculator />);
 
-    await chooseTrack(user, { continent: 'Asia', track: 'Tsukuba Circuit' });
+    await chooseTrack(user, { country: 'Giappone', track: 'Tsukuba Circuit' });
     expect(screen.getByText('Per questo tracciato manca la lunghezza: aggiungila nel file delle piste.')).toBeInTheDocument();
   });
 
   it('per la P1 confronta con la P2 e aggiunge l’ingresso in pit stall', async () => {
     const user = userEvent.setup();
     renderWithRouter(<FieDisconnectionsCalculator />);
-    await chooseTrack(user, { continent: 'Asia', track: 'Suzuka Circuit', configuration: 'Completo' });
+    await chooseTrack(user, { country: 'Giappone', track: 'Suzuka Circuit', configuration: 'Completo' });
 
     await user.click(screen.getByRole('radio', { name: /^P1/ }));
     const gapInput = screen.getByRole('spinbutton', { name: 'Distacco dalla P2' });
@@ -50,7 +50,7 @@ describe('<FieDisconnectionsCalculator />', () => {
   it('non mostra attese negative quando il distacco copre la penalità', async () => {
     const user = userEvent.setup();
     renderWithRouter(<FieDisconnectionsCalculator />);
-    await chooseTrack(user, { continent: 'Asia', track: 'Suzuka Circuit', configuration: 'Completo' });
+    await chooseTrack(user, { country: 'Giappone', track: 'Suzuka Circuit', configuration: 'Completo' });
 
     await user.click(screen.getByRole('radio', { name: /^P1/ }));
     const gapInput = screen.getByRole('spinbutton', { name: 'Distacco dalla P2' });

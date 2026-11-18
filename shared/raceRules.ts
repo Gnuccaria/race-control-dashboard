@@ -20,11 +20,10 @@ const RACE_LAPS_MAX_DIGITS = String(RACE_LAPS_MAX).length;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const NON_DIGIT_PATTERN = /\D/g;
 /**
- * Nomi di piste, configurazioni e continenti: lettere, cifre, spazi e la punteggiatura dei nomi reali
+ * Nomi di piste e configurazioni: lettere, cifre, spazi e la punteggiatura dei nomi reali
  * ("Spa-Francorchamps", "Circuit de l'Eau Rouge", "Yamagiwa + Miyabi", "Europe - Middle East").
  */
 const TRACK_NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} .'’&()/+-]*$/u;
-export const TRACK_CONTINENT_MAX_LENGTH = 48;
 export const TRACK_LENGTH_MAX_METERS = 99999;
 
 export interface RaceResultEntry {
@@ -167,17 +166,20 @@ export interface SavedRace extends RaceSummary {
 
 export interface Track {
   readonly id: number;
+  /** Nome del tracciato in inglese, come nell'elenco del wiki di Gran Turismo ("Autodromo Nazionale Monza"). */
   readonly name: string;
   /** Configurazione del tracciato ("Full Course", "No Chicane"); null = non indicata. */
   readonly configuration: string | null;
-  readonly continent: string | null;
+  /** Nazione (codice ISO a due lettere, es. "IT"); null = non indicata. */
+  readonly country: string | null;
   readonly lengthMeters: number | null;
   /** Percorribile anche in senso inverso; null = non indicato. */
   readonly hasReverseLayout: boolean | null;
+  /** Mappa di gt-engine.com (nome del file), per il briefing; null = nessuna. Vedi shared/trackRules.ts. */
+  readonly mapFile: string | null;
+  /** Mappa del senso inverso, se gt-engine.com ne ha una. */
+  readonly reverseMapFile: string | null;
 }
-
-/** Dati di una pista da salvare (senza id). */
-export type TrackDraft = Omit<Track, 'id'>;
 
 /** Separatore tra tracciato e configurazione ("Monza - Full Course"), uguale nel server e nell'app. */
 export const TRACK_CONFIGURATION_SEPARATOR = ' - ';
@@ -189,60 +191,6 @@ export const formatTrackName = (track: Pick<Track, 'name' | 'configuration'>): s
 /** Chiave unica di una pista: nome + configurazione, senza badare alle maiuscole (colonna name_key). */
 export const toTrackKey = (track: Pick<Track, 'name' | 'configuration'>): string =>
   `${toTrackNameKey(track.name)}|${(track.configuration ?? '').toLowerCase()}`;
-
-export interface TrackDraftIssues {
-  readonly name?: 'invalid';
-  readonly configuration?: 'invalid';
-  readonly continent?: 'invalid';
-  readonly lengthMeters?: 'invalid';
-  readonly hasReverseLayout?: 'invalid';
-}
-
-export type TrackDraftValidation =
-  | { readonly isValid: true; readonly track: TrackDraft }
-  | { readonly isValid: false; readonly issues: TrackDraftIssues };
-
-/** Testo facoltativo: vuoto → null, altrimenti normalizzato e controllato come i nomi. */
-function readOptionalTrackText(rawValue: unknown, maxLength: number): string | null | undefined {
-  if (rawValue === undefined || rawValue === null || (typeof rawValue === 'string' && rawValue.trim() === '')) return null;
-  if (typeof rawValue !== 'string') return undefined;
-  const text = rawValue.normalize('NFC').trim().replace(/\s+/g, ' ');
-  return [...text].length <= maxLength && TRACK_NAME_PATTERN.test(text) ? text : undefined;
-}
-
-/** Convalida una pista con tutti i suoi dati (solo il nome è obbligatorio). */
-export function validateTrackDraft(input: unknown): TrackDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  const name = normalizeTrackName(candidate.name);
-  const configuration = readOptionalTrackText(candidate.configuration, TRACK_NAME_MAX_LENGTH);
-  const continent = readOptionalTrackText(candidate.continent, TRACK_CONTINENT_MAX_LENGTH);
-  const { lengthMeters, hasReverseLayout } = candidate;
-  const isLengthValid =
-    lengthMeters === undefined ||
-    lengthMeters === null ||
-    (typeof lengthMeters === 'number' && Number.isInteger(lengthMeters) && lengthMeters > 0 && lengthMeters <= TRACK_LENGTH_MAX_METERS);
-  const isReverseValid = hasReverseLayout === undefined || hasReverseLayout === null || typeof hasReverseLayout === 'boolean';
-
-  const issues: { -readonly [Field in keyof TrackDraftIssues]: TrackDraftIssues[Field] } = {};
-  if (name === null) issues.name = 'invalid';
-  if (configuration === undefined) issues.configuration = 'invalid';
-  if (continent === undefined) issues.continent = 'invalid';
-  if (!isLengthValid) issues.lengthMeters = 'invalid';
-  if (!isReverseValid) issues.hasReverseLayout = 'invalid';
-  if (name === null || configuration === undefined || continent === undefined || Object.keys(issues).length > 0) {
-    return { isValid: false, issues };
-  }
-  return {
-    isValid: true,
-    track: {
-      name,
-      configuration,
-      continent,
-      lengthMeters: (lengthMeters as number | null | undefined) ?? null,
-      hasReverseLayout: (hasReverseLayout as boolean | null | undefined) ?? null,
-    },
-  };
-}
 
 /** Tiene solo le cifre e al massimo due: nel campo Round non si può scrivere altro. */
 export function sanitizeRoundInput(rawValue: string): string {

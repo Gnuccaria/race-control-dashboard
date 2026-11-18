@@ -19,7 +19,7 @@ interface RaceInfoFieldsProps {
 
 /**
  * Scheda "Anagrafica": nome della gara, campionato (con la durata dove serve), round, data e tracciato
- * (scelto nel popup Continente → Tracciato → Configurazione).
+ * (scelto nel popup Nazione → Tracciato → Configurazione).
  */
 export function RaceInfoFields({ draft, allCrews, isReadOnly }: RaceInfoFieldsProps) {
   const { messages } = useI18n();

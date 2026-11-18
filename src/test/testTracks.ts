@@ -1,11 +1,22 @@
 import type { Track } from '@shared/raceRules';
 
-/** Piste finte per i test: due continenti, un tracciato con più configurazioni, una con il senso inverso. */
+const track = (id: number, name: string, configuration: string, country: string, lengthMeters: number | null, hasReverseLayout: boolean, mapFile: string | null = null): Track => ({
+  id,
+  name,
+  configuration,
+  country,
+  lengthMeters,
+  hasReverseLayout,
+  mapFile,
+  reverseMapFile: null,
+});
+
+/** Piste finte per i test: tre nazioni, un tracciato con più configurazioni, una con il senso inverso. */
 export const TEST_TRACKS: Track[] = [
-  { id: 1, name: 'Alsace', configuration: 'Village', continent: 'Europe - Middle East', lengthMeters: 5423, hasReverseLayout: true },
-  { id: 2, name: 'Monza', configuration: 'Full Course', continent: 'Europe - Middle East', lengthMeters: 5793, hasReverseLayout: false },
-  { id: 3, name: 'Monza', configuration: 'No Chicane', continent: 'Europe - Middle East', lengthMeters: 5755, hasReverseLayout: false },
-  { id: 4, name: 'Suzuka Circuit', configuration: 'Full Course', continent: 'Asia', lengthMeters: 5807, hasReverseLayout: false },
-  { id: 5, name: 'Suzuka Circuit', configuration: 'East Course', continent: 'Asia', lengthMeters: 2243, hasReverseLayout: false },
-  { id: 6, name: 'Tsukuba Circuit', configuration: 'Full Course', continent: 'Asia', lengthMeters: null, hasReverseLayout: false },
+  track(1, 'Alsace', 'Village', 'FR', 5423, true, 'alsace-village.png'),
+  track(2, 'Monza', 'Full Course', 'IT', 5793, false, 'monza.png'),
+  track(3, 'Monza', 'No Chicane', 'IT', 5755, false),
+  track(4, 'Suzuka Circuit', 'Full Course', 'JP', 5807, false),
+  track(5, 'Suzuka Circuit', 'East Course', 'JP', 2243, false),
+  track(6, 'Tsukuba Circuit', 'Full Course', 'JP', null, false),
 ];

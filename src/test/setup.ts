@@ -7,7 +7,7 @@ import { TEST_CARS } from './testCars';
 import { TEST_TRACKS } from './testTracks';
 
 // Le pagine si caricano in lazy: con tutti i test in parallelo il primo caricamento può superare il secondo predefinito.
-configure({ asyncUtilTimeout: 5000 });
+configure({ asyncUtilTimeout: 10_000 });
 
 // jsdom non implementa matchMedia: simuliamo un dispositivo in tema chiaro.
 vi.stubGlobal('matchMedia', (mediaQuery: string) => ({
@@ -51,9 +51,10 @@ vi.mock('@/features/championships/services/championshipApi', () => ({
   deleteChampionships: vi.fn(),
 }));
 
-// Anche le piste: un piccolo elenco con continenti, configurazioni e senso inverso.
+// Anche le piste: un piccolo elenco con nazioni, configurazioni e senso inverso.
 vi.mock('@/features/tracks/trackApi', () => ({
   fetchTracks: vi.fn(() => Promise.resolve({ isSuccess: true, value: TEST_TRACKS })),
+  refreshTracks: vi.fn(),
 }));
 
 // I test verificano i testi italiani, indipendentemente dalla lingua di jsdom.

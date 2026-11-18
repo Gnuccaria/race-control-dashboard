@@ -153,17 +153,15 @@ describe('API gare e piste', () => {
     expect(withoutLaps).toMatchObject({ status: 422, body: { error: { details: { results: 'invalid' } } } });
   });
 
-  it('gestisce le piste: inserimento, nomi unici, elenco alfabetico, uso nelle gare', async () => {
-    expect((await request('POST', '/tracks', { name: '  Spa-Francorchamps ' })).body).toEqual({
-      track: { id: 1, name: 'Spa-Francorchamps', configuration: null, continent: null, lengthMeters: null, hasReverseLayout: null },
-    });
-    await request('POST', '/tracks', { name: 'Monza' });
-    expect((await request('POST', '/tracks', { name: 'MONZA' })).status).toBe(409);
-    expect((await request('POST', '/tracks', { name: '<b>' })).status).toBe(422);
-    const trackList = (await request('GET', '/tracks')).body.tracks as { id: number; name: string; configuration: string | null }[];
-    expect(trackList.map(({ id, name, configuration }) => [id, name, configuration])).toEqual([
-      [2, 'Monza', null],
-      [1, 'Spa-Francorchamps', null],
+  it('piste: elenco alfabetico (arrivano solo dall\'aggiornamento dai siti), uso nelle gare', async () => {
+    await env.CREWS_DB.prepare(
+      "INSERT INTO tracks (id, name, name_key, configuration, country, length_meters, has_reverse_layout, map_file) VALUES (1, 'Spa-Francorchamps', 'spa-francorchamps|full course', 'Full Course', 'BE', 7044, 0, 'spa-francorchamps.png'), (2, 'Monza', 'monza|full course', 'Full Course', 'IT', 5793, 0, NULL)",
+    ).run();
+    expect((await request('POST', '/tracks', { name: 'Imola' })).status).toBe(405);
+    const trackList = (await request('GET', '/tracks')).body.tracks as unknown[];
+    expect(trackList).toEqual([
+      { id: 2, name: 'Monza', configuration: 'Full Course', country: 'IT', lengthMeters: 5793, hasReverseLayout: false, mapFile: null, reverseMapFile: null },
+      { id: 1, name: 'Spa-Francorchamps', configuration: 'Full Course', country: 'BE', lengthMeters: 7044, hasReverseLayout: false, mapFile: 'spa-francorchamps.png', reverseMapFile: null },
     ]);
 
     const withTrack = await request('POST', '/races', race({ trackId: 2 }));

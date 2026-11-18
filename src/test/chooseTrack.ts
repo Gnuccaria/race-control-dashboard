@@ -1,17 +1,17 @@
 import { screen, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 
-/** Apre il campo Tracciato e sceglie continente, tracciato e configurazione (più, se richiesto, "al contrario"). */
+/** Apre il campo Tracciato e sceglie nazione, tracciato e configurazione (più, se richiesto, "al contrario"). */
 export async function chooseTrack(
   user: UserEvent,
-  choice: { continent: string; track: string; configuration?: string; isReversed?: boolean },
+  choice: { country: string; track: string; configuration?: string; isReversed?: boolean },
 ) {
   await user.click(screen.getByRole('button', { name: 'Tracciato' }));
   const dialog = await screen.findByRole('dialog', { name: 'Scegli il tracciato' });
-  const continentSelect = within(dialog).getByRole('combobox', { name: 'Continente' });
+  const countrySelect = within(dialog).getByRole('combobox', { name: 'Nazione' });
   // Le piste arrivano (finte) dal server: si aspetta che il menu abbia le opzioni.
-  await within(continentSelect).findByRole('option', { name: choice.continent });
-  await user.selectOptions(continentSelect, choice.continent);
+  await within(countrySelect).findByRole('option', { name: choice.country });
+  await user.selectOptions(countrySelect, choice.country);
   await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Tracciato' }), choice.track);
   if (choice.configuration) {
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Configurazione' }), choice.configuration);

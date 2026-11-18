@@ -1,24 +1,28 @@
-import { type Track, toTrackKey } from '../../../shared/raceRules';
+import { type Track } from '../../../shared/raceRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
 interface TrackRow {
   readonly id: number;
   readonly name: string;
   readonly configuration: string | null;
-  readonly continent: string | null;
+  readonly country: string | null;
   readonly length_meters: number | null;
   readonly has_reverse_layout: number | null;
+  readonly map_file: string | null;
+  readonly reverse_map_file: string | null;
 }
 
-const TRACK_COLUMNS = 'id, name, configuration, continent, length_meters, has_reverse_layout';
+const TRACK_COLUMNS = 'id, name, configuration, country, length_meters, has_reverse_layout, map_file, reverse_map_file';
 
 const toTrack = (row: TrackRow): Track => ({
   id: row.id,
   name: row.name,
   configuration: row.configuration,
-  continent: row.continent,
+  country: row.country,
   lengthMeters: row.length_meters,
   hasReverseLayout: row.has_reverse_layout === null ? null : row.has_reverse_layout === 1,
+  mapFile: row.map_file,
+  reverseMapFile: row.reverse_map_file,
 });
 
 export async function listTracks(database: SqlDatabase): Promise<Track[]> {
@@ -33,16 +37,12 @@ export async function findTrackById(database: SqlDatabase, trackId: number): Pro
   return row ? toTrack(row) : null;
 }
 
-/** Pista senza configurazione con questo nome già presente? */
-export async function isTrackNameTaken(database: SqlDatabase, name: string): Promise<boolean> {
-  return (await database.prepare('SELECT id FROM tracks WHERE name_key = ?').bind(toTrackKey({ name, configuration: null })).first()) !== null;
-}
+/** Tracciato salvato, con la chiave del wiki (null per quelli importati dal CSV) e quante gare lo usano. */
+export type StoredTrack = Track & { readonly sourceKey: string | null; readonly usageCount: number };
 
-export async function insertTrack(database: SqlDatabase, name: string): Promise<Track> {
-  const insertedRow = await database
-    .prepare(`INSERT INTO tracks (name, name_key) VALUES (?, ?) RETURNING ${TRACK_COLUMNS}`)
-    .bind(name, toTrackKey({ name, configuration: null }))
-    .first<TrackRow>();
-  if (!insertedRow) throw new Error('Il database non ha restituito la pista inserita.');
-  return toTrack(insertedRow);
+export async function listStoredTracks(database: SqlDatabase): Promise<StoredTrack[]> {
+  const { results } = await database
+    .prepare(`SELECT ${TRACK_COLUMNS}, source_key, (SELECT COUNT(*) FROM races WHERE races.track_id = tracks.id) AS usage_count FROM tracks`)
+    .all<TrackRow & { readonly source_key: string | null; readonly usage_count: number }>();
+  return results.map((row) => ({ ...toTrack(row), sourceKey: row.source_key, usageCount: row.usage_count }));
 }

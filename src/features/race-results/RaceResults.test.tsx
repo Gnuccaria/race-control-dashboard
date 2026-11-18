@@ -166,25 +166,32 @@ describe('Nuova gara', () => {
     await user.type(screen.getByRole('textbox', { name: 'Giri totali' }), '2a5');
     expect(screen.getByRole('textbox', { name: 'Giri totali' })).toHaveValue('25');
 
-    // Tracciato: Continente → Tracciato → Configurazione; "al contrario" solo dove la configurazione lo prevede.
+    // Tracciato: Nazione → Tracciato → Configurazione (nazioni nella lingua dell'app); "al contrario" solo dove la configurazione lo prevede.
     await user.click(screen.getByRole('button', { name: 'Tracciato' }));
     const dialog = await screen.findByRole('dialog', { name: 'Scegli il tracciato' });
     expect(within(dialog).getByRole('combobox', { name: 'Tracciato' })).toBeDisabled();
     expect(within(dialog).getByRole('combobox', { name: 'Configurazione' })).toBeDisabled();
-    await within(dialog).findByRole('option', { name: 'Asia' });
-    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Continente' }), 'Europa - Medio Oriente');
+    await within(dialog).findByRole('option', { name: 'Giappone' });
+    expect(within(within(dialog).getByRole('combobox', { name: 'Nazione' })).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Seleziona una nazione',
+      'Francia',
+      'Giappone',
+      'Italia',
+    ]);
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Nazione' }), 'Italia');
     expect(within(within(dialog).getByRole('combobox', { name: 'Tracciato' })).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Seleziona un tracciato',
-      'Alsace',
       'Monza',
     ]);
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Tracciato' }), 'Monza');
     expect(within(dialog).getByRole('button', { name: 'Conferma' })).toBeDisabled();
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Configurazione' }), 'Senza chicane');
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    // Lunghezza in km e in miglia.
+    expect(within(dialog).getByText('Lunghezza: 5,755 km (3,58 mi)')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Annulla' }));
     expect(screen.getByRole('button', { name: 'Tracciato' })).toHaveTextContent('Scegli un tracciato');
-    await chooseTrack(user, { continent: 'Europa - Medio Oriente', track: 'Alsace', isReversed: true });
+    await chooseTrack(user, { country: 'Francia', track: 'Alsace', isReversed: true });
     expect(screen.getByRole('button', { name: 'Tracciato' })).toHaveTextContent('Alsace - Villaggio al contrario');
 
     await user.click(screen.getByRole('tab', { name: 'Dettagli' }));

@@ -8,6 +8,8 @@ import { CreateChampionshipIcon, ManageChampionshipsIcon } from '@/features/cham
 import { CREATE_CHAMPIONSHIP_TOOL_INFO, MANAGE_CHAMPIONSHIPS_TOOL_INFO } from '@/features/championships/championshipsToolInfo';
 import { ManageCarsIcon } from '@/features/cars/CarIcons';
 import { MANAGE_CARS_TOOL_INFO } from '@/features/cars/manageCarsToolInfo';
+import { MANAGE_TRACKS_TOOL_INFO } from '@/features/tracks/manageTracksToolInfo';
+import { ManageTracksIcon } from '@/features/tracks/TrackIcons';
 import { ADD_CREW_TOOL_INFO, MANAGE_CREWS_TOOL_INFO } from '@/features/crews/addCrewToolInfo';
 import { AddCrewIcon, ManageCrewsIcon } from '@/features/crews/CrewIcons';
 import { FieDisconnectionsIcon } from '@/features/fie-disconnections/FieDisconnectionsIcon';
@@ -110,6 +112,17 @@ export const TOOL_SECTIONS: readonly ToolSection[] = [
           loadPage: async () => {
             const { ManageCarsPage } = await import('@/features/cars');
             return { Component: ManageCarsPage };
+          },
+        },
+      },
+      {
+        ...MANAGE_TRACKS_TOOL_INFO,
+        Icon: ManageTracksIcon,
+        availability: {
+          status: 'available',
+          loadPage: async () => {
+            const { ManageTracksPage } = await import('@/features/tracks');
+            return { Component: ManageTracksPage };
           },
         },
       },

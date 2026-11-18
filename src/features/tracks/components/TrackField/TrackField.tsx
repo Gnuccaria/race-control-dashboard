@@ -24,7 +24,7 @@ interface TrackFieldProps {
 
 /**
  * Campo Tracciato: mostra "Tracciato - Configurazione [al contrario]" e al clic apre un popup modale
- * con i menu Continente, Tracciato e Configurazione (in quest'ordine, ognuno abilitato dal precedente).
+ * con i menu Nazione, Tracciato e Configurazione (in quest'ordine, ognuno abilitato dal precedente).
  * L'elenco delle piste viene riletto dal server a ogni apertura.
  */
 export function TrackField({

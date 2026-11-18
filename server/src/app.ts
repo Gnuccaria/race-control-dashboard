@@ -67,7 +67,7 @@ async function logErrorResponse(request: Request, response: Response): Promise<v
  *   PUT /races/:id/driver-swaps   (solo i cambi pilota, Commissari Sportivi)
  *   GET · PUT /races/:id/weather   (pattern meteo; lo salva il Direttore Gara)
  *   GET · POST · DELETE /championships   GET · PUT /championships/:id
- *   GET · POST /tracks
+ *   GET /tracks   POST /tracks/refresh   (tracciati; aggiornamento dai siti, Organizzazione)
  *   GET /cars   POST /cars/refresh   (vetture; aggiornamento dai siti, Organizzazione)
  *   GET /public/races                GET /public/races/:id   (sito dei risultati, senza accesso)
  *   GET /public/races/:id/report.pdf (referto di gara in PDF)
@@ -77,12 +77,12 @@ async function logErrorResponse(request: Request, response: Response): Promise<v
  *   GET /public/disconnection-tickets/availability   (sito: invio dei ticket aperto o chiuso)
  *   GET /public/protests/form · /mine · /:id · /:id/video   POST /public/protests   PUT /public/protests/:id/video · /:id/youtube   (proteste dal sito)
  *   GET /protests · /protests/:id · /protests/:id/video   PUT /protests/:id/review   (proteste nell'app, Commissari Sportivi)
- * La verifica Discord, le chiamate a Discord dell'accesso al sito e lo scaricamento dei siti delle vetture sono iniettabili per i test.
+ * La verifica Discord, le chiamate a Discord dell'accesso al sito e lo scaricamento dei siti di vetture e tracciati sono iniettabili per i test.
  */
 export function createApp(checkMembership?: MembershipChecker, discordFetch?: DiscordFetch, carSourceFetch?: SourceFetch) {
   const crewHandlers = createCrewHandlers(checkMembership);
   const raceHandlers = createRaceHandlers(checkMembership);
-  const trackHandlers = createTrackHandlers(checkMembership);
+  const trackHandlers = createTrackHandlers(checkMembership, carSourceFetch);
   const carHandlers = createCarHandlers(checkMembership, carSourceFetch);
   const championshipHandlers = createChampionshipHandlers(checkMembership);
   const penaltyHandlers = createPenaltyHandlers(checkMembership);
@@ -105,6 +105,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
     '/public/protests': { method: 'POST', handler: protestHandlers.submitProtest },
     '/protests': { method: 'GET', handler: protestHandlers.listProtests },
     '/cars/refresh': { method: 'POST', handler: carHandlers.refreshCars },
+    '/tracks/refresh': { method: 'POST', handler: trackHandlers.refreshTracks },
   };
 
   const resources: Record<string, ResourceRoutes> = {
@@ -121,7 +122,7 @@ export function createApp(checkMembership?: MembershipChecker, discordFetch?: Di
       item: { GET: championshipHandlers.getChampionship, PUT: championshipHandlers.updateChampionship },
     },
     tracks: {
-      collection: { GET: trackHandlers.listTracks, POST: trackHandlers.createTrack },
+      collection: { GET: trackHandlers.listTracks },
     },
     cars: {
       collection: { GET: carHandlers.listCars },
