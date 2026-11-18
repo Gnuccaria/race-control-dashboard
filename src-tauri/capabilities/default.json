@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permessi della finestra principale: base, tema della finestra, pallino delle notifiche sull'icona e chiamate HTTP solo verso l'API di Discord e il server degli equipaggi su Cloudflare Workers.",
+  "description": "Permessi della finestra principale: base, tema della finestra, pallino delle notifiche sull'icona e aggiornamento automatico dell'app, chiamate HTTP solo verso l'API di Discord e il server degli equipaggi su Cloudflare Workers.",
   "windows": [
     "main"
   ],
@@ -21,6 +21,8 @@
           "url": "https://*.workers.dev/*"
         }
       ]
-    }
+    },
+    "updater:default",
+    "process:allow-restart"
   ]
 }

@@ -432,6 +432,15 @@ export const en: Messages = {
     loading: 'Loading the weather pattern…',
     notPublished: 'The weather pattern of this race has not been published yet.',
   },
+  updates: {
+    title: 'Updating',
+    version: (version: string) => `Installing version ${version}`,
+    progressLabel: 'Update progress',
+    downloading: 'Downloading…',
+    percent: (percent: number) => `${percent}%`,
+    installing: 'Installing… the app will restart by itself.',
+    doNotClose: 'Do not close the app during the update.',
+  },
   cars: {
     loading: 'Loading cars…',
     unknownCar: 'Car no longer available',

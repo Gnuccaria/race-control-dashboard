@@ -440,6 +440,15 @@ export const it = {
     loading: 'Caricamento del pattern meteo…',
     notPublished: 'Il pattern meteo di questa gara non è ancora stato pubblicato.',
   },
+  updates: {
+    title: 'Aggiornamento in corso',
+    version: (version: string) => `Installazione della versione ${version}`,
+    progressLabel: 'Avanzamento dell\'aggiornamento',
+    downloading: 'Scaricamento…',
+    percent: (percent: number) => `${percent}%`,
+    installing: 'Installazione… l\'app si riavvierà da sola.',
+    doNotClose: 'Non chiudere l\'app durante l\'aggiornamento.',
+  },
   cars: {
     loading: 'Caricamento delle auto…',
     unknownCar: 'Auto non più disponibile',

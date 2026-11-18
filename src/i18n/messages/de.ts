@@ -433,6 +433,15 @@ export const de: Messages = {
     loading: 'Wettermuster wird geladen…',
     notPublished: 'Das Wettermuster dieses Rennens wurde noch nicht veröffentlicht.',
   },
+  updates: {
+    title: 'Aktualisierung läuft',
+    version: (version: string) => `Version ${version} wird installiert`,
+    progressLabel: 'Fortschritt der Aktualisierung',
+    downloading: 'Wird heruntergeladen…',
+    percent: (percent: number) => `${percent} %`,
+    installing: 'Wird installiert… die App startet von selbst neu.',
+    doNotClose: 'Schließe die App während der Aktualisierung nicht.',
+  },
   cars: {
     loading: 'Autos werden geladen…',
     unknownCar: 'Auto nicht mehr verfügbar',

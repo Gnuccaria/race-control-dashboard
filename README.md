@@ -166,4 +166,35 @@ npm run typecheck && npm run lint && npx vitest run
 npm run typecheck && npx vitest run
 ```
 
-Gli installer di tutti e tre i sistemi si ottengono pubblicando un tag (`git tag v1.0.0 && git push --tags`): GitHub crea una release in bozza.
+### Rilasciare una nuova versione dell'app (Windows, con aggiornamento automatico)
+
+Mentre sviluppi basta `npm run desktop:dev`: le modifiche all'interfaccia compaiono subito nell'app aperta, senza ricompilare. Per distribuire non serve compilare sul proprio PC: lo fa GitHub.
+
+All'avvio l'app installata controlla se su GitHub c'è una versione più recente. Se c'è, la scarica e la installa senza chiedere, mostrando una barra con la percentuale, poi si riavvia aggiornata. Senza rete, o se qualcosa va storto, si apre normalmente. Gli aggiornamenti sono firmati: l'app installa solo quelli firmati con la chiave del progetto.
+
+**Da fare una volta sola**
+
+1. Crea la coppia di chiavi di firma sul tuo PC (scegli una password e conservala; il file va fuori dalla cartella del progetto):
+```bash
+npx tauri signer generate -w ~/.tauri/race-control.key
+```
+2. Copia la **chiave pubblica** (il contenuto di `~/.tauri/race-control.key.pub`) in `src-tauri/tauri.conf.json`, al posto di `INSERIRE_QUI_LA_CHIAVE_PUBBLICA` in `plugins.updater.pubkey`, e fai commit.
+3. Su GitHub → Settings → Secrets and variables → Actions:
+   - **Secrets**: `TAURI_SIGNING_PRIVATE_KEY` con il contenuto di `~/.tauri/race-control.key` (la chiave privata) e `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` con la sua password;
+   - **Variables**: `VITE_CREW_API_URL` con l'indirizzo del server su Cloudflare.
+
+La chiave privata non va mai nel repository né condivisa: chi la perde non può più pubblicare aggiornamenti per le app già installate (bisognerebbe reinstallarle a mano).
+
+**A ogni nuova versione**
+
+1. Aumenta `version` in `package.json` (es. da `1.0.0` a `1.1.0`) e fai commit e push.
+2. Pubblica il tag con lo stesso numero:
+```bash
+git tag v1.1.0
+```
+```bash
+git push --tags
+```
+3. GitHub (Actions → "Installer desktop") compila l'installer per Windows, lo firma e pubblica la release con il file `latest.json`. Dal prossimo avvio le app installate si aggiornano da sole; per i nuovi utenti l'installer `.exe` è nella pagina delle release.
+
+Gli installer non hanno un certificato di firma di Windows: al primo download Windows SmartScreen mostra un avviso ("Esegui comunque"). Gli aggiornamenti automatici funzionano lo stesso.

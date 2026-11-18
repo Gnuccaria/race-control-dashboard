@@ -434,6 +434,15 @@ export const fr: Messages = {
     loading: 'Chargement du scénario météo…',
     notPublished: 'Le scénario météo de cette course n’a pas encore été publié.',
   },
+  updates: {
+    title: 'Mise à jour en cours',
+    version: (version: string) => `Installation de la version ${version}`,
+    progressLabel: 'Avancement de la mise à jour',
+    downloading: 'Téléchargement…',
+    percent: (percent: number) => `${percent} %`,
+    installing: 'Installation… l’application va redémarrer toute seule.',
+    doNotClose: 'Ne fermez pas l’application pendant la mise à jour.',
+  },
   cars: {
     loading: 'Chargement des voitures…',
     unknownCar: 'Voiture plus disponible',

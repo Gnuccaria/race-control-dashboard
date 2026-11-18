@@ -45,5 +45,16 @@
         "type": "embedBootstrapper"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "INSERIRE_QUI_LA_CHIAVE_PUBBLICA",
+      "endpoints": [
+        "https://github.com/gnuccaria/race-control-dashboard/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

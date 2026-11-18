@@ -17,3 +17,7 @@ server/.wrangler
 .env
 .env.*
 !.env.example
+
+# Chiavi di firma degli aggiornamenti: mai nel repository (la privata va solo nei segreti di GitHub)
+*.key
+*.key.pub
