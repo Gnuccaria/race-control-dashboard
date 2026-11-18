@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Env } from '../src/env';
 import { buildRaceReport, describeDecision, describeDecisions, formatReportTime, joinCarNumbers, reportFileName } from '../src/reports/raceReportData';
+import { loadRaceReportInput } from '../src/reports/raceReportRepository';
 import { readReportLanguage, reportTexts } from '../src/reports/reportTexts';
 import { createTestApp, createTestEnv, getPath, REQUIRED_DETAILS, sendJson, withSchedule, crewDetails } from './support/testApp';
 
@@ -202,5 +203,32 @@ describe('GET /public/races/:id/report.pdf', () => {
 
   it('404 per una gara inesistente', async () => {
     expect((await handleRequest(getPath('/public/races/9/report.pdf'), env)).status).toBe(404);
+  });
+
+  it('i cambi pilota salvati dall\'app arrivano al sito (colonna Penalità) e al referto (una riga per vettura)', async () => {
+    // #16 si ferma per prima e riparte a 1:00; #44 si ferma 1 s dopo e riparte a 0:50: 9 s oltre il margine × 2,5 → 23 s.
+    const saved = await request('PUT', '/races/1/driver-swaps', {
+      driverSwaps: [
+        { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 60_000, isCancelled: false, notes: '' },
+        { swap: 1, crewId: 2, pitInMs: 3_601_000, pitOutMs: 50_000, isCancelled: false, notes: '' },
+      ],
+    });
+    expect(saved.status).toBe(200);
+    const publicRace = (await (await handleRequest(getPath('/public/races/1'), env)).json()) as { race: { results: { position: number; penaltyMs: number | null }[] } };
+    // Sito: 10 s di decisione + 23 s di cambio pilota per la #44; nessuna penalità per la #16.
+    expect(publicRace.race.results.map((result) => [result.position, result.penaltyMs])).toEqual([
+      [1, null],
+      [2, 33_000],
+    ]);
+    // Referto: gli stessi dati letti dal database.
+    const input = await loadRaceReportInput(env.CREWS_DB, 1, (round, championship) => `Round ${round} – ${championship}`);
+    const report = buildRaceReport(input ?? { title: '', round: 1, results: [], penalties: [], driverSwaps: [], crewNumberById: new Map() });
+    expect(report.classification.map((line) => line.penalty)).toEqual(['', '+33.000']);
+    expect(report.penalties.at(-1)).toEqual({
+      crews: '#44',
+      decision: '+23 secondi al tempo di gara della vettura #44',
+      violation: 'Violazione della procedura di driver swap',
+      reason: 'Infrazione: 23.000 secondi',
+    });
   });
 });

@@ -10,7 +10,7 @@ import styles from './ClassificationTable.module.css';
 type ColumnKey = 'position' | 'number' | 'crew' | 'car' | 'laps' | 'gap' | 'penalties';
 const COLUMNS: readonly ColumnKey[] = ['position', 'number', 'crew', 'car', 'laps', 'gap', 'penalties'];
 /** Colonne numeriche: allineate a destra con cifre della stessa larghezza. */
-const NUMERIC_COLUMNS = new Set<ColumnKey>(['number', 'laps', 'gap']);
+const NUMERIC_COLUMNS = new Set<ColumnKey>(['number', 'laps', 'gap', 'penalties']);
 
 /**
  * Classifica di una gara: posizione, numero, equipaggio, vettura, giri completati, distacco e penalità.
@@ -57,8 +57,8 @@ export function ClassificationTable({ results }: { readonly results: readonly Pu
               <td className={joinClassNames(styles.numeric, styles.gap)}>
                 {renderGap(result)}
               </td>
-              {/* Le penalità non sono ancora registrate dall'app. */}
-              <td>{missing}</td>
+              {/* Penalità totali come nel referto: decisioni a tempo + cambi pilota (secondi per eccesso). */}
+              <td className={joinClassNames(styles.numeric, styles.gap)}>{result.penaltyMs === null ? missing : `+${formatGap(result.penaltyMs, decimalSeparator)}`}</td>
             </tr>
           ))}
         </tbody>

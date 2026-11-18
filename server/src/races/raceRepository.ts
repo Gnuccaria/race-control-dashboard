@@ -99,6 +99,8 @@ export async function listPublicRaceResults(database: SqlDatabase, raceId: numbe
   return results.map(({ carManufacturer, carModel, ...result }) => ({
     ...result,
     carName: carManufacturer === null ? null : formatCarName({ manufacturer: carManufacturer, model: carModel }),
+    // Le penalità le aggiunge chi conosce penalità e cambi pilota (publicRaceHandlers).
+    penaltyMs: null,
   }));
 }
 

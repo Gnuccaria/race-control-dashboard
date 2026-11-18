@@ -257,8 +257,8 @@ describe('API gare e piste', () => {
     expect(body.race).toMatchObject({ name: 'Gara di prova', totalLaps: 30, championship: CHAMPIONSHIP, round: 1 });
     // Classifica con numero, nome e colore dell'equipaggio e nome della vettura usata; nessun id Discord.
     expect(body.race.results).toEqual([
-      { position: 1, laps: 29, gapMs: null, crewNumber: 2, crewName: 'Beta', crewColor: '#E10600', carName: 'BMW' },
-      { position: 2, laps: 28, gapMs: 65320, crewNumber: 1, crewName: 'Alfa', crewColor: '#E10600', carName: 'Audi' },
+      { position: 1, laps: 29, gapMs: null, crewNumber: 2, crewName: 'Beta', crewColor: '#E10600', carName: 'BMW', penaltyMs: null },
+      { position: 2, laps: 28, gapMs: 65320, crewNumber: 1, crewName: 'Alfa', crewColor: '#E10600', carName: 'Audi', penaltyMs: null },
     ]);
     expect(JSON.stringify(body).includes('discord')).toBe(false);
 

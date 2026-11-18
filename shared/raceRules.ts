@@ -54,6 +54,11 @@ export interface PublicRaceResult {
   readonly carName: string | null;
   /** Distacco dal leader in millisecondi, null se non indicato. */
   readonly gapMs: number | null;
+  /**
+   * Penalità totali in millisecondi, come nel referto: decisioni a tempo delle penalità + cambi pilota non annullati
+   * (in secondi interi, per eccesso). null senza penalità.
+   */
+  readonly penaltyMs: number | null;
 }
 
 /** Gara come la vede il sito pubblico: dati della gara e classifica completa. */

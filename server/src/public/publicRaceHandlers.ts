@@ -2,7 +2,7 @@ import { hasRaceStarted } from '../../../shared/raceSchedule';
 import type { Env } from '../env';
 import { errorResponse, publicJsonResponse, publicPdfResponse } from '../http/jsonResponse';
 import { findRaceSummaryById, listPublicRaceResults, listRaces } from '../races/raceRepository';
-import { buildRaceReport, reportFileName } from '../reports/raceReportData';
+import { buildRaceReport, reportFileName, totalPenaltyByCrew } from '../reports/raceReportData';
 import { renderRaceReportPdf } from '../reports/raceReportPdf';
 import { loadRaceReportInput } from '../reports/raceReportRepository';
 import { readReportLanguage } from '../reports/reportTexts';
@@ -23,7 +23,15 @@ export const publicRaceHandlers = {
   async getRace(_request: Request, env: Env, raceId: number): Promise<Response> {
     const race = await findRaceSummaryById(env.CREWS_DB, raceId);
     if (!race || !hasRaceStarted(race)) return errorResponse(404, 'not-found');
-    return publicJsonResponse({ race: { ...race, results: await listPublicRaceResults(env.CREWS_DB, raceId) } });
+    // Penalità di ogni posizione come nel referto: decisioni a tempo + cambi pilota (secondi per eccesso).
+    const [results, reportInput] = await Promise.all([listPublicRaceResults(env.CREWS_DB, raceId), loadRaceReportInput(env.CREWS_DB, raceId, roundTitle)]);
+    const totals = reportInput ? totalPenaltyByCrew(reportInput.penalties, reportInput.driverSwaps) : new Map<number, number>();
+    const crewIdByPosition = new Map((reportInput?.results ?? []).map((row) => [row.position, row.crewId]));
+    const withPenalties = results.map((result) => {
+      const total = totals.get(crewIdByPosition.get(result.position) ?? -1) ?? 0;
+      return { ...result, penaltyMs: total > 0 ? total : null };
+    });
+    return publicJsonResponse({ race: { ...race, results: withPenalties } });
   },
 
   /**
