@@ -1,12 +1,14 @@
 /**
  * Cambi pilota (dal foglio "Driver Swap Checker"). A ogni cambio, tra la fine di uno stint (Pit In: vettura ferma
  * in piazzola) e l'inizio del successivo (Pit Out: pit stop effettuato), ogni vettura deve ripartire con almeno
- * lo stesso distacco con cui si è fermata, meno un margine:
- *   distacco Pit In  = Pit In della vettura − Pit In più basso fra tutte
- *   distacco Pit Out = Pit Out della vettura − Pit Out più basso fra tutte
- *   penalità se distacco Pit Out + margine < distacco Pit In,
- *   e vale coefficiente × (distacco Pit In − distacco Pit Out − margine).
- * Una vettura senza uno dei due tempi (assente o ritirata) non entra nei minimi e non viene controllata.
+ * lo stesso distacco con cui si è fermata, meno un margine. I distacchi si misurano entrambi dalla stessa vettura di
+ * riferimento, quella con il Pit In più basso (ferma per prima):
+ *   distacco Pit In  = Pit In della vettura − Pit In del riferimento
+ *   distacco Pit Out = Pit Out della vettura − Pit Out del riferimento (negativo se riparte davanti al riferimento)
+ *   penalità se distacco Pit Out + margine < distacco Pit In: la vettura può guadagnare al massimo il margine;
+ *   vale coefficiente × (distacco Pit In − distacco Pit Out − margine), arrotondata al secondo per eccesso.
+ * Esempio: Pit In a +1 s, Pit Out a −10 s: con 2 s di margine poteva arrivare a −1 s; i 9 s in più × 2,5 = 22,5 → 23 s.
+ * Una vettura senza uno dei due tempi (assente o ritirata) non fa da riferimento e non viene controllata.
  * Margine e coefficiente sono fissi (non modificabili dall'app). Il server ricalcola le penalità prima di salvarle.
  */
 
@@ -32,6 +34,8 @@ const pad = (value: number, length = 2) => String(value).padStart(length, '0');
 
 /** 8 000 642 ms → "02:13:20.642". */
 export function formatRaceTimestamp(milliseconds: number): string {
+  // Distacco Pit Out davanti al riferimento: "-00:00:10.000".
+  if (milliseconds < 0) return `-${formatRaceTimestamp(-milliseconds)}`;
   const totalSeconds = Math.floor(milliseconds / 1000);
   return `${pad(Math.floor(totalSeconds / 3600))}:${pad(Math.floor((totalSeconds % 3600) / 60))}:${pad(totalSeconds % 60)}.${pad(milliseconds % 1000, 3)}`;
 }
@@ -46,7 +50,7 @@ function toMilliseconds(hours: string, minutes: string, seconds: string, fractio
  * Legge un tempo scritto in qualunque forma ragionevole e lo porta in millisecondi:
  *   "2:13:20,642" · "02:13:20.642" · "2.13.20,642" (come nel foglio) · "13:20.5" (minuti:secondi) ·
  *   "02.13.20.642" (HH.MM.SS.DDD) · "021320,642" o "021320.642" (HHMMSS,DDD e HHMMSS.DDD) ·
- *   "021320642" o "021320" (solo cifre: HHMMSSDDD o HHMMSS).
+ *   cifre attaccate lette da destra: "23" = 23 s, "445" = 4:45, "021320" = 2:13:20, "021320642" (HHMMSSDDD).
  * La virgola indica sempre i millesimi; con i ":" li indica anche il punto; con soli punti, il quarto gruppo.
  * Vuoto → null; non interpretabile → NaN.
  */
@@ -55,14 +59,19 @@ export function parseRaceTimestamp(timestampText: string): number | null {
   if (text === '') return null;
   if (!/^[\d:.,]+$/.test(text)) return Number.NaN;
 
-  if (/^\d+$/.test(text)) {
-    if (text.length === 6) return toMilliseconds(text.slice(0, 2), text.slice(2, 4), text.slice(4, 6), '');
-    if (text.length === 9) return toMilliseconds(text.slice(0, 2), text.slice(2, 4), text.slice(4, 6), text.slice(6));
-    return Number.NaN;
+  if (/^\d{9}$/.test(text)) return toMilliseconds(text.slice(0, 2), text.slice(2, 4), text.slice(4, 6), text.slice(6));
+  // Cifre attaccate, lette da destra: le ultime due sono i secondi, le due prima i minuti, il resto le ore
+  // ("23" = 23 s, "445" = 4:45, "13000" = 1:30:00, "021320" = 2:13:20), con i millesimi dopo la virgola
+  // ("23,5", "021320,642") o dopo il punto ("021320.642"; con una o due cifre davanti il punto resta la regola
+  // dei minuti.secondi, "13.20" = 13:20, se dopo ci sono due cifre).
+  const compact = /^(\d{1,6})(?:([.,])(\d{1,3}))?$/.exec(text);
+  const [, digits = '', separator, compactFraction = ''] = compact ?? [];
+  if (compact && !(separator === '.' && digits.length <= 2 && compactFraction.length === 2)) {
+    const seconds = digits.slice(-2);
+    const minutes = digits.slice(-4, -2) || '0';
+    const hours = digits.slice(0, -4) || '0';
+    return toMilliseconds(hours, minutes, seconds, compactFraction);
   }
-  // HHMMSS,DDD e HHMMSS.DDD: sei cifre attaccate e i millesimi dopo la virgola o il punto.
-  const compact = /^(\d{2})(\d{2})(\d{2})[.,](\d{1,3})$/.exec(text);
-  if (compact) return toMilliseconds(compact[1] ?? '', compact[2] ?? '', compact[3] ?? '', compact[4] ?? '');
 
   let clock = text;
   let fraction = '';
@@ -171,20 +180,23 @@ const minimumOf = (values: readonly (number | null)[]): number | null => {
   return presentValues.length === 0 ? null : Math.min(...presentValues);
 };
 
-/** Un cambio pilota: righe → distacchi, esito e penalità di ogni vettura. */
+/** Penalità di una vettura: coefficiente × secondi guadagnati oltre il margine, arrotondata al secondo per eccesso. */
+export const driverSwapPenaltyMs = (excessMs: number): number => Math.ceil((DRIVER_SWAP_COEFFICIENT * excessMs) / 1000) * 1000;
+
+/** Un cambio pilota: righe → distacchi (dalla vettura ferma per prima), esito e penalità di ogni vettura. */
 export function checkDriverSwap(rows: readonly CheckerRow[]): DriverSwapCheck[] {
   const comparableRows = rows.filter((row) => row.pitInMs !== null && row.pitOutMs !== null);
   const lowestPitIn = minimumOf(comparableRows.map((row) => row.pitInMs));
-  const lowestPitOut = minimumOf(comparableRows.map((row) => row.pitOutMs));
+  // Riferimento: la vettura con il Pit In più basso (a parità, la prima); i due distacchi si misurano da lei.
+  const reference = comparableRows.find((row) => row.pitInMs === lowestPitIn);
 
   return rows.map((row) => {
-    const pitInDiffMs = row.pitInMs !== null && row.pitOutMs !== null && lowestPitIn !== null ? row.pitInMs - lowestPitIn : null;
-    const pitOutDiffMs = row.pitInMs !== null && row.pitOutMs !== null && lowestPitOut !== null ? row.pitOutMs - lowestPitOut : null;
+    const canCompare = row.pitInMs !== null && row.pitOutMs !== null && reference && reference.pitInMs !== null && reference.pitOutMs !== null;
+    const pitInDiffMs = canCompare ? (row.pitInMs ?? 0) - (reference.pitInMs ?? 0) : null;
+    const pitOutDiffMs = canCompare ? (row.pitOutMs ?? 0) - (reference.pitOutMs ?? 0) : null;
     const isPenalty = pitInDiffMs !== null && pitOutDiffMs !== null && pitOutDiffMs + DRIVER_SWAP_BUFFER_MS < pitInDiffMs;
     const penaltyMs =
-      isPenalty && pitInDiffMs !== null && pitOutDiffMs !== null
-        ? Math.round(DRIVER_SWAP_COEFFICIENT * (pitInDiffMs - pitOutDiffMs - DRIVER_SWAP_BUFFER_MS))
-        : null;
+      isPenalty && pitInDiffMs !== null && pitOutDiffMs !== null ? driverSwapPenaltyMs(pitInDiffMs - pitOutDiffMs - DRIVER_SWAP_BUFFER_MS) : null;
     return { crewId: row.crewId, pitInDiffMs, pitOutDiffMs, isPenalty, penaltyMs, isCancelled: row.isCancelled };
   });
 }

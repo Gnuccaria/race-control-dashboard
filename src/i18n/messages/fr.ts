@@ -735,7 +735,7 @@ export const fr: Messages = {
     driverSwaps: {
       tab: 'Changements de pilote',
       description:
-        "Pour chaque changement, saisissez le Pit In (voiture complètement arrêtée à son emplacement, fin du relais) et le Pit Out (arrêt effectué, début du relais suivant) : en quittant le champ, le temps devient HH:MM:SS.DDD (2:13:20,642 ou 2.13.20,642 conviennent aussi). Laissez vides les temps d'une voiture absente. La marge (2 secondes) et le coefficient (× 2,5) sont fixes ; écarts et pénalités se calculent seuls et tout le tableau est enregistré avec la course.",
+        "Pour chaque changement, saisissez le Pit In (voiture complètement arrêtée à son emplacement, fin du relais) et le Pit Out (arrêt effectué, début du relais suivant) : en quittant le champ, le temps devient HH:MM:SS.DDD (2:13:20,642, 2.13.20,642, 021320,642 et les chiffres seuls lus depuis la droite conviennent aussi : 23 = 23 secondes, 445 = 4 minutes 45). Laissez vides les temps d'une voiture absente. Les écarts se mesurent depuis la voiture arrêtée en premier ; au Pit Out une voiture peut gagner au plus 2 secondes, le reste × 2,5 (arrondi à la seconde supérieure) est la pénalité. La marge et le coefficient sont fixes ; écarts et pénalités se calculent seuls et tout le tableau est enregistré avec la course.",
       readOnlyDescription: 'Temps, pénalités, annulations et notes enregistrés avec la course. Appuyez sur « Modifier » pour les changer.',
       noChampionship: "Choisissez le championnat dans l'onglet Informations : les lignes sont les voitures qui y participent.",
       summaryTitle: 'Pénalités par voiture',

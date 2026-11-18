@@ -736,7 +736,7 @@ export const de: Messages = {
     driverSwaps: {
       tab: 'Fahrerwechsel',
       description:
-        'Gib für jeden Wechsel Pit In (Auto steht vollständig in der Box, Ende des Stints) und Pit Out (Boxenstopp erledigt, Beginn des nächsten Stints) ein: Beim Verlassen des Feldes wird die Zeit zu HH:MM:SS.DDD (2:13:20,642 oder 2.13.20,642 gehen auch). Fehlt ein Auto, bleiben seine Zeiten leer. Toleranz (2 Sekunden) und Faktor (× 2,5) sind fest; Abstände und Strafen werden automatisch berechnet und die ganze Tabelle wird mit dem Rennen gespeichert.',
+        'Gib für jeden Wechsel Pit In (Auto steht vollständig in der Box, Ende des Stints) und Pit Out (Boxenstopp erledigt, Beginn des nächsten Stints) ein: Beim Verlassen des Feldes wird die Zeit zu HH:MM:SS.DDD (2:13:20,642, 2.13.20,642, 021320,642 und reine Ziffern, von rechts gelesen, gehen auch: 23 = 23 Sekunden, 445 = 4 Minuten 45). Fehlt ein Auto, bleiben seine Zeiten leer. Die Abstände werden vom zuerst gestoppten Auto gemessen; beim Pit Out darf ein Auto höchstens 2 Sekunden gewinnen, der Rest × 2,5 (auf die Sekunde aufgerundet) ist die Strafe. Toleranz und Faktor sind fest; Abstände und Strafen werden automatisch berechnet und die ganze Tabelle wird mit dem Rennen gespeichert.',
       readOnlyDescription: 'Zeiten, Strafen, Aufhebungen und Notizen sind mit dem Rennen gespeichert. Drücke „Bearbeiten“, um sie zu ändern.',
       noChampionship: 'Wähle die Meisterschaft im Tab Stammdaten: Die Zeilen sind die teilnehmenden Autos.',
       summaryTitle: 'Strafen pro Auto',

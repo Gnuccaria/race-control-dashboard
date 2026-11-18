@@ -696,7 +696,7 @@ export const en: Messages = {
     driverSwaps: {
       tab: 'Driver swaps',
       description:
-        'For each swap enter the Pit In (car fully stopped in its box, end of the stint) and the Pit Out (pit stop completed, start of the next stint): when you leave the field the time becomes HH:MM:SS.DDD (2:13:20.642 or 2.13.20,642 work too). Leave the times empty for a car that is missing. Margin (2 seconds) and coefficient (× 2.5) are fixed; gaps and penalties are calculated automatically and the whole table is saved with the race.',
+        'For each swap enter the Pit In (car fully stopped in its box, end of the stint) and the Pit Out (pit stop completed, start of the next stint): when you leave the field the time becomes HH:MM:SS.DDD (2:13:20.642, 2.13.20,642, 021320.642 and plain digits read from the right work too: 23 = 23 seconds, 445 = 4 minutes 45). Leave the times empty for a car that is missing. Gaps are measured from the car that stopped first; at the Pit Out a car may gain at most 2 seconds, the rest × 2.5 (rounded up to the second) is the penalty. Margin and coefficient are fixed; gaps and penalties are calculated automatically and the whole table is saved with the race.',
       readOnlyDescription: 'Times, penalties, cancellations and notes saved with the race. Press "Edit" to change them.',
       noChampionship: 'Choose the championship in the General tab: the rows are the cars taking part in it.',
       summaryTitle: 'Penalties per car',

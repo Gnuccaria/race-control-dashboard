@@ -168,13 +168,13 @@ describe('API penalità e cambi pilota', () => {
     expect(saved.body.race).toMatchObject({
       driverSwaps: [
         { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 600_000, penaltyMs: null, isCancelled: false, notes: '' },
-        // 2,5 × (10 s − 5 s − 2 s): il valore mandato dall'app (1) non conta.
-        { swap: 1, crewId: 2, pitInMs: 3_610_000, pitOutMs: 605_000, penaltyMs: 7_500, isCancelled: true, notes: 'Crash, penalità annullata' },
+        // 2,5 × (10 s − 5 s − 2 s) = 7,5 → 8 s per eccesso: il valore mandato dall'app (1) non conta.
+        { swap: 1, crewId: 2, pitInMs: 3_610_000, pitOutMs: 605_000, penaltyMs: 8_000, isCancelled: true, notes: 'Crash, penalità annullata' },
         { swap: 2, crewId: 2, pitInMs: null, pitOutMs: 700_000, penaltyMs: null, isCancelled: false, notes: '' },
       ],
     });
     const columns = await env.CREWS_DB.prepare('SELECT * FROM driver_swaps WHERE swap = 1 AND crew_id = 2').first();
-    expect(columns).toEqual({ race_id: 1, swap: 1, crew_id: 2, pit_in: 3_610_000, pit_out: 605_000, penalty: 7_500, is_cancelled: 1, notes: 'Crash, penalità annullata' });
+    expect(columns).toEqual({ race_id: 1, swap: 1, crew_id: 2, pit_in: 3_610_000, pit_out: 605_000, penalty: 8_000, is_cancelled: 1, notes: 'Crash, penalità annullata' });
 
     // Salvando la gara intera i cambi pilota restano quelli salvati.
     expect((await request('PUT', '/races/1', race({ driverSwaps: [] }))).body.race).toMatchObject({ driverSwaps: [{ swap: 1 }, { swap: 1 }, { swap: 2 }] });

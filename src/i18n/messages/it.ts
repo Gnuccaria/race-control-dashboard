@@ -752,7 +752,7 @@ export const it = {
     driverSwaps: {
       tab: 'Cambi pilota',
       description:
-        'Per ogni cambio scrivi il Pit In (vettura completamente ferma in piazzola, fine dello stint) e il Pit Out (pit stop effettuato, inizio dello stint successivo): uscendo dalla casella il tempo diventa HH:MM:SS.DDD (vanno bene anche 2:13:20,642 o 2.13.20,642). Se una vettura è assente lascia vuoti i suoi tempi. Margine (2 secondi) e coefficiente (× 2,5) sono fissi; distacchi e penalità si calcolano da soli e con la gara si salva tutta la tabella.',
+        'Per ogni cambio scrivi il Pit In (vettura completamente ferma in piazzola, fine dello stint) e il Pit Out (pit stop effettuato, inizio dello stint successivo): uscendo dalla casella il tempo diventa HH:MM:SS.DDD (vanno bene anche 2:13:20,642, 2.13.20,642, 021320,642 e le sole cifre lette da destra: 23 = 23 secondi, 445 = 4 minuti e 45). Se una vettura è assente lascia vuoti i suoi tempi. I distacchi si misurano dalla vettura ferma per prima; al Pit Out una vettura può guadagnare al massimo 2 secondi, il resto × 2,5 (arrotondato al secondo per eccesso) è la penalità. Margine e coefficiente sono fissi; distacchi e penalità si calcolano da soli e con la gara si salva tutta la tabella.',
       readOnlyDescription: 'Tempi, penalità, annullamenti e note salvati con la gara. Premi "Modifica" per cambiarli.',
       noChampionship: "Scegli il campionato nella scheda Anagrafica: le righe sono le vetture che vi partecipano.",
       summaryTitle: 'Penalità per vettura',

@@ -230,12 +230,12 @@ describe('cambi pilota nel form', () => {
       ],
     };
     const sheet = computeDriverSwapSheet(values, [1, 2, 3, 4, 5], 5);
-    // Margine 2 s e coefficiente 2,5 fissi: 2,5 × (10 − 5 − 2) s.
-    expect(sheet.checksBySwap[0]?.get(2)).toMatchObject({ isPenalty: true, penaltyMs: 7_500 });
+    // Margine 2 s e coefficiente 2,5 fissi: 2,5 × (10 − 5 − 2) s = 7,5 → 8 s (per eccesso).
+    expect(sheet.checksBySwap[0]?.get(2)).toMatchObject({ isPenalty: true, penaltyMs: 8_000 });
     expect(sheet.checksBySwap[1]?.get(2)).toMatchObject({ isPenalty: true, penaltyMs: 5_000, isCancelled: true });
     expect([...sheet.invalidCells]).toEqual([invalidCellKey(1, 3, 'pitIn')]);
     expect([...sheet.swapsWithErrors]).toEqual([1]);
-    expect(sheet).toMatchObject({ hasErrors: true, totals: [{ crewId: 2, penaltyMs: 7_500 }] });
+    expect(sheet).toMatchObject({ hasErrors: true, totals: [{ crewId: 2, penaltyMs: 8_000 }] });
     // Si salvano solo le righe compilate (anche solo con una nota), mai la 5 vuota.
     expect(sheet.entries.map(({ swap, crewId, notes }) => ({ swap, crewId, notes }))).toEqual([
       { swap: 1, crewId: 1, notes: '' },

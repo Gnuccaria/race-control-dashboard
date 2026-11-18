@@ -299,7 +299,7 @@ describe('Dettaglio gara', () => {
       { position: 1, crewId: 1, laps: 30, gapMs: null, carId: testCarId('Ferrari') },
       { position: 2, crewId: 2, laps: 29, gapMs: 12_045, carId: testCarId('Audi') },
     ],
-    // Cambio 1 già salvato: la #12 (equipaggio 2) ha 7,5 secondi di penalità.
+    // Cambio 1 già salvato: la #12 (equipaggio 2) ha 7,5 secondi di penalità salvati, ricalcolati in 8 (per eccesso).
     driverSwaps: [
       { swap: 1, crewId: 1, pitInMs: 3_600_000, pitOutMs: 600_000, penaltyMs: null, isCancelled: false, notes: '' },
       { swap: 1, crewId: 2, pitInMs: 3_610_000, pitOutMs: 605_000, penaltyMs: 7_500, isCancelled: false, notes: 'Box lento' },
@@ -406,7 +406,7 @@ describe('Dettaglio gara', () => {
     const firstSwap = screen.getByRole('table', { name: 'Cambio 1: stint 1 → stint 2' });
     expect(within(firstSwap).getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual(['#7', '#12']);
     expect(screen.getByRole('textbox', { name: 'Pit In della vettura #12, stint 1' })).toHaveValue('01:00:10.000');
-    expect(screen.getByRole('table', { name: 'Penalità per vettura' })).toHaveTextContent('#1200:00:07.500');
+    expect(screen.getByRole('table', { name: 'Penalità per vettura' })).toHaveTextContent('#1200:00:08.000');
 
     // In lettura niente X per svuotare le righe.
     expect(screen.queryByRole('button', { name: /Svuota la riga/ })).not.toBeInTheDocument();
