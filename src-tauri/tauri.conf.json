@@ -48,7 +48,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "INSERIRE_QUI_LA_CHIAVE_PUBBLICA",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJBN0VCQjcxMEVBMDEzN0YKUldSL0U2QU9jYnQrS2p3QWxwODRJN3JVRG9sa1U1V0ROenB6TkpCRENIMHVLdGsyQW85bE02aDcK",
       "endpoints": [
         "https://github.com/gnuccaria/race-control-dashboard/releases/latest/download/latest.json"
       ],
