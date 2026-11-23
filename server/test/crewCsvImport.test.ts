@@ -49,6 +49,15 @@ describe("piano d'importazione", () => {
     expect(plan.championshipModes).toEqual(['merge', 'merge']);
   });
 
+  it('riconosce le intestazioni in inglese di Excel, anche con il BOM all\'inizio del file', () => {
+    const plan = planCrewImport(`\uFEFFcrew_name;crew_number;car;championship;crew_color\nVez Team Lime;16;;${FIE};\nApex;12;nissan;${JAPAN};#e10600`, CARS, CHAMPIONSHIPS);
+    expect(plan.problems).toEqual([]);
+    expect(plan.crews).toMatchObject([
+      { name: 'Vez Team Lime', number: 16, championships: [{ championship: FIE, carId: null }], color: null },
+      { name: 'Apex', number: 12, championships: [{ championship: JAPAN, carId: 5 }], color: '#E10600' },
+    ]);
+  });
+
   it('auto facoltativa, campionato letto se presente, "#" davanti al numero ignorato', () => {
     const plan = planCrewImport(`Nome;Numero;Campionato\nSim Racing Café;#690;${FIE}\nGT  Tribe Team Yellow ;20;`, CARS, CHAMPIONSHIPS);
     expect(plan.problems).toEqual([]);

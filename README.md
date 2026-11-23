@@ -119,7 +119,7 @@ Si apre nel browser, nella lingua del browser (italiano, inglese, francese o ted
 Dalla cartella `server`, il file esportato da Excel ("Salva come → CSV") sostituisce l'elenco online. Con `--dry-run` il comando mostra cosa cambierebbe senza scrivere nulla. Se anche una sola riga ha un problema non cambia niente, e ogni riga da correggere viene elencata con il motivo.
 
 ```bash
-npm run crews:import -- data/crews.csv --dry-run
+npm run crews:import -- percorso/equipaggi.csv --dry-run
 ```
 
 - **Equipaggi**: nome e numero obbligatori; auto, campionato (uno di quelli creati nell'app, oppure "Nessuno") e colore facoltativi. Ogni riga aggiorna l'equipaggio con lo stesso numero, così le gare restano collegate. Il campionato della riga si aggiunge a quelli già salvati; "Nessuno" li toglie tutti.
