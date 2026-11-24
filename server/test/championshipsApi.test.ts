@@ -17,11 +17,15 @@ interface ApiBody {
   readonly error: { readonly code: string; readonly details?: unknown };
 }
 
+/** Qualifiche un giorno prima, 30 minuti, proteste fino a 1 ora dopo; gara con proteste fino a 48 ore dopo la fine. */
+const PROTEST_TIMES = { qualifying: { advanceHours: 24, minutes: 30, protestHours: 1 }, raceProtestHours: 48 };
+
 const SPRINT = {
   name: 'GT3 Sprint Cup',
   durations: [{ hours: 2, stintMinutes: 60, startTime: '21:00' }],
   carIds: [1, 3],
   sessionSettings: DEFAULT_SESSION_SETTINGS,
+  protestTimes: PROTEST_TIMES,
 };
 
 describe('API campionati', () => {
@@ -145,9 +149,27 @@ describe('API campionati', () => {
     // I campionati salvati prima: durate senza orario e impostazioni iniziali.
     const japan = (await request('GET', '/championships/2')).body.championship;
     expect(japan).toMatchObject({ durations: [{ hours: 3, stintMinutes: 90, startTime: null }], sessionSettings: DEFAULT_SESSION_SETTINGS });
-    const updated = await request('PUT', '/championships/2', { name: JAPAN, durations: [{ hours: 3, stintMinutes: 90, startTime: '21:00' }], carIds: [5], sessionSettings });
+    const updated = await request('PUT', '/championships/2', { name: JAPAN, durations: [{ hours: 3, stintMinutes: 90, startTime: '21:00' }], carIds: [5], sessionSettings, protestTimes: PROTEST_TIMES });
     expect(updated.status).toBe(200);
     expect(updated.body.championship).toMatchObject({ durations: [{ startTime: '21:00' }], sessionSettings: { race: { boost: 'strong' } } });
+  });
+
+  it('anticipo e durata delle qualifiche e finestre delle proteste: obbligatori, dai menu, senza sovrapposizioni', async () => {
+    // I campionati salvati prima: proteste fino a 48 ore dopo la gara, nessuna qualifica impostata.
+    expect((await request('GET', '/championships/1')).body.championship).toMatchObject({ protestTimes: { qualifying: null, raceProtestHours: 48 } });
+
+    expect((await request('POST', '/championships', { ...SPRINT, protestTimes: undefined })).body.error.details).toEqual({ protestTimes: 'qualifyingAdvanceHours' });
+    expect((await request('POST', '/championships', { ...SPRINT, protestTimes: { ...PROTEST_TIMES, raceProtestHours: 4 } })).body.error.details).toEqual({
+      protestTimes: 'raceProtestHours',
+    });
+    const overlapping = { qualifying: { advanceHours: 1, minutes: 30, protestHours: 1 }, raceProtestHours: 48 };
+    expect((await request('POST', '/championships', { ...SPRINT, protestTimes: overlapping })).body.error.details).toEqual({ protestTimes: 'overlap' });
+
+    const created = await request('POST', '/championships', { ...SPRINT, protestTimes: { qualifying: { advanceHours: 2, minutes: 45, protestHours: 1 }, raceProtestHours: 168 } });
+    expect(created.status).toBe(201);
+    expect((await request('GET', '/championships/3')).body.championship).toMatchObject({
+      protestTimes: { qualifying: { advanceHours: 2, minutes: 45, protestHours: 1 }, raceProtestHours: 168 },
+    });
   });
 
   it('una durata usata da qualche gara non si toglie e non cambia stint; le altre sì', async () => {

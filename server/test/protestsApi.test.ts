@@ -153,7 +153,8 @@ describe('proteste', () => {
       isValid: true,
       protest: { raceId: 3, stint: 1, lap: 1, corner: '3', description: '', youtubeVideoId: null, otherCrewIds: [] },
     });
-    expect(validateProtestDraft({})).toEqual({ isValid: false, issues: { raceId: 'required', stint: 'required', lap: 'required', corner: 'required' } });
+    // Lo stint qui è facoltativo: serve solo per le proteste di gara, e la sessione la decide il server dall'orario.
+    expect(validateProtestDraft({})).toEqual({ isValid: false, issues: { raceId: 'required', lap: 'required', corner: 'required' } });
     expect(
       validateProtestDraft({
         raceId: 'Serie X',
@@ -176,7 +177,7 @@ describe('proteste', () => {
       status: 200,
       body: {
         crew: { id: 1, number: 16, name: 'Vez Team Lime', championships: ['Cool1 FIE Championship'] },
-        races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: romeLocal(-HOUR).date }],
+        races: [{ id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship', raceDate: romeLocal(-HOUR).date, session: 'race' }],
         otherCrews: [
           { id: 3, number: 26, name: 'GT Extreme Drivers', color: '#E10600', championships: ['Cool1 FIE Championship'] },
           { id: 2, number: 44, name: 'Firestarter Project', color: '#E10600', championships: ['Cool1 FIE Championship'] },
@@ -215,6 +216,48 @@ describe('proteste', () => {
     expect(await raceIds()).toEqual([]);
   });
 
+  it('finestre del campionato: proteste di qualifica senza stint, di gara con stint; la sessione la decide l’orario', async () => {
+    const setTimes = (raceId: number, startOffset: number, endOffset: number) => {
+      const start = romeLocal(startOffset);
+      const end = romeLocal(endOffset);
+      return env.CREWS_DB.prepare('UPDATE races SET race_date = ?, start_time = ?, end_date = ?, end_time = ? WHERE id = ?')
+        .bind(start.date, start.time, end.date, end.time, raceId)
+        .run();
+    };
+    const sessions = async () => ((await siteRequest('GET', '/public/protests/form', 'site-vez')).body.races as { id: number; session: string }[]);
+    // Cool1 FIE: qualifiche 1 giorno prima della gara, 30 minuti, proteste fino a 1 ora dopo; gara fino a 6 ore dopo la fine.
+    await env.CREWS_DB.prepare(
+      "UPDATE championships SET qualifying_advance_hours = 24, qualifying_minutes = 30, qualifying_protest_hours = 1, race_protest_hours = 6 WHERE name = 'Cool1 FIE Championship'",
+    ).run();
+
+    // Gara 1 fra 23 ore e mezza: le qualifiche sono cominciate 30 minuti fa, finestra di qualifica aperta.
+    await setTimes(1, 23.5 * HOUR, 26.5 * HOUR);
+    await setTimes(2, -60 * DAY, -59 * DAY);
+    await setTimes(4, -61 * DAY, -60 * DAY);
+    expect(await sessions()).toEqual([expect.objectContaining({ id: 1, session: 'qualifying' })]);
+    // Senza stint: è una protesta di qualifica, lo stint mandato si ignora.
+    expect(await submit(protest({ stint: undefined }))).toMatchObject({ status: 201 });
+    expect(await submit(protest({ stint: 3 }))).toMatchObject({ status: 201 });
+    const list = (await (await handleRequest(getPath('/protests', 'token-director'), env)).json()) as { protests: { session: string; stint: number | null }[] };
+    expect(list.protests.map(({ session, stint }) => ({ session, stint }))).toEqual([
+      { session: 'qualifying', stint: null },
+      { session: 'qualifying', stint: null },
+    ]);
+
+    // Fra la fine della finestra di qualifica e la partenza: nessuna finestra aperta.
+    await setTimes(1, 21 * HOUR, 24 * HOUR);
+    expect(await sessions()).toEqual([]);
+    // Durante la gara: protesta di gara, lo stint è obbligatorio.
+    await setTimes(1, -HOUR, 2 * HOUR);
+    expect(await sessions()).toEqual([expect.objectContaining({ id: 1, session: 'race' })]);
+    expect(await submit(protest({ stint: undefined }))).toMatchObject({ status: 422, body: { error: { details: { stint: 'required' } } } });
+    // Finita da 5 ore: aperta (finestra di 6 ore); da 7 ore: chiusa.
+    await setTimes(1, -8 * HOUR, -5 * HOUR);
+    expect(await sessions()).toEqual([expect.objectContaining({ id: 1, session: 'race' })]);
+    await setTimes(1, -10 * HOUR, -7 * HOUR);
+    expect(await sessions()).toEqual([]);
+  });
+
   it('salva la protesta e i Commissari la leggono nell’app', async () => {
     expect(await submit(protest())).toEqual({ status: 201, body: { protest: { id: 1 } } });
     const list = await handleRequest(getPath('/protests', 'token-director'), env);
@@ -223,6 +266,7 @@ describe('proteste', () => {
       crew: { id: 1, number: 16, name: 'Vez Team Lime' },
       championship: 'Cool1 FIE Championship',
       race: { id: 1, name: '6 Ore di Monza', round: 1, championship: 'Cool1 FIE Championship' },
+      session: 'race',
       stint: 2,
       lap: 14,
       corner: 'Variante Ascari',

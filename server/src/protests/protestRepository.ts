@@ -1,4 +1,4 @@
-import { isProtestWindowOpen } from '../../../shared/raceSchedule';
+import { openProtestSession, type ProtestSession } from '../../../shared/protestTimingRules';
 import {
   isProtestVideoExpired,
   isProtestVideoType,
@@ -22,7 +22,8 @@ interface ProtestRow {
   readonly crewNumber: number;
   readonly crewName: string;
   readonly championship: string | null;
-  readonly stint: number;
+  readonly session: ProtestSession;
+  readonly stint: number | null;
   readonly lap: number;
   readonly corner: string;
   readonly description: string;
@@ -49,7 +50,7 @@ interface ProtestRow {
 /** Protesta con la sua gara (se c'è): nome, round e campionato letti dalla gara. */
 const PROTEST_SELECT = `
   SELECT protests.id, protests.crew_id AS crewId, protests.crew_number AS crewNumber, protests.crew_name AS crewName,
-    protests.championship, protests.stint, protests.lap, protests.corner, protests.description,
+    protests.championship, protests.session, protests.stint, protests.lap, protests.corner, protests.description,
     protests.youtube_video_id AS youtubeVideoId, protests.other_crews_json AS otherCrewsJson, protests.video_key AS videoKey,
     protests.video_content_type AS videoContentType, protests.video_size AS videoSize, protests.submitted_by_name AS submittedByName,
     protests.submitted_by_username AS submittedByUsername, protests.created_at AS createdAt,
@@ -78,6 +79,7 @@ const toSharedProtest = (row: ProtestRow): Omit<Protest, 'rejectionReason' | 'pe
   crew: { id: row.crewId, number: row.crewNumber, name: row.crewName },
   championship: row.championship,
   race: toProtestRace(row),
+  session: row.session,
   stint: row.stint,
   lap: row.lap,
   corner: row.corner,
@@ -267,9 +269,9 @@ interface ProtestSubmission {
 export async function insertProtest(database: SqlDatabase, protest: ProtestDraft, submission: ProtestSubmission): Promise<number> {
   const row = await database
     .prepare(
-      `INSERT INTO protests (crew_id, crew_number, crew_name, crew_role_id, championship, race_id, stint, lap, corner, description,
+      `INSERT INTO protests (crew_id, crew_number, crew_name, crew_role_id, championship, race_id, session, stint, lap, corner, description,
          youtube_video_id, other_crews_json, submitted_by_discord_id, submitted_by_name, submitted_by_username)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
     .bind(
       submission.crew.id,
@@ -278,7 +280,9 @@ export async function insertProtest(database: SqlDatabase, protest: ProtestDraft
       submission.crewRoleId,
       submission.race.championship,
       protest.raceId,
-      protest.stint,
+      submission.race.session,
+      // Le proteste di qualifica non hanno stint.
+      submission.race.session === 'qualifying' ? null : protest.stint,
       protest.lap,
       protest.corner,
       protest.description,
@@ -325,22 +329,40 @@ export async function listProtests(database: SqlDatabase): Promise<Protest[]> {
 }
 
 /**
- * Gare dei campionati indicati per cui adesso si possono mandare proteste (dall'ora di inizio a 48 ore dopo la fine),
- * dalla più recente: il menu "Gara" del modulo del sito.
+ * Gare dei campionati indicati per cui adesso si possono mandare proteste, con la sessione aperta (qualifiche o gara,
+ * dalle finestre del campionato), dalla più recente: il menu "Gara" del modulo del sito.
  */
 export async function listRacesOpenForProtests(database: SqlDatabase, championships: readonly string[], now = Date.now()): Promise<ProtestRaceOption[]> {
   const { results } = await database
     .prepare(
-      `SELECT id, name, round, championship, race_date AS raceDate, start_time AS startTime, end_date AS endDate, end_time AS endTime
-       FROM races
-       WHERE championship IN (SELECT value FROM json_each(?)) AND start_time IS NOT NULL
-       ORDER BY race_date DESC, round DESC`,
+      `SELECT races.id, races.name, races.round, races.championship, races.race_date AS raceDate, races.start_time AS startTime,
+              races.end_date AS endDate, races.end_time AS endTime, championships.qualifying_advance_hours AS advanceHours,
+              championships.qualifying_minutes AS qualifyingMinutes, championships.qualifying_protest_hours AS qualifyingProtestHours,
+              championships.race_protest_hours AS raceProtestHours
+       FROM races JOIN championships ON championships.name = races.championship
+       WHERE races.championship IN (SELECT value FROM json_each(?)) AND races.start_time IS NOT NULL
+       ORDER BY races.race_date DESC, races.round DESC`,
     )
     .bind(JSON.stringify(championships))
-    .all<ProtestRaceOption & { startTime: string; endDate: string | null; endTime: string | null }>();
-  return results
-    .filter((race) => isProtestWindowOpen(race, now))
-    .map(({ id, name, round, championship, raceDate }) => ({ id, name, round, championship, raceDate }));
+    .all<
+      Omit<ProtestRaceOption, 'session'> & {
+        startTime: string;
+        endDate: string | null;
+        endTime: string | null;
+        advanceHours: number | null;
+        qualifyingMinutes: number | null;
+        qualifyingProtestHours: number | null;
+        raceProtestHours: number;
+      }
+    >();
+  return results.flatMap((race) => {
+    const qualifying =
+      race.advanceHours === null || race.qualifyingMinutes === null || race.qualifyingProtestHours === null
+        ? null
+        : { advanceHours: race.advanceHours, minutes: race.qualifyingMinutes, protestHours: race.qualifyingProtestHours };
+    const session = openProtestSession(race, { qualifying, raceProtestHours: race.raceProtestHours }, now);
+    return session === null ? [] : [{ id: race.id, name: race.name, round: race.round, championship: race.championship, raceDate: race.raceDate, session }];
+  });
 }
 
 export async function findProtest(database: SqlDatabase, protestId: number): Promise<Protest | null> {

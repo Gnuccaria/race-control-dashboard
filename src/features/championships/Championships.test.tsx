@@ -24,6 +24,17 @@ async function chooseStartTime(user: TestUser, durationTitle: string, hour: stri
   await user.selectOptions(within(duration).getByRole('combobox', { name: 'Orario di partenza: Minuti' }), minute);
 }
 
+/** Scheda Generale: anticipo e durata delle qualifiche, finestre delle proteste (menu con valori fissi). */
+async function chooseProtestTimes(user: TestUser, times: { advance?: string; duration?: string; qualifying?: string; race?: string }) {
+  await user.click(screen.getByRole('tab', { name: /Generale/ }));
+  if (times.advance) await user.selectOptions(screen.getByRole('combobox', { name: 'Anticipo delle qualifiche' }), times.advance);
+  if (times.duration) await user.selectOptions(screen.getByRole('combobox', { name: 'Durata delle qualifiche' }), times.duration);
+  if (times.qualifying) await user.selectOptions(screen.getByRole('combobox', { name: 'Proteste dopo le qualifiche' }), times.qualifying);
+  if (times.race) await user.selectOptions(screen.getByRole('combobox', { name: 'Proteste dopo la gara' }), times.race);
+}
+
+const PROTEST_TIMES = { qualifying: { advanceHours: 24, minutes: 30, protestHours: 1 }, raceProtestHours: 48 };
+
 describe('Crea campionato', () => {
   beforeEach(() => {
     vi.mocked(createChampionship).mockReset();
@@ -39,6 +50,7 @@ describe('Crea campionato', () => {
         carIds: [1, 3],
         createdAt: '2026-11-17T00:00:00Z',
         sessionSettings: DEFAULT_SESSION_SETTINGS,
+        protestTimes: PROTEST_TIMES,
       },
     });
     const user = userEvent.setup();
@@ -102,6 +114,23 @@ describe('Crea campionato', () => {
     await chooseStartTime(user, 'Gara di 2 ore · stint da 60 minuti', '21', '30');
     const stints = screen.getByRole('list', { name: 'Orari degli stint della gara di 2 ore' });
     expect(within(stints).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Stint 121:30', 'Stint 222:30']);
+    // Qualifiche e proteste: obbligatori; qualifiche e loro proteste devono finire prima della gara.
+    expect(createButton).toBeDisabled();
+    await chooseProtestTimes(user, { advance: '1 ora', duration: '30 minuti', qualifying: '1 ora', race: '2 giorni' });
+    expect(screen.getByText(/finirebbero dopo la partenza della gara/)).toBeInTheDocument();
+    expect(createButton).toBeDisabled();
+    expect(within(screen.getByRole('combobox', { name: 'Proteste dopo la gara' })).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Scegli',
+      '6 ore',
+      '12 ore',
+      '1 giorno',
+      '2 giorni',
+      '3 giorni',
+      '5 giorni',
+      '7 giorni',
+    ]);
+    await chooseProtestTimes(user, { advance: '1 giorno' });
+    expect(screen.queryByText(/finirebbero dopo la partenza della gara/)).not.toBeInTheDocument();
     expect(createButton).toBeEnabled();
 
     // Impostazioni di sessione: la prima scelta della gara passa alla qualifica, poi la qualifica resta indipendente.
@@ -137,7 +166,12 @@ describe('Crea campionato', () => {
 
     expect(await screen.findByText('Campionato «GT3 Sprint» creato.')).toBeInTheDocument();
     const sent = vi.mocked(createChampionship).mock.calls[0]?.[0];
-    expect(sent).toMatchObject({ name: 'GT3 Sprint', durations: [{ hours: 2, stintMinutes: 60, startTime: '21:30' }], carIds: [testCarId('Audi')] });
+    expect(sent).toMatchObject({
+      name: 'GT3 Sprint',
+      durations: [{ hours: 2, stintMinutes: 60, startTime: '21:30' }],
+      carIds: [testCarId('Audi')],
+      protestTimes: PROTEST_TIMES,
+    });
     expect(sent?.sessionSettings.race).toMatchObject({
       boost: 'off',
       fuelConsumption: 3,
@@ -161,6 +195,7 @@ describe('Crea campionato', () => {
     await user.click(screen.getByRole('button', { name: 'Vetture ammesse' }));
     await user.click(await screen.findByRole('checkbox', { name: 'BMW' }));
     await chooseStartTime(user, 'Gara di 6 ore · stint da 60 minuti', '20', '00');
+    await chooseProtestTimes(user, { advance: '1 giorno', duration: '30 minuti', qualifying: '1 ora', race: '2 giorni' });
     await user.click(screen.getByRole('button', { name: 'Crea campionato' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Esiste già un campionato con questo nome.');
@@ -242,6 +277,10 @@ describe('Gestisci campionato', () => {
     expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
     await chooseStartTime(user, 'Gara di 3 ore · stint da 90 minuti', '21', '00');
     await chooseStartTime(user, 'Gara di 6 ore · stint da 120 minuti', '18', '00');
+    // Il campionato salvato prima non ha le qualifiche (le 48 ore della gara restano): vanno scelte.
+    expect(screen.getByRole('button', { name: 'Salva' })).toBeDisabled();
+    await chooseProtestTimes(user, { advance: '1 giorno', duration: '30 minuti', qualifying: '1 ora' });
+    expect(screen.getByRole('combobox', { name: 'Proteste dopo la gara' })).toHaveValue('48');
     await user.click(screen.getByRole('button', { name: 'Salva' }));
 
     expect(await screen.findByText('Modifiche salvate.')).toBeInTheDocument();
@@ -253,6 +292,7 @@ describe('Gestisci campionato', () => {
       ],
       carIds: [testCarId('Nissan')],
       sessionSettings: DEFAULT_SESSION_SETTINGS,
+      protestTimes: PROTEST_TIMES,
     });
   });
 });

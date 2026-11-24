@@ -99,3 +99,16 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Anticipo e durata delle qualifiche, finestre delle proteste: due per riga, una sola su schermi stretti. */
+.protestTimes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+@media (width < 40rem) {
+  .protestTimes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -113,9 +113,11 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       const { profile } = member;
       if ((await countRecentProtestsBy(env.CREWS_DB, profile.id)) >= MAX_PROTESTS_PER_DAY) return errorResponse(429, 'too-many-protests');
 
-      // La gara deve essere del campionato dell'equipaggio, con le proteste aperte (dall'inizio a 48 ore dopo la fine).
+      // La gara deve essere del campionato dell'equipaggio, con una finestra delle proteste aperta (qualifiche o gara).
       const race = (await listRacesOpenForProtests(env.CREWS_DB, lookup.crew.championships)).find((option) => option.id === validation.protest.raceId);
       if (!race) return errorResponse(422, 'invalid-protest', { raceId: 'invalid' });
+      // Lo stint serve solo per le proteste di gara (la sessione la decide l'orario di invio).
+      if (race.session === 'race' && validation.protest.stint === null) return errorResponse(422, 'invalid-protest', { stint: 'required' });
       // Gli altri equipaggi devono essere del campionato della gara (e non il proprio).
       const championshipCrews = await listChampionshipCrews(env.CREWS_DB, race.championship, lookup.crew.id);
       const otherCrews = validation.protest.otherCrewIds.map((crewId) => championshipCrews.find((crew) => crew.id === crewId));

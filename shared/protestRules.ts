@@ -1,3 +1,4 @@
+import type { ProtestSession } from './protestTimingRules';
 import type { CrewChampionship } from './crewRules';
 import { type PenaltyCrewDecision, type PenaltyDocument, type PenaltyDraft, type PenaltyDraftIssues, validatePenaltyDraft } from './penaltyRules';
 
@@ -49,6 +50,8 @@ export interface ProtestRace {
 /** Gara tra cui scegliere nel modulo del sito: accetta proteste ed è del campionato dell'equipaggio. */
 export interface ProtestRaceOption extends ProtestRace {
   readonly raceDate: string;
+  /** Sessione con la finestra delle proteste aperta adesso: decide il server dall'orario (shared/protestTimingRules.ts). */
+  readonly session: ProtestSession;
 }
 
 /** Penalità decisa accogliendo la protesta (salvata tra le penalità della gara, va nel referto PDF). */
@@ -72,7 +75,8 @@ export interface ProtestDraft {
   /** Gara dell'episodio (deve accettare proteste ed essere del campionato dell'equipaggio): da qui il campionato
    * e gli altri equipaggi coinvolti. */
   readonly raceId: number;
-  readonly stint: number;
+  /** Stint della gara; null per le proteste di qualifica (che non hanno stint). */
+  readonly stint: number | null;
   readonly lap: number;
   readonly corner: string;
   /** Descrizione dell'episodio; '' = non scritta. */
@@ -89,7 +93,10 @@ export interface Protest {
   readonly championship: string | null;
   /** null per le proteste mandate prima che si scegliesse la gara (hanno solo il campionato). */
   readonly race: ProtestRace | null;
-  readonly stint: number;
+  /** Qualifiche o gara, decisa dal server dall'orario di invio. */
+  readonly session: ProtestSession;
+  /** null per le proteste di qualifica. */
+  readonly stint: number | null;
   readonly lap: number;
   readonly corner: string;
   readonly description: string;
@@ -169,8 +176,8 @@ export function validateProtestDraft(input: unknown): ProtestDraftValidation {
   const { raceId, stint, lap } = candidate;
   if (raceId === undefined || raceId === null || raceId === '') issues.raceId = 'required';
   else if (!isIntegerBetween(raceId, 1, Number.MAX_SAFE_INTEGER)) issues.raceId = 'invalid';
-  if (stint === undefined || stint === null) issues.stint = 'required';
-  else if (!isIntegerBetween(stint, PROTEST_STINT_MIN, PROTEST_STINT_MAX)) issues.stint = 'invalid';
+  // Facoltativo qui: è obbligatorio solo per le proteste di gara, e la sessione la decide il server dall'orario.
+  if (stint !== undefined && stint !== null && !isIntegerBetween(stint, PROTEST_STINT_MIN, PROTEST_STINT_MAX)) issues.stint = 'invalid';
   if (lap === undefined || lap === null) issues.lap = 'required';
   else if (!isIntegerBetween(lap, PROTEST_LAP_MIN, PROTEST_LAP_MAX)) issues.lap = 'invalid';
 
@@ -201,7 +208,7 @@ export function validateProtestDraft(input: unknown): ProtestDraftValidation {
     isValid: true,
     protest: {
       raceId: raceId as number,
-      stint: stint as number,
+      stint: stint === undefined || stint === null ? null : (stint as number),
       lap: lap as number,
       corner,
       description,

@@ -107,7 +107,8 @@ export function Component() {
                 ...(loadedProtest.race ? [{ term: siteTexts.protest.form.race, description: protestRaceLabel(loadedProtest, messages) }] : []),
                 { term: siteTexts.disconnectionTicket.form.crew, description: crewLabel(loadedProtest.crew) },
                 { term: siteTexts.myTickets.sentBy, description: `${loadedProtest.submittedByName} (@${loadedProtest.submittedByUsername})` },
-                { term: siteTexts.protest.form.stint, description: loadedProtest.stint },
+                { term: siteTexts.protest.form.session, description: siteTexts.protest.form.sessions[loadedProtest.session] },
+                ...(loadedProtest.stint === null ? [] : [{ term: siteTexts.protest.form.stint, description: loadedProtest.stint }]),
                 { term: siteTexts.protest.form.lap, description: loadedProtest.lap },
                 { term: siteTexts.protest.form.corner, description: loadedProtest.corner },
                 {

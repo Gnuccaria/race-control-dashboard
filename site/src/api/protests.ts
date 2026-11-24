@@ -34,7 +34,8 @@ export interface ProtestFormData {
 /** Dati della protesta come li manda il modulo (il link YouTube lo converte il server). */
 export interface ProtestSubmission {
   readonly raceId: number;
-  readonly stint: number;
+  /** null per le proteste di qualifica (niente stint). */
+  readonly stint: number | null;
   readonly lap: number;
   readonly corner: string;
   readonly description: string;

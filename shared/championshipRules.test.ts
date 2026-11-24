@@ -11,6 +11,7 @@ const COMPLETE = {
   ],
   carIds: [3, 1],
   sessionSettings: DEFAULT_SESSION_SETTINGS,
+  protestTimes: { qualifying: { advanceHours: 24, minutes: 30, protestHours: 1 }, raceProtestHours: 48 },
 };
 
 describe('regole campionato', () => {
@@ -25,11 +26,18 @@ describe('regole campionato', () => {
         ],
         carIds: [3, 1],
         sessionSettings: DEFAULT_SESSION_SETTINGS,
+        protestTimes: COMPLETE.protestTimes,
       },
     });
     expect(validateChampionshipDraft({})).toEqual({
       isValid: false,
-      issues: { name: 'required', durations: 'invalid', carIds: 'invalid', sessionSettings: { session: 'race', key: 'startType' } },
+      issues: {
+        name: 'required',
+        durations: 'invalid',
+        carIds: 'invalid',
+        sessionSettings: { session: 'race', key: 'startType' },
+        protestTimes: 'qualifyingAdvanceHours',
+      },
     });
     expect(validateChampionshipDraft({ ...COMPLETE, durations: [{ hours: 6, stintMinutes: 60 }] })).toMatchObject({ issues: { durations: 'start-time' } });
     expect(validateChampionshipDraft({ ...COMPLETE, durations: [{ hours: 6, stintMinutes: 60, startTime: '9:00' }] })).toMatchObject({

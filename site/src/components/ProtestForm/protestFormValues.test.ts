@@ -16,6 +16,11 @@ describe('modulo della protesta', () => {
     expect(checkProtestForm(values({ stint: '' })).submission).toBeNull();
   });
 
+  it('protesta di qualifica (finestra delle qualifiche aperta): niente stint', () => {
+    expect(checkProtestForm(values({ stint: '' }), true).submission).toMatchObject({ raceId: 3, stint: null, lap: 14 });
+    expect(checkProtestForm(values({ stint: '99' }), true)).toMatchObject({ isStintInvalid: false, submission: { stint: null } });
+  });
+
   it('segnala stint, giro, link e curva non validi', () => {
     const check = checkProtestForm(values({ stint: '21', lap: '0', youtubeUrl: 'vimeo.com/1', corner: 'x'.repeat(41) }));
     expect(check).toMatchObject({ isStintInvalid: true, isLapInvalid: true, isYoutubeInvalid: true, isCornerInvalid: true, submission: null });

@@ -8,6 +8,7 @@
  */
 
 import { isRaceTime } from './raceSchedule';
+import { type ProtestTimes, type ProtestTimesIssue, readProtestTimes } from './protestTimingRules';
 import { readSessionSettings, type SessionSettings } from './sessionSettingsRules';
 
 export const CHAMPIONSHIP_NAME_MAX_LENGTH = 48;
@@ -39,6 +40,11 @@ export interface ChampionshipDraft {
   readonly carIds: readonly number[];
   /** Impostazioni della stanza di gioco, per la gara e la qualifica. */
   readonly sessionSettings: SessionSettings;
+  /**
+   * Anticipo e durata delle qualifiche e finestre delle proteste (shared/protestTimingRules.ts): obbligatori nei
+   * campionati salvati da ora; nei campionati salvati prima le qualifiche sono null fino alla prima modifica.
+   */
+  readonly protestTimes: ProtestTimes;
 }
 
 export interface Championship extends ChampionshipDraft {
@@ -131,6 +137,8 @@ export interface ChampionshipDraftIssues {
   readonly carIds?: 'required' | 'invalid' | 'repeated';
   /** La voce (della gara o della qualifica) senza un valore ammesso. */
   readonly sessionSettings?: { readonly session: 'race' | 'qualifying'; readonly key: string };
+  /** Anticipo, durata o finestra non scelti, oppure qualifiche e gara con finestre sovrapposte (overlap). */
+  readonly protestTimes?: ProtestTimesIssue;
 }
 
 export type ChampionshipDraftValidation =
@@ -169,7 +177,8 @@ export function validateChampionshipDraft(input: unknown): ChampionshipDraftVali
   const durations = readDurations(candidate.durations);
   const carIds = readCarIds(candidate.carIds);
   const sessionSettings = readSessionSettings(candidate.sessionSettings);
-  if (nameIssue || typeof durations === 'string' || typeof carIds === 'string' || !sessionSettings.isValid) {
+  const protestTimes = readProtestTimes(candidate.protestTimes);
+  if (nameIssue || typeof durations === 'string' || typeof carIds === 'string' || !sessionSettings.isValid || !protestTimes.isValid) {
     return {
       isValid: false,
       issues: {
@@ -177,10 +186,11 @@ export function validateChampionshipDraft(input: unknown): ChampionshipDraftVali
         ...(typeof durations === 'string' && { durations }),
         ...(typeof carIds === 'string' && { carIds }),
         ...(!sessionSettings.isValid && { sessionSettings: { session: sessionSettings.session, key: sessionSettings.key } }),
+        ...(!protestTimes.isValid && { protestTimes: protestTimes.issue }),
       },
     };
   }
-  return { isValid: true, championship: { name, durations, carIds, sessionSettings: sessionSettings.settings } };
+  return { isValid: true, championship: { name, durations, carIds, sessionSettings: sessionSettings.settings, protestTimes: protestTimes.times } };
 }
 
 /** Campionati in ordine alfabetico, senza badare alle maiuscole. */

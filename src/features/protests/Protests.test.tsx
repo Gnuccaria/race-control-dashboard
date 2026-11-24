@@ -18,6 +18,7 @@ const protest = (id: number, change: Partial<Protest> = {}): Protest => ({
   crew: { id: 1, number: 16, name: 'Vez Team Lime' },
   championship: 'Cool1 FIE Championship',
   race: { id: 7, name: '6 Ore di Monza', round: 3, championship: 'Cool1 FIE Championship' },
+  session: 'race',
   stint: 2,
   lap: 14,
   corner: '7',

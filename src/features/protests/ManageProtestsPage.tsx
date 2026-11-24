@@ -28,6 +28,7 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.race}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.crew}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.otherCrews}</th>
+            <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.session}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.stint}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.lap}</th>
             <th scope="col" className={tableStyles.plainColumnHeader}>{texts.columns.sentAt}</th>
@@ -54,7 +55,8 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
                   </span>
                 )}
               </td>
-              <td className={tableStyles.numberCell}>{protest.stint}</td>
+              <td>{texts.sessions[protest.session]}</td>
+              <td className={tableStyles.numberCell}>{protest.stint ?? '–'}</td>
               <td className={tableStyles.numberCell}>{protest.lap}</td>
               <td>{formatTimestamp(protest.createdAt, locale)}</td>
               <td>

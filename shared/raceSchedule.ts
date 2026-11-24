@@ -1,12 +1,10 @@
 /**
  * Orari delle gare: data e ora di inizio e di fine, scritti e mostrati in ora italiana (Europe/Rome) per tutti,
- * qualunque sia il fuso orario di chi usa app e sito. Le proteste per una gara si possono mandare dall'ora di inizio
- * fino a 48 ore esatte dopo l'ora di fine. Usato da app, sito e server.
+ * qualunque sia il fuso orario di chi usa app e sito. Le finestre delle proteste (qualifiche e gara) dipendono dal
+ * campionato: vedi shared/protestTimingRules.ts. Usato da app, sito e server.
  */
 
 export const RACE_TIME_ZONE = 'Europe/Rome';
-/** Le proteste restano aperte fino a 48 ore dopo la fine della gara. */
-export const PROTEST_WINDOW_AFTER_END_MS = 48 * 60 * 60 * 1000;
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -57,17 +55,6 @@ export function raceInstants(schedule: RaceSchedule): { readonly startsAt: numbe
   const startsAt = romeLocalToInstant(schedule.raceDate, schedule.startTime);
   const endsAt = romeLocalToInstant(schedule.endDate, schedule.endTime);
   return startsAt === null || endsAt === null ? null : { startsAt, endsAt };
-}
-
-/** Finestra delle proteste: dall'inizio della gara a 48 ore dopo la fine; null senza orari. */
-export function protestWindow(schedule: RaceSchedule): { readonly opensAt: number; readonly closesAt: number } | null {
-  const instants = raceInstants(schedule);
-  return instants ? { opensAt: instants.startsAt, closesAt: instants.endsAt + PROTEST_WINDOW_AFTER_END_MS } : null;
-}
-
-export function isProtestWindowOpen(schedule: RaceSchedule, now = Date.now()): boolean {
-  const window = protestWindow(schedule);
-  return window !== null && now >= window.opensAt && now <= window.closesAt;
 }
 
 /**

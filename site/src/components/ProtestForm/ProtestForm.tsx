@@ -44,7 +44,11 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
   const [isSending, setIsSending] = useState(false);
   const [uploadFraction, setUploadFraction] = useState<number | null>(null);
   const [failure, setFailure] = useState<ProtestRequestProblem | null>(null);
-  const check = checkProtestForm(values);
+  const races = formState.status === 'ready' ? formState.data.races : [];
+  const selectedRace = races.find((race) => String(race.id) === values.raceId);
+  // Gara con la finestra delle qualifiche aperta: la protesta è di qualifica e non ha lo stint.
+  const isQualifying = selectedRace?.session === 'qualifying';
+  const check = checkProtestForm(values, isQualifying);
   const canSend = check.submission !== null && formState.status === 'ready' && !isSending;
 
   const change = <Field extends keyof ProtestFormValues>(field: Field, value: ProtestFormValues[Field]) => {
@@ -80,12 +84,10 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
   const crewValue =
     formState.status === 'ready' ? `#${formState.data.crew.number} ${formState.data.crew.name}` : formState.status === 'loading' ? crewTexts.crewLoading : '';
   // Gare dei campionati dell'equipaggio con le proteste aperte; gli altri equipaggi sono quelli del campionato della gara scelta.
-  const races = formState.status === 'ready' ? formState.data.races : [];
-  const selectedRace = races.find((race) => String(race.id) === values.raceId);
   const otherCrews =
     formState.status === 'ready' && selectedRace ? formState.data.otherCrews.filter((crew) => crew.championships.includes(selectedRace.championship)) : [];
   const raceOptionLabel = (race: (typeof races)[number]) =>
-    `${race.name ?? messages.races.raceLabel(race.round, race.championship)} · ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(`${race.raceDate}T12:00:00`))}`;
+    `${race.name ?? messages.races.raceLabel(race.round, race.championship)} · ${new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(`${race.raceDate}T12:00:00`))} · ${texts.sessions[race.session]}`;
   const isDescriptionCounterVisible = check.remainingCharacters <= PROTEST_DESCRIPTION_COUNTER_FROM;
 
   return (
@@ -131,11 +133,17 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
               />
             )}
           </FormField>
-          <FormField label={texts.stint} hint={texts.stintHint} errorMessage={check.isStintInvalid ? texts.stintInvalid(PROTEST_STINT_MAX) : undefined}>
-            {({ isInvalid, ...inputAttributes }) => (
-              <Input {...inputAttributes} type="text" inputMode="numeric" maxLength={2} isInvalid={isInvalid} value={values.stint} onValueChange={(stint) => change('stint', digitsOnly(stint, 2))} />
-            )}
-          </FormField>
+          {isQualifying ? (
+            <p className={styles.qualifyingNotice} role="status">
+              {texts.qualifyingNotice}
+            </p>
+          ) : (
+            <FormField label={texts.stint} hint={texts.stintHint} errorMessage={check.isStintInvalid ? texts.stintInvalid(PROTEST_STINT_MAX) : undefined}>
+              {({ isInvalid, ...inputAttributes }) => (
+                <Input {...inputAttributes} type="text" inputMode="numeric" maxLength={2} isInvalid={isInvalid} value={values.stint} onValueChange={(stint) => change('stint', digitsOnly(stint, 2))} />
+              )}
+            </FormField>
+          )}
           <FormField label={texts.lap} hint={texts.lapHint} errorMessage={check.isLapInvalid ? texts.lapInvalid(PROTEST_LAP_MAX) : undefined}>
             {({ isInvalid, ...inputAttributes }) => (
               <Input {...inputAttributes} type="text" inputMode="numeric" maxLength={3} isInvalid={isInvalid} value={values.lap} onValueChange={(lap) => change('lap', digitsOnly(lap, 3))} />

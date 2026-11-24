@@ -56,7 +56,8 @@ export function ProtestDetailPage() {
                   : protest.championship
                     ? [{ term: texts.detail.championship, description: protest.championship }]
                     : []),
-                { term: texts.columns.stint, description: protest.stint },
+                { term: texts.columns.session, description: texts.sessions[protest.session] },
+                ...(protest.stint === null ? [] : [{ term: texts.columns.stint, description: protest.stint }]),
                 { term: texts.columns.lap, description: protest.lap },
                 { term: texts.detail.corner, description: protest.corner },
                 {

@@ -16,6 +16,7 @@ import {
   type SessionSettingValue,
   type TyreCompound,
 } from '@shared/sessionSettingsRules';
+import type { ProtestTimes } from '@shared/protestTimingRules';
 import { useState } from 'react';
 
 /** Una riga delle durate come si scrive: ore e minuti dello stint come testo (solo cifre). */
@@ -38,7 +39,30 @@ export interface ChampionshipValues {
    * lo prende e da lì resta indipendente (anche se la si modifica a mano prima). Tutte in un campionato nuovo, nessuna in uno salvato.
    */
   readonly linkedQualifyingKeys: readonly SessionSettingKey[];
+  /** Anticipo e durata delle qualifiche, finestre delle proteste: valori dei menu come testo ('' = non scelto). */
+  readonly protestTimes: ProtestTimesValues;
 }
+
+export interface ProtestTimesValues {
+  readonly advanceHours: string;
+  readonly qualifyingMinutes: string;
+  readonly qualifyingProtestHours: string;
+  readonly raceProtestHours: string;
+}
+
+const EMPTY_PROTEST_TIMES: ProtestTimesValues = { advanceHours: '', qualifyingMinutes: '', qualifyingProtestHours: '', raceProtestHours: '' };
+
+const toProtestTimesValues = (times: ProtestTimes): ProtestTimesValues => ({
+  advanceHours: times.qualifying ? String(times.qualifying.advanceHours) : '',
+  qualifyingMinutes: times.qualifying ? String(times.qualifying.minutes) : '',
+  qualifyingProtestHours: times.qualifying ? String(times.qualifying.protestHours) : '',
+  raceProtestHours: String(times.raceProtestHours),
+});
+
+const toProtestTimesInput = (values: ProtestTimesValues) => ({
+  qualifying: { advanceHours: toNumber(values.advanceHours), minutes: toNumber(values.qualifyingMinutes), protestHours: toNumber(values.qualifyingProtestHours) },
+  raceProtestHours: toNumber(values.raceProtestHours),
+});
 
 const HOURS_MAX_DIGITS = 2;
 const STINT_MAX_DIGITS = 4;
@@ -49,7 +73,9 @@ const emptyRow = (rowId: number): DurationRow => ({ rowId, hours: '', stintMinut
 
 /** Valori iniziali: quelli salvati (dettaglio) oppure un campionato vuoto con una durata da compilare. */
 export function toChampionshipValues(saved?: ChampionshipDraft): ChampionshipValues {
-  if (!saved) return { name: '', durations: [emptyRow(1)], carIds: [], sessionSettings: DEFAULT_SESSION_SETTINGS, linkedQualifyingKeys: QUALIFYING_SETTING_KEYS };
+  if (!saved) {
+    return { name: '', durations: [emptyRow(1)], carIds: [], sessionSettings: DEFAULT_SESSION_SETTINGS, linkedQualifyingKeys: QUALIFYING_SETTING_KEYS, protestTimes: EMPTY_PROTEST_TIMES };
+  }
   return {
     name: saved.name,
     durations: saved.durations.map((duration, index) => ({
@@ -61,6 +87,7 @@ export function toChampionshipValues(saved?: ChampionshipDraft): ChampionshipVal
     carIds: [...saved.carIds],
     sessionSettings: saved.sessionSettings,
     linkedQualifyingKeys: [],
+    protestTimes: toProtestTimesValues(saved.protestTimes),
   };
 }
 
@@ -81,6 +108,7 @@ const toDraftInput = (values: ChampionshipValues) => ({
     .map((row) => ({ hours: toNumber(row.hours), stintMinutes: toNumber(row.stintMinutes), startTime: row.startTime })),
   carIds: values.carIds,
   sessionSettings: values.sessionSettings,
+  protestTimes: toProtestTimesInput(values.protestTimes),
 });
 
 /** Problema di una riga: vuota va bene (non conta); compilata a metà manca l'altro valore. */
@@ -112,6 +140,11 @@ export function useChampionshipDraft(saved?: ChampionshipDraft) {
     canAddDuration: values.durations.length < CHAMPIONSHIP_DURATIONS_MAX,
     /** Durate compilate e valide: nella scheda Gestione stint, una con l'orario di partenza e gli stint. */
     scheduledRows: values.durations.filter((row) => !isEmptyRow(row) && findRowIssue(row, values.durations) === null),
+    /** Qualifiche e gara con finestre delle proteste sovrapposte (solo quando tutti i menu sono scelti). */
+    hasProtestTimesOverlap: !validation.isValid && validation.issues.protestTimes === 'overlap',
+    changeProtestTime: (field: keyof ProtestTimesValues, value: string) => {
+      setValues((previous) => ({ ...previous, protestTimes: { ...previous.protestTimes, [field]: value } }));
+    },
     /** Problema delle impostazioni di sessione (scheda con il segnale di errore). */
     sessionSettingsIssue: validation.isValid ? null : (validation.issues.sessionSettings ?? null),
     changeName: (name: string) => {

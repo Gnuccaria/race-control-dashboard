@@ -6,8 +6,11 @@ import { DEFAULT_SESSION_SETTINGS } from './sessionSettingsRules';
  * durate e gli stessi stint (Cool1 FIE 6 ore/60 min e 12 ore/120 min = 5 cambi; All Japan GT 3 ore/90 min = 1 cambio).
  * Vetture ammesse come in src/test/testCars.ts: tutte nel Cool1 FIE, la Nissan (id 5) anche nell'All Japan GT.
  */
+/** Come i campionati della migrazione: proteste di gara fino a 48 ore dopo la fine, nessuna qualifica impostata. */
+const NO_QUALIFYING_TIMES = { qualifying: null, raceProtestHours: 48 };
+
 export const TEST_CHAMPIONSHIPS: Championship[] = [
-  { id: 2, name: 'All Japan GT Championship', durations: [{ hours: 3, stintMinutes: 90 }], carIds: [5], createdAt: '2026-11-01T00:00:00Z', sessionSettings: DEFAULT_SESSION_SETTINGS },
+  { id: 2, name: 'All Japan GT Championship', durations: [{ hours: 3, stintMinutes: 90 }], carIds: [5], createdAt: '2026-11-01T00:00:00Z', sessionSettings: DEFAULT_SESSION_SETTINGS, protestTimes: NO_QUALIFYING_TIMES },
   {
     id: 1,
     name: 'Cool1 FIE Championship',
@@ -18,5 +21,6 @@ export const TEST_CHAMPIONSHIPS: Championship[] = [
     carIds: [1, 2, 3, 4, 5, 6],
     createdAt: '2026-11-01T00:00:00Z',
     sessionSettings: DEFAULT_SESSION_SETTINGS,
+    protestTimes: NO_QUALIFYING_TIMES,
   },
 ];

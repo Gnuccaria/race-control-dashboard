@@ -63,7 +63,8 @@ const parseBetween = (text: string, min: number, max: number): number | null => 
   return value >= min && value <= max ? value : null;
 };
 
-export function checkProtestForm(values: ProtestFormValues): ProtestFormCheck {
+/** isQualifying: la gara scelta ha aperta la finestra delle qualifiche, quindi niente stint (lo decide il server). */
+export function checkProtestForm(values: ProtestFormValues, isQualifying = false): ProtestFormCheck {
   const stint = parseBetween(values.stint, PROTEST_STINT_MIN, PROTEST_STINT_MAX);
   const lap = parseBetween(values.lap, PROTEST_LAP_MIN, PROTEST_LAP_MAX);
   const corner = normalizeProtestCorner(values.corner);
@@ -79,9 +80,9 @@ export function checkProtestForm(values: ProtestFormValues): ProtestFormCheck {
         ? 'too-large'
         : null;
   const raceId = /^\d{1,9}$/.test(values.raceId) ? Number(values.raceId) : null;
-  const isComplete = raceId !== null && stint !== null && lap !== null && corner !== '' && !isCornerInvalid && description.length <= PROTEST_DESCRIPTION_MAX_LENGTH;
+  const isComplete = raceId !== null && (isQualifying || stint !== null) && lap !== null && corner !== '' && !isCornerInvalid && description.length <= PROTEST_DESCRIPTION_MAX_LENGTH;
   return {
-    isStintInvalid: values.stint !== '' && stint === null,
+    isStintInvalid: !isQualifying && values.stint !== '' && stint === null,
     isLapInvalid: values.lap !== '' && lap === null,
     isCornerInvalid,
     isYoutubeInvalid,
@@ -89,7 +90,7 @@ export function checkProtestForm(values: ProtestFormValues): ProtestFormCheck {
     remainingCharacters: PROTEST_DESCRIPTION_MAX_LENGTH - values.description.length,
     submission:
       isComplete && !isYoutubeInvalid && videoIssue === null
-        ? { raceId: raceId as number, stint: stint as number, lap: lap as number, corner, description, youtubeUrl, otherCrewIds: values.otherCrewIds }
+        ? { raceId: raceId as number, stint: isQualifying ? null : (stint as number), lap: lap as number, corner, description, youtubeUrl, otherCrewIds: values.otherCrewIds }
         : null,
   };
 }

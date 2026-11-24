@@ -8,6 +8,7 @@ import { useI18n } from '@/i18n/useI18n';
 import type { ChampionshipDraftState } from '../../hooks/useChampionshipDraft';
 import { ChampionshipCarsField } from '../ChampionshipCarsField/ChampionshipCarsField';
 import { ChampionshipDurationsField } from '../ChampionshipDurationsField/ChampionshipDurationsField';
+import { ProtestTimesField } from '../ProtestTimesField/ProtestTimesField';
 import { SessionSettingsFields } from '../SessionSettingsFields/SessionSettingsFields';
 import { StintScheduleField } from '../StintScheduleField/StintScheduleField';
 import styles from './ChampionshipFields.module.css';
@@ -72,6 +73,7 @@ export function ChampionshipFields({ draft, isReadOnly = false, lockedCarIds = [
           )}
         </FormField>
         <ChampionshipDurationsField draft={draft} isReadOnly={isReadOnly} />
+        <ProtestTimesField draft={draft} isReadOnly={isReadOnly} />
         <ChampionshipCarsField draft={draft} isReadOnly={isReadOnly} lockedCarIds={lockedCarIds} />
       </div>
       <div {...getTabPanelProps(idPrefix, 'stints', selectedTabId)}>

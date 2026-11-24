@@ -11,9 +11,14 @@ interface ChampionshipRow {
   /** Vetture ammesse come elenco JSON di id (car_championships). */
   readonly car_ids_json: string | null;
   readonly session_settings_json: string | null;
+  readonly qualifying_advance_hours: number | null;
+  readonly qualifying_minutes: number | null;
+  readonly qualifying_protest_hours: number | null;
+  readonly race_protest_hours: number;
 }
 
 const CHAMPIONSHIP_COLUMNS = `id, name, created_at, session_settings_json,
+  qualifying_advance_hours, qualifying_minutes, qualifying_protest_hours, race_protest_hours,
   (SELECT json_group_array(json_object('hours', hours, 'stintMinutes', stint_minutes, 'startTime', start_time))
    FROM championship_durations WHERE championship_durations.championship_id = championships.id) AS durations_json,
   (SELECT json_group_array(car_id) FROM car_championships WHERE car_championships.championship = championships.name) AS car_ids_json`;
@@ -38,7 +43,22 @@ const toChampionship = (row: ChampionshipRow): Championship => ({
     .filter((value): value is number => typeof value === 'number')
     .sort((first, second) => first - second),
   sessionSettings: parseStoredSessionSettings(row.session_settings_json),
+  protestTimes: {
+    qualifying:
+      row.qualifying_advance_hours === null || row.qualifying_minutes === null || row.qualifying_protest_hours === null
+        ? null
+        : { advanceHours: row.qualifying_advance_hours, minutes: row.qualifying_minutes, protestHours: row.qualifying_protest_hours },
+    raceProtestHours: row.race_protest_hours,
+  },
 });
+
+/** Tempi di qualifiche e proteste come valori delle colonne, nell'ordine di PROTEST_TIME_COLUMNS. */
+const protestTimeValues = ({ protestTimes }: ChampionshipDraft) => [
+  protestTimes.qualifying?.advanceHours ?? null,
+  protestTimes.qualifying?.minutes ?? null,
+  protestTimes.qualifying?.protestHours ?? null,
+  protestTimes.raceProtestHours,
+];
 
 /** Tutti i campionati, in ordine alfabetico. */
 export async function listChampionships(database: SqlDatabase): Promise<Championship[]> {
@@ -70,8 +90,11 @@ export async function insertChampionship(database: SqlDatabase, championship: Ch
   const nameKey = toChampionshipKey(championship.name);
   await database.batch([
     database
-      .prepare('INSERT INTO championships (name, name_key, created_by_discord_id, session_settings_json) VALUES (?, ?, ?, ?)')
-      .bind(championship.name, nameKey, createdByDiscordId, JSON.stringify(championship.sessionSettings)),
+      .prepare(
+        `INSERT INTO championships (name, name_key, created_by_discord_id, session_settings_json, qualifying_advance_hours, qualifying_minutes,
+           qualifying_protest_hours, race_protest_hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(championship.name, nameKey, createdByDiscordId, JSON.stringify(championship.sessionSettings), ...protestTimeValues(championship)),
     database.prepare(insertDurationsSql('(SELECT id FROM championships WHERE name_key = ?)')).bind(nameKey, JSON.stringify(championship.durations)),
     // Vetture ammesse rimaste da un campionato eliminato con lo stesso nome: si ripulisce prima di inserire.
     database.prepare('DELETE FROM car_championships WHERE championship = ?').bind(championship.name),
@@ -91,8 +114,11 @@ export async function updateChampionship(database: SqlDatabase, previous: Champi
   const carIdsJson = JSON.stringify(championship.carIds);
   await database.batch([
     database
-      .prepare('UPDATE championships SET name = ?, name_key = ?, session_settings_json = ? WHERE id = ?')
-      .bind(name, toChampionshipKey(name), JSON.stringify(championship.sessionSettings), previous.id),
+      .prepare(
+        `UPDATE championships SET name = ?, name_key = ?, session_settings_json = ?, qualifying_advance_hours = ?, qualifying_minutes = ?,
+           qualifying_protest_hours = ?, race_protest_hours = ? WHERE id = ?`,
+      )
+      .bind(name, toChampionshipKey(name), JSON.stringify(championship.sessionSettings), ...protestTimeValues(championship), previous.id),
     database.prepare('UPDATE races SET championship = ? WHERE championship = ?').bind(name, previous.name),
     database.prepare('UPDATE crew_championships SET championship = ? WHERE championship = ?').bind(name, previous.name),
     database.prepare('UPDATE protests SET championship = ? WHERE championship = ?').bind(name, previous.name),
