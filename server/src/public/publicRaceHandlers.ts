@@ -1,6 +1,6 @@
 import type { Env } from '../env';
 import { errorResponse, publicJsonResponse, publicPdfResponse } from '../http/jsonResponse';
-import { findRaceSummaryById, listPublicRaceResults, listRaces } from '../races/raceRepository';
+import { findRaceSummaryById, listPublicRaceQualifying, listPublicRaceResults, listRaces } from '../races/raceRepository';
 import { buildRaceReport, reportFileName, totalPenaltyByCrew } from '../reports/raceReportData';
 import { renderRaceReportPdf } from '../reports/raceReportPdf';
 import { findRaceWeather } from '../weather/weatherRepository';
@@ -31,7 +31,9 @@ export const publicRaceHandlers = {
       const total = totals.get(crewIdByPosition.get(result.position) ?? -1) ?? 0;
       return { ...result, penaltyMs: total > 0 ? total : null };
     });
-    return publicJsonResponse({ race: { ...race, results: withPenalties, weather: await findRaceWeather(env.CREWS_DB, race) } });
+    return publicJsonResponse({
+      race: { ...race, results: withPenalties, qualifying: await listPublicRaceQualifying(env.CREWS_DB, raceId), weather: await findRaceWeather(env.CREWS_DB, race) },
+    });
   },
 
   /**

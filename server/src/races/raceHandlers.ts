@@ -1,6 +1,7 @@
 import { driverSwapCountOf } from '../../../shared/championshipRules';
 import { readDriverSwaps } from '../../../shared/driverSwapRules';
 import { type RaceDraft, resolveResultCars, type SavedRaceResult, validateRaceDraft } from '../../../shared/raceRules';
+import type { SavedQualifyingEntry } from '../../../shared/qualifyingRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
@@ -17,6 +18,7 @@ import {
   hasCrewsOutsideChampionship,
   insertRace,
   isRaceRoundTaken,
+  listRaceQualifying,
   listRaceResults,
   listRaces,
   replaceDriverSwaps,
@@ -24,7 +26,7 @@ import {
 } from './raceRepository';
 
 type RaceDraftReading =
-  | { readonly race: RaceDraft; readonly results: readonly SavedRaceResult[] }
+  | { readonly race: RaceDraft; readonly results: readonly SavedRaceResult[]; readonly qualifying: readonly SavedQualifyingEntry[] }
   | { readonly errorResponse: Response };
 
 /**
@@ -62,7 +64,18 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
     return { errorResponse: errorResponse(422, 'invalid-race', { results: 'crew-without-car', positions: positionsWithoutCar }) };
   }
   const results = race.results.map((result) => ({ ...result, carId: carIdByPosition.get(result.position) ?? null }));
-  return { race, results };
+
+  // Qualifiche: stessa regola per la vettura di ogni riga. Senza il campo (app non ancora aggiornata) restano quelle salvate.
+  const savedQualifying = excludedRaceId === undefined ? [] : await listRaceQualifying(database, excludedRaceId);
+  const hasQualifying = typeof requestBody === 'object' && requestBody !== null && 'qualifying' in requestBody;
+  if (!hasQualifying) return { race: { ...race, qualifying: savedQualifying }, results, qualifying: savedQualifying };
+  const qualifyingCarIds = await findCrewCarIds(database, race.qualifying.map((entry) => entry.crewId), race.championship);
+  const qualifyingCars = resolveResultCars(race.qualifying, savedQualifying, qualifyingCarIds);
+  if (qualifyingCars.positionsWithoutCar.length > 0) {
+    return { errorResponse: errorResponse(422, 'invalid-race', { qualifying: 'crew-without-car', positions: qualifyingCars.positionsWithoutCar }) };
+  }
+  const qualifying = race.qualifying.map((entry) => ({ ...entry, carId: qualifyingCars.carIdByPosition.get(entry.position) ?? null }));
+  return { race, results, qualifying };
 }
 
 /** Gestori delle richieste sulle gare: ognuno verifica prima utente e ruolo, come per gli equipaggi. */
@@ -93,7 +106,7 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
       if ('errorResponse' in reading) return reading.errorResponse;
 
       try {
-        return jsonResponse(201, { race: await insertRace(env.CREWS_DB, reading.race, reading.results, authorization.discordUserId) });
+        return jsonResponse(201, { race: await insertRace(env.CREWS_DB, reading.race, reading.results, reading.qualifying, authorization.discordUserId) });
       } catch (insertError) {
         // Due richieste quasi simultanee per lo stesso round: il vincolo UNIQUE fa da ultima difesa.
         if (!isUniqueConstraintError(insertError)) throw insertError;
@@ -111,7 +124,7 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
       if ('errorResponse' in reading) return reading.errorResponse;
 
       try {
-        const savedRace = await updateRace(env.CREWS_DB, raceId, reading.race, reading.results, true);
+        const savedRace = await updateRace(env.CREWS_DB, raceId, reading.race, reading.results, reading.qualifying, true);
         return savedRace ? jsonResponse(200, { race: savedRace }) : errorResponse(404, 'not-found');
       } catch (updateError) {
         if (!isUniqueConstraintError(updateError)) throw updateError;

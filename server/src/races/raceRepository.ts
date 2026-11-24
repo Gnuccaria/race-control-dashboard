@@ -1,6 +1,7 @@
 import type { CrewChampionship } from '../../../shared/crewRules';
 import { formatCarName } from '../../../shared/carRules';
 import { type DriverSwapEntry, type SavedDriverSwap, withDriverSwapPenalties } from '../../../shared/driverSwapRules';
+import type { PublicQualifyingResult, SavedQualifyingEntry } from '../../../shared/qualifyingRules';
 import type { PublicRaceResult, RaceDraft, RaceDuration, RaceSummary, SavedRace, SavedRaceResult } from '../../../shared/raceRules';
 import type { SqlDatabase } from '../database/sqlDatabase';
 
@@ -60,6 +61,38 @@ export async function listRaceResults(database: SqlDatabase, raceId: number): Pr
     .bind(raceId)
     .all<SavedRaceResult>();
   return results;
+}
+
+/** Qualifiche salvate di una gara, in ordine di posizione. */
+export async function listRaceQualifying(database: SqlDatabase, raceId: number): Promise<SavedQualifyingEntry[]> {
+  const { results } = await database
+    .prepare('SELECT position, crew_id AS crewId, q1_ms AS q1Ms, q2_ms AS q2Ms, car_id AS carId FROM race_qualifying WHERE race_id = ? ORDER BY position')
+    .bind(raceId)
+    .all<SavedQualifyingEntry>();
+  return results;
+}
+
+const QUALIFYING_COLUMNS_FROM_JSON =
+  "json_extract(value, '$.position'), json_extract(value, '$.crewId'), json_extract(value, '$.carId'), json_extract(value, '$.q1Ms'), json_extract(value, '$.q2Ms')";
+
+/** Qualifiche per il sito pubblico: come la classifica, con i tempi Q1 e Q2. */
+export async function listPublicRaceQualifying(database: SqlDatabase, raceId: number): Promise<PublicQualifyingResult[]> {
+  const { results } = await database
+    .prepare(
+      `SELECT race_qualifying.position, race_qualifying.q1_ms AS q1Ms, race_qualifying.q2_ms AS q2Ms, crews.number AS crewNumber,
+              crews.name AS crewName, crews.color AS crewColor, cars.manufacturer AS carManufacturer, cars.model AS carModel
+       FROM race_qualifying
+       JOIN crews ON crews.id = race_qualifying.crew_id
+       LEFT JOIN cars ON cars.id = race_qualifying.car_id
+       WHERE race_qualifying.race_id = ?
+       ORDER BY race_qualifying.position`,
+    )
+    .bind(raceId)
+    .all<Omit<PublicQualifyingResult, 'carName'> & { carManufacturer: string | null; carModel: string | null }>();
+  return results.map(({ carManufacturer, carModel, ...result }) => ({
+    ...result,
+    carName: carManufacturer === null ? null : formatCarName({ manufacturer: carManufacturer, model: carModel }),
+  }));
 }
 
 /** Righe dei cambi pilota salvate con la gara, per cambio ed equipaggio. */
@@ -134,6 +167,7 @@ export async function findRaceById(database: SqlDatabase, raceId: number): Promi
     ...toRaceSummary(row),
     results: await listRaceResults(database, raceId),
     driverSwaps: await listDriverSwaps(database, raceId),
+    qualifying: await listRaceQualifying(database, raceId),
   };
 }
 
@@ -151,6 +185,7 @@ export async function hasCrewsOutsideChampionship(database: SqlDatabase, race: R
   return hasCrewsOutside(database, race.championship, [
     ...race.results.map((result) => result.crewId),
     ...race.driverSwaps.map((driverSwap) => driverSwap.crewId),
+    ...race.qualifying.map((entry) => entry.crewId),
   ]);
 }
 
@@ -165,11 +200,14 @@ export async function hasCrewsOutside(database: SqlDatabase, championship: strin
   return (row?.validCount ?? 0) !== crewIds.length;
 }
 
-/** Gara e classifica in un'unica transazione; results = classifica con la vettura già decisa per ogni riga. */
+/**
+ * Gara, classifica e qualifiche in un'unica transazione; results e qualifying hanno la vettura già decisa per ogni riga.
+ */
 export async function insertRace(
   database: SqlDatabase,
   race: RaceDraft,
   results: readonly SavedRaceResult[],
+  qualifying: readonly SavedQualifyingEntry[],
   createdByDiscordId: string,
 ): Promise<SavedRace> {
   const [insertedRace] = await database.batch<{ id: number }>([
@@ -208,6 +246,13 @@ export async function insertRace(
          FROM json_each(?)`,
       )
       .bind(race.championship, race.round, toDriverSwapsJson(race.driverSwaps)),
+    database
+      .prepare(
+        `INSERT INTO race_qualifying (race_id, position, crew_id, car_id, q1_ms, q2_ms)
+         SELECT (SELECT id FROM races WHERE championship = ? AND round = ?), ${QUALIFYING_COLUMNS_FROM_JSON}
+         FROM json_each(?)`,
+      )
+      .bind(race.championship, race.round, JSON.stringify(qualifying)),
   ]);
 
   const raceId = insertedRace?.results[0]?.id;
@@ -216,12 +261,13 @@ export async function insertRace(
   return savedRace;
 }
 
-/** Aggiorna la gara e sostituisce la classifica, in un'unica transazione; null se non esiste. */
+/** Aggiorna la gara e sostituisce classifica e qualifiche, in un'unica transazione; null se non esiste. */
 export async function updateRace(
   database: SqlDatabase,
   raceId: number,
   race: RaceDraft,
   results: readonly SavedRaceResult[],
+  qualifying: readonly SavedQualifyingEntry[],
   /** true (Gestisci ordini di arrivo): i cambi pilota restano quelli salvati, li gestiscono i Commissari. */
   keepDriverSwaps = false,
 ): Promise<SavedRace | null> {
@@ -254,6 +300,10 @@ export async function updateRace(
          FROM json_each(?)`,
       )
       .bind(raceId, toResultsJson(results)),
+    database.prepare('DELETE FROM race_qualifying WHERE race_id = ?').bind(raceId),
+    database
+      .prepare(`INSERT INTO race_qualifying (race_id, position, crew_id, car_id, q1_ms, q2_ms) SELECT ?, ${QUALIFYING_COLUMNS_FROM_JSON} FROM json_each(?)`)
+      .bind(raceId, JSON.stringify(qualifying)),
     ...(keepDriverSwaps ? [] : driverSwapStatements(database, raceId, race.driverSwaps)),
   ]);
   return findRaceById(database, raceId);
@@ -278,8 +328,9 @@ export async function replaceDriverSwaps(database: SqlDatabase, raceId: number, 
 /** Elimina le gare indicate con classifiche, penalità e cambi pilota, tutto insieme; restituisce quante gare sono state eliminate. */
 export async function deleteRaces(database: SqlDatabase, raceIds: readonly number[]): Promise<number> {
   const idsJson = JSON.stringify(raceIds);
-  const [, , , , , deletedRaces] = await database.batch<{ id: number }>([
+  const [, , , , , , deletedRaces] = await database.batch<{ id: number }>([
     database.prepare('DELETE FROM race_results WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
+    database.prepare('DELETE FROM race_qualifying WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
     database.prepare('DELETE FROM race_weather WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
     database.prepare('DELETE FROM driver_swaps WHERE race_id IN (SELECT value FROM json_each(?))').bind(idsJson),
     database

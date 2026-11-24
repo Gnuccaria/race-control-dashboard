@@ -30,6 +30,10 @@ const race: PublicRace = {
   endTime: '03:00',
   updatedAt: '2026-11-09T10:00:00Z',
   results: [{ position: 1, laps: 120, crewNumber: 16, crewName: 'Vez Team Lime', crewColor: '#00FF00', carName: 'Audi R8', gapMs: null, penaltyMs: 23_000 }],
+  qualifying: [
+    { position: 1, crewNumber: 16, crewName: 'Vez Team Lime', crewColor: '#00FF00', carName: 'Audi R8', q1Ms: 118_432, q2Ms: 117_905 },
+    { position: 5, crewNumber: 44, crewName: 'Firestarter Project', crewColor: '#FF6600', carName: 'BMW M4', q1Ms: 119_010, q2Ms: null },
+  ],
   weather: { stintCount: 2, pattern: { qualifying: ['S01', 'S09'], stints: [Array(9).fill('C02'), Array(9).fill('R07')] } },
 };
 
@@ -45,15 +49,33 @@ describe('pagina della gara sul sito', () => {
     Object.defineProperty(navigator, 'pdfViewerEnabled', { value: true, configurable: true });
   });
 
-  it('quattro schede: Qualifiche non ancora disponibile, Gara (la classifica, scheda iniziale), Meteo e Documentazione', async () => {
+  it('quattro schede: Qualifiche, Gara (la classifica, scheda iniziale), Meteo e Documentazione', async () => {
     await renderRacePage();
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Qualifiche', 'Gara', 'Meteo', 'Documentazione']);
-    expect(screen.getByRole('tab', { name: 'Qualifiche' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Qualifiche' })).toBeEnabled();
     expect(screen.getByRole('tab', { name: 'Gara' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('table', { name: 'Classifica della gara' })).toHaveTextContent('+23,000');
     // Il referto non sta più sopra la classifica.
     expect(screen.queryByRole('button', { name: 'Visualizza referto' })).not.toBeInTheDocument();
+  });
+
+  it('Qualifiche: come la classifica, con i tempi Q1 e Q2 in M:SS.DDD', async () => {
+    const user = userEvent.setup();
+    await renderRacePage();
+    await user.click(screen.getByRole('tab', { name: 'Qualifiche' }));
+    const table = screen.getByRole('table', { name: 'Qualifiche della gara' });
+    expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Pos.', 'N.', 'Equipaggio', 'Vettura', 'Tempo Q1', 'Tempo Q2']);
+    expect(within(table).getAllByRole('row')[1]).toHaveTextContent('116Vez Team LimeAudi R81:58.4321:57.905');
+    expect(within(table).getAllByRole('row')[2]).toHaveTextContent('544Firestarter ProjectBMW M41:59.010–');
+  });
+
+  it('Qualifiche non ancora inserite: lo dice', async () => {
+    vi.mocked(fetchPublicRace).mockResolvedValue({ ...race, qualifying: [] });
+    const user = userEvent.setup();
+    await renderRacePage();
+    await user.click(screen.getByRole('tab', { name: 'Qualifiche' }));
+    expect(screen.getByText('Le qualifiche non sono ancora disponibili.')).toBeInTheDocument();
   });
 
   it('Meteo: la qualifica con 2 slot e una riga per stint con 9 slot, ognuno con icona e codice', async () => {

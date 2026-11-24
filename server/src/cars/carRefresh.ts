@@ -174,7 +174,8 @@ export async function listStoredCars(database: SqlDatabase): Promise<StoredCar[]
     .prepare(
       `SELECT id, manufacturer, model, car_group, horsepower, weight_kg, drivetrain, bop_horsepower, bop_weight_kg, limiter, ballast_kg, source_id,
          (SELECT COUNT(*) FROM crew_championships WHERE crew_championships.car_id = cars.id)
-           + (SELECT COUNT(*) FROM race_results WHERE race_results.car_id = cars.id) AS usage_count
+           + (SELECT COUNT(*) FROM race_results WHERE race_results.car_id = cars.id)
+           + (SELECT COUNT(*) FROM race_qualifying WHERE race_qualifying.car_id = cars.id) AS usage_count
        FROM cars`,
     )
     .all<StoredCarRow>();

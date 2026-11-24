@@ -7,6 +7,7 @@ import type { CrewChampionship } from './crewRules';
 import { isRaceTime, raceInstants } from './raceSchedule';
 import type { RaceWeather } from './weatherRules';
 import { type DriverSwapEntry, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
+import { type PublicQualifyingResult, type QualifyingEntry, readQualifying, type SavedQualifyingEntry } from './qualifyingRules';
 
 /** Righe dell'ordine di arrivo. */
 export const RACE_RESULT_POSITIONS = 14;
@@ -64,6 +65,8 @@ export interface PublicRaceResult {
 /** Gara come la vede il sito pubblico: dati della gara e classifica completa. */
 export interface PublicRace extends RaceSummary {
   readonly results: readonly PublicRaceResult[];
+  /** Qualifiche (scheda Qualifiche del sito); assenti nelle risposte dei server non aggiornati. */
+  readonly qualifying?: readonly PublicQualifyingResult[];
   /** Pattern meteo (scheda Meteo del sito), con il numero di stint della gara. */
   readonly weather: RaceWeather;
 }
@@ -134,6 +137,8 @@ export interface RaceDraft {
   readonly results: readonly RaceResultEntry[];
   /** Righe dei cambi pilota (solo quelle compilate): vettura, Pit In, Pit Out, annullata e note. */
   readonly driverSwaps: readonly DriverSwapEntry[];
+  /** Qualifiche (scheda Qualifiche): miglior giro in Q1 e in Q2, facoltativi (shared/qualifyingRules.ts). */
+  readonly qualifying: readonly QualifyingEntry[];
 }
 
 /** Riga dell'elenco gare. */
@@ -160,6 +165,8 @@ export interface RaceSummary {
 /** Gara completa, con l'ordine di arrivo. */
 export interface SavedRace extends RaceSummary {
   readonly results: readonly SavedRaceResult[];
+  /** Qualifiche salvate, con la vettura di ogni riga; assenti nelle gare lette da un server non aggiornato. */
+  readonly qualifying?: readonly SavedQualifyingEntry[];
   /** Con la penalità di ogni riga, calcolata dal server. */
   readonly driverSwaps: readonly SavedDriverSwap[];
 }
@@ -300,6 +307,8 @@ export interface RaceDraftIssues {
   /** before-start = la fine non è dopo l'inizio. */
   readonly endTime?: 'invalid' | 'before-start';
   readonly results?: 'invalid' | 'repeated-crew';
+  /** Qualifiche: invalid = struttura o tempi non validi; repeated-crew = equipaggio in due posizioni. */
+  readonly qualifying?: 'invalid' | 'repeated-crew';
   readonly driverSwaps?: 'invalid';
 }
 
@@ -383,6 +392,9 @@ export function validateRaceDraft(input: unknown, championships: readonly Pick<C
   if (!results) issues.results = 'invalid';
   else if (findRepeatedCrewPositions(results).size > 0) issues.results = 'repeated-crew';
   if (!driverSwaps) issues.driverSwaps = 'invalid';
+  const qualifying = readQualifying(candidate.qualifying);
+  if (!qualifying) issues.qualifying = 'invalid';
+  else if (findRepeatedCrewPositions(qualifying).size > 0) issues.qualifying = 'repeated-crew';
 
   if (!isTotalLapsMissing && totalLaps === null) issues.totalLaps = 'invalid';
   else if (totalLaps !== null && results?.some((result) => result.laps > totalLaps)) issues.totalLaps = 'exceeded';
@@ -395,6 +407,7 @@ export function validateRaceDraft(input: unknown, championships: readonly Pick<C
     !endTime ||
     !results ||
     !driverSwaps ||
+    !qualifying ||
     name === undefined ||
     Object.keys(issues).length > 0
   ) {
@@ -402,7 +415,7 @@ export function validateRaceDraft(input: unknown, championships: readonly Pick<C
   }
   return {
     isValid: true,
-    race: { name, championship, duration, totalLaps, round, trackId, isTrackReversed, raceDate, startTime, endDate, endTime, results, driverSwaps },
+    race: { name, championship, duration, totalLaps, round, trackId, isTrackReversed, raceDate, startTime, endDate, endTime, results, driverSwaps, qualifying },
   };
 }
 

@@ -19,6 +19,7 @@ import {
   type SavedRaceResult,
   validateRaceDraft,
 } from '@shared/raceRules';
+import { canPositionHaveQ2, parseLapTimeText, QUALIFYING_POSITIONS, type QualifyingEntry, type SavedQualifyingEntry, formatLapTime } from '@shared/qualifyingRules';
 import { isRaceTime, raceInstants } from '@shared/raceSchedule';
 import { type DriverSwapSheet, type DriverSwapValues, EMPTY_DRIVER_SWAP_VALUES, toDriverSwapValues } from './driverSwapDraft';
 
@@ -49,7 +50,16 @@ export interface RaceDraftValues {
   readonly savedResults: readonly SavedRaceResult[];
   /** Scheda "Cambi pilota". */
   readonly driverSwap: DriverSwapValues;
+  /** Scheda "Qualifiche": una casella per posizione (indice 0 = posizione 1). */
+  readonly qualifyingCrewIdByPosition: readonly (number | null)[];
+  /** Miglior giro in Q1 e in Q2 come testo (M:SS.DDD), facoltativi; Q2 solo nelle posizioni 1–4 e 8–11. */
+  readonly q1TextByPosition: readonly string[];
+  readonly q2TextByPosition: readonly string[];
+  /** Qualifiche già salvate: le righe invariate tengono la loro vettura. */
+  readonly savedQualifying: readonly SavedQualifyingEntry[];
 }
+
+const emptyQualifyingTexts = () => Array.from({ length: QUALIFYING_POSITIONS }, () => '');
 
 export const EMPTY_RACE_VALUES: RaceDraftValues = {
   name: '',
@@ -68,6 +78,10 @@ export const EMPTY_RACE_VALUES: RaceDraftValues = {
   gapTextByPosition: Array.from({ length: RACE_RESULT_POSITIONS }, () => ''),
   savedResults: [],
   driverSwap: EMPTY_DRIVER_SWAP_VALUES,
+  qualifyingCrewIdByPosition: Array.from({ length: QUALIFYING_POSITIONS }, () => null),
+  q1TextByPosition: emptyQualifyingTexts(),
+  q2TextByPosition: emptyQualifyingTexts(),
+  savedQualifying: [],
 };
 
 /** decimalSeparator: separatore dei decimali della lingua, per mostrare il distacco salvato (1:05,320 / 1:05.320). */
@@ -79,6 +93,14 @@ export function toRaceDraftValues(race: SavedRace, decimalSeparator = ','): Race
     crewIdByPosition[position - 1] = crewId;
     lapsTextByPosition[position - 1] = laps === null ? '' : String(laps);
     gapTextByPosition[position - 1] = gapMs === null || !canPositionHaveGap(position) ? '' : formatGap(gapMs, decimalSeparator);
+  }
+  const qualifyingCrewIdByPosition = [...EMPTY_RACE_VALUES.qualifyingCrewIdByPosition];
+  const q1TextByPosition = emptyQualifyingTexts();
+  const q2TextByPosition = emptyQualifyingTexts();
+  for (const { position, crewId, q1Ms, q2Ms } of race.qualifying ?? []) {
+    qualifyingCrewIdByPosition[position - 1] = crewId;
+    q1TextByPosition[position - 1] = q1Ms === null ? '' : formatLapTime(q1Ms);
+    q2TextByPosition[position - 1] = q2Ms === null || !canPositionHaveQ2(position) ? '' : formatLapTime(q2Ms);
   }
   return {
     name: race.name ?? '',
@@ -98,8 +120,33 @@ export function toRaceDraftValues(race: SavedRace, decimalSeparator = ','): Race
     gapTextByPosition,
     savedResults: race.results,
     driverSwap: toDriverSwapValues(race.driverSwaps),
+    qualifyingCrewIdByPosition,
+    q1TextByPosition,
+    q2TextByPosition,
+    savedQualifying: race.qualifying ?? [],
   };
 }
+
+/** Qualifiche da salvare: solo le posizioni occupate; un tempo scritto male → NaN, che la convalida rifiuta. */
+export function toQualifying(values: RaceDraftValues): QualifyingEntry[] {
+  return values.qualifyingCrewIdByPosition.flatMap((crewId, index) =>
+    crewId === null
+      ? []
+      : [
+          {
+            position: index + 1,
+            crewId,
+            q1Ms: parseLapTimeText(values.q1TextByPosition[index] ?? ''),
+            // Q2 solo nelle posizioni che lo prevedono: un testo rimasto altrove viene ignorato.
+            q2Ms: canPositionHaveQ2(index + 1) ? parseLapTimeText(values.q2TextByPosition[index] ?? '') : null,
+          },
+        ],
+  );
+}
+
+/** Posizioni delle qualifiche con un tempo Q1 o Q2 scritto male. */
+export const findQualifyingPositionsWithInvalidTime = (values: RaceDraftValues): number[] =>
+  toQualifying(values).flatMap((entry) => (Number.isNaN(entry.q1Ms) || Number.isNaN(entry.q2Ms) ? [entry.position] : []));
 
 /**
  * Solo le posizioni occupate: le righe vuote non contano, quindi la classifica può avere meno di 14 righe.
@@ -173,6 +220,15 @@ export interface RaceDraftCheck {
   readonly hasResultsErrors: boolean;
   /** Tempi o margine scritti male nella scheda "Cambi pilota". */
   readonly hasDriverSwapErrors: boolean;
+  /** Qualifiche: posizione ripetuta → prima posizione dell'equipaggio. */
+  readonly qualifyingRepeatedPositions: ReadonlyMap<number, number>;
+  /** Qualifiche: posizioni con un tempo scritto male. */
+  readonly qualifyingPositionsWithInvalidTime: readonly number[];
+  /** Qualifiche: vettura che verrà salvata in ogni posizione occupata. */
+  readonly qualifyingCarIdByPosition: ReadonlyMap<number, number | null>;
+  /** Qualifiche: posizioni il cui equipaggio non ha un'auto nel campionato. */
+  readonly qualifyingPositionsWithoutCar: readonly number[];
+  readonly hasQualifyingErrors: boolean;
   /** Tutto pronto per il salvataggio. */
   readonly isComplete: boolean;
 }
@@ -209,6 +265,13 @@ export function checkRaceDraft(
   const positionsMissingLaps = findPositionsMissingLaps(values);
   const positionsWithInvalidGap = findPositionsWithInvalidGap(values);
   const hasDriverSwapErrors = driverSwapSheet?.hasErrors ?? false;
+  const qualifying = toQualifying(values);
+  const qualifyingRepeatedPositions = findRepeatedCrewPositions(qualifying);
+  const qualifyingPositionsWithInvalidTime = findQualifyingPositionsWithInvalidTime(values);
+  const qualifyingCars = currentCarIdByCrewId
+    ? resolveResultCars(qualifying, values.savedQualifying, currentCarIdByCrewId)
+    : { carIdByPosition: new Map<number, number | null>(), positionsWithoutCar: [] };
+  const hasQualifyingErrors = qualifyingRepeatedPositions.size > 0 || qualifyingPositionsWithInvalidTime.length > 0 || qualifyingCars.positionsWithoutCar.length > 0;
   return {
     isNameInvalid,
     isDurationRequired,
@@ -225,8 +288,14 @@ export function checkRaceDraft(
     hasResultsErrors:
       repeatedPositions.size > 0 || positionsWithoutCar.length > 0 || positionsOverTotalLaps.length > 0 || positionsWithInvalidGap.length > 0,
     hasDriverSwapErrors,
+    qualifyingRepeatedPositions,
+    qualifyingPositionsWithInvalidTime,
+    qualifyingCarIdByPosition: qualifyingCars.carIdByPosition,
+    qualifyingPositionsWithoutCar: qualifyingCars.positionsWithoutCar,
+    hasQualifyingErrors,
     isComplete:
       !hasDriverSwapErrors &&
+      !hasQualifyingErrors &&
       !isNameInvalid &&
       !isTotalLapsInvalid &&
       positionsOverTotalLaps.length === 0 &&
@@ -265,6 +334,7 @@ export const validateRaceValues = (
     endTime: values.endTime,
     results: toRaceResults(values),
     driverSwaps,
+    qualifying: toQualifying(values),
   }, championships);
 
 export type { RaceDraft };

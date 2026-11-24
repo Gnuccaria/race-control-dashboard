@@ -139,7 +139,7 @@ export async function countCrewsInRaceResults(database: SqlDatabase, crewIds: re
   const row = await database
     .prepare(
       `SELECT COUNT(DISTINCT crew_id) AS crewCount FROM (
-         SELECT crew_id FROM race_results UNION ALL SELECT crew_id FROM penalty_crews UNION ALL SELECT crew_id FROM driver_swaps
+         SELECT crew_id FROM race_results UNION ALL SELECT crew_id FROM race_qualifying UNION ALL SELECT crew_id FROM penalty_crews UNION ALL SELECT crew_id FROM driver_swaps
        ) WHERE crew_id IN (SELECT value FROM json_each(?))`,
     )
     .bind(JSON.stringify(crewIds))

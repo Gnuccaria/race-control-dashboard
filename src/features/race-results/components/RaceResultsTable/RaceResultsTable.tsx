@@ -21,7 +21,7 @@ interface RaceResultsTableProps {
 }
 
 /**
- * Scheda "Dettagli": ordine di arrivo su 14 righe. Ogni menu propone solo gli equipaggi del campionato;
+ * Scheda "Gara": ordine di arrivo su 14 righe. Ogni menu propone solo gli equipaggi del campionato;
  * un equipaggio già inserito più in alto viene sottolineato in rosso con il rimando alla prima posizione.
  * La colonna Auto mostra la vettura che resta legata alla gara: quella già salvata per le righe invariate,
  * quella attuale dell'equipaggio per le righe nuove o cambiate.
@@ -203,7 +203,7 @@ interface RaceResultCarProps {
 }
 
 /** Vettura di una riga dell'ordine di arrivo; se diversa da quella attuale dell'equipaggio, lo dice al passaggio del mouse. */
-function RaceResultCar({ crewCarId, raceCarId, isMissing, carNameById }: RaceResultCarProps) {
+export function RaceResultCar({ crewCarId, raceCarId, isMissing, carNameById }: RaceResultCarProps) {
   const { messages } = useI18n();
   const formTexts = messages.races.form;
   if (crewCarId === undefined || raceCarId === undefined) return <span className={styles.emptyCar}>–</span>;

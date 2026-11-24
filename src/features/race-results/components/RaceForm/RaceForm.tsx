@@ -7,6 +7,7 @@ import { useI18n } from '@/i18n/useI18n';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
 import { DriverSwapTables } from '../DriverSwapTables/DriverSwapTables';
 import { RaceInfoFields } from '../RaceInfoFields/RaceInfoFields';
+import { QualifyingTable } from '../QualifyingTable/QualifyingTable';
 import { RaceResultsTable } from '../RaceResultsTable/RaceResultsTable';
 import styles from './RaceForm.module.css';
 
@@ -27,7 +28,7 @@ interface RaceFormProps {
 
 /**
  * Campi di una gara su schede, usati sia in creazione sia nel dettaglio; le schede mostrate restano tutte montate.
- * Anagrafica, Dettagli e Cambi pilota si salvano con la gara (sempre per intero, anche le schede non mostrate,
+ * Anagrafica, Qualifiche, Gara e Cambi pilota si salvano con la gara (sempre per intero, anche le schede non mostrate,
  * così i dati delle altre schede restano com'erano).
  */
 export function RaceForm({ draft, crewsQuery, isReadOnly, initialTab, visibleTabs = RESULTS_TABS }: RaceFormProps) {
@@ -38,11 +39,13 @@ export function RaceForm({ draft, crewsQuery, isReadOnly, initialTab, visibleTab
   const allCrews = crewsQuery.status === 'loaded' ? crewsQuery.value : [];
   const allTabs: { readonly id: RaceFormTab; readonly label: string; readonly hasErrors: boolean }[] = [
     { id: 'info', label: formTexts.infoTab, hasErrors: !isReadOnly && draft.check.hasInfoErrors },
+    { id: 'qualifying', label: formTexts.qualifyingTab, hasErrors: !isReadOnly && draft.check.hasQualifyingErrors },
     { id: 'results', label: formTexts.resultsTab, hasErrors: !isReadOnly && draft.check.hasResultsErrors },
     { id: 'driverSwaps', label: messages.races.driverSwaps.tab, hasErrors: !isReadOnly && draft.check.hasDriverSwapErrors },
   ];
   const tabContent: Record<RaceFormTab, ReactNode> = {
     info: <RaceInfoFields draft={draft} allCrews={allCrews} isReadOnly={isReadOnly} />,
+    qualifying: <QualifyingTable draft={draft} crewsQuery={crewsQuery} isReadOnly={isReadOnly} />,
     results: <RaceResultsTable draft={draft} crewsQuery={crewsQuery} isReadOnly={isReadOnly} />,
     driverSwaps: <DriverSwapTables draft={draft} crewsQuery={crewsQuery} isReadOnly={isReadOnly} />,
   };

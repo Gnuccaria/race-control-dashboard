@@ -7,6 +7,7 @@ import {
   sanitizeLapsInput,
   sanitizeRoundInput,
 } from '@shared/raceRules';
+import { canPositionHaveQ2, formatLapTime, parseLapTimeText, sanitizeLapTimeInput } from '@shared/qualifyingRules';
 import { isRaceTime, raceEndAfter } from '@shared/raceSchedule';
 import { useState } from 'react';
 import { useChampionships } from '@/features/championships/useChampionships';
@@ -31,6 +32,14 @@ const clearPositionValues = (values: RaceDraftValues, position: number): RaceDra
   crewIdByPosition: replaceAt(values.crewIdByPosition, position, null),
   lapsTextByPosition: replaceAt(values.lapsTextByPosition, position, ''),
   gapTextByPosition: replaceAt(values.gapTextByPosition, position, ''),
+});
+
+/** Riga vuota delle qualifiche: nessun equipaggio, nessun tempo. */
+const clearQualifyingValues = (values: RaceDraftValues, position: number): RaceDraftValues => ({
+  ...values,
+  qualifyingCrewIdByPosition: replaceAt(values.qualifyingCrewIdByPosition, position, null),
+  q1TextByPosition: replaceAt(values.q1TextByPosition, position, ''),
+  q2TextByPosition: replaceAt(values.q2TextByPosition, position, ''),
 });
 
 /** Equipaggi che hanno almeno una riga nei cambi pilota (prima che gli equipaggi siano letti dal server). */
@@ -107,6 +116,7 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
     changeChampionship: (championship: CrewChampionship, allCrews: readonly SavedCrew[]) => {
       setValues((previousValues) => {
         const crewIdByPosition = keepChampionshipCrews(previousValues.crewIdByPosition, findChampionshipCrews(allCrews, championship));
+        const qualifyingCrewIdByPosition = keepChampionshipCrews(previousValues.qualifyingCrewIdByPosition, findChampionshipCrews(allCrews, championship));
         return suggestSchedule({
           ...previousValues,
           championship,
@@ -121,6 +131,10 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
             crewIdByPosition[index] === null ? '' : lapsText,
           ),
           gapTextByPosition: previousValues.gapTextByPosition.map((gapText, index) => (crewIdByPosition[index] === null ? '' : gapText)),
+          // Lo stesso per le qualifiche.
+          qualifyingCrewIdByPosition,
+          q1TextByPosition: previousValues.q1TextByPosition.map((text, index) => (qualifyingCrewIdByPosition[index] === null ? '' : text)),
+          q2TextByPosition: previousValues.q2TextByPosition.map((text, index) => (qualifyingCrewIdByPosition[index] === null ? '' : text)),
           // I cambi pilota sono per vettura (e numero di cambi) del campionato: con un altro campionato si riparte da zero.
           driverSwap: { rowsBySwap: [] },
         }, previousValues);
@@ -183,6 +197,33 @@ export function useRaceDraft(initialValues: RaceDraftValues = EMPTY_RACE_VALUES,
           index === position - 1 ? sanitizeLapsInput(typedValue) : lapsText,
         ),
       }));
+    },
+    /** Qualifiche: togliendo l'equipaggio da una posizione si svuotano anche i suoi tempi. */
+    changeQualifyingCrewAtPosition: (position: number, crewId: number | null) => {
+      setValues((previousValues) =>
+        crewId === null
+          ? clearQualifyingValues(previousValues, position)
+          : { ...previousValues, qualifyingCrewIdByPosition: replaceAt(previousValues.qualifyingCrewIdByPosition, position, crewId) },
+      );
+    },
+    /** La X a destra della riga delle qualifiche: toglie equipaggio e tempi di quella posizione. */
+    clearQualifyingPosition: (position: number) => {
+      setValues((previousValues) => clearQualifyingValues(previousValues, position));
+    },
+    /** Miglior giro in Q1 o in Q2: solo cifre, ":" e separatore dei decimali (Q2 solo nelle posizioni 1–4 e 8–11). */
+    changeQualifyingTime: (position: number, session: 'q1' | 'q2', typedValue: string) => {
+      if (session === 'q2' && !canPositionHaveQ2(position)) return;
+      const field = session === 'q1' ? 'q1TextByPosition' : 'q2TextByPosition';
+      setValues((previousValues) => ({ ...previousValues, [field]: replaceAt(previousValues[field], position, sanitizeLapTimeInput(typedValue)) }));
+    },
+    /** Uscendo dalla casella: un tempo interpretabile diventa M:SS.DDD, altrimenti resta (in errore). */
+    formatQualifyingTime: (position: number, session: 'q1' | 'q2') => {
+      const field = session === 'q1' ? 'q1TextByPosition' : 'q2TextByPosition';
+      setValues((previousValues) => {
+        const milliseconds = parseLapTimeText(previousValues[field][position - 1] ?? '');
+        if (milliseconds === null || Number.isNaN(milliseconds)) return previousValues;
+        return { ...previousValues, [field]: replaceAt(previousValues[field], position, formatLapTime(milliseconds)) };
+      });
     },
     /** Una cella di una riga di un cambio pilota (i tempi tengono solo cifre e separatori). */
     changeDriverSwapRow: (swapIndex: number, crewId: number, change: Partial<DriverSwapRowValues>) => {

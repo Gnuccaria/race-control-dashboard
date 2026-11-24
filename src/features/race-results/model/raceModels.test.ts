@@ -112,6 +112,10 @@ describe('form della gara', () => {
     gapTextByPosition: ['', '', '1:05,320', ...Array.from({ length: 11 }, () => '')],
     savedResults: [],
     driverSwap: EMPTY_DRIVER_SWAP_VALUES,
+    qualifyingCrewIdByPosition: EMPTY_RACE_VALUES.qualifyingCrewIdByPosition,
+    q1TextByPosition: EMPTY_RACE_VALUES.q1TextByPosition,
+    q2TextByPosition: EMPTY_RACE_VALUES.q2TextByPosition,
+    savedQualifying: [],
   } as const;
 
   it('richiede la durata nel Cool1 FIE Championship e controlla il nome', () => {

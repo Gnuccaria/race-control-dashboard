@@ -41,6 +41,38 @@ describe('API gare e piste', () => {
     ).run();
   });
 
+  it('salva le qualifiche con la vettura di ogni riga, le mostra sul sito e le ricontrolla', async () => {
+    const qualifying = [
+      { position: 1, crewId: 1, q1Ms: 118_432, q2Ms: 117_905 },
+      { position: 2, crewId: 2, q1Ms: 118_900, q2Ms: null },
+    ];
+    const created = await request('POST', '/races', race({ qualifying }));
+    expect(created.status).toBe(201);
+    expect((created.body.race as { qualifying: unknown }).qualifying).toEqual([
+      { position: 1, crewId: 1, q1Ms: 118_432, q2Ms: 117_905, carId: 1 },
+      { position: 2, crewId: 2, q1Ms: 118_900, q2Ms: null, carId: 2 },
+    ]);
+    const raceId = (created.body.race as { id: number }).id;
+    const publicRace = (await (await handleRequest(new Request(`https://race-control-api.test/public/races/${raceId}`), env)).json()) as { race: { qualifying: unknown[] } };
+    expect(publicRace.race.qualifying[0]).toMatchObject({ position: 1, crewNumber: 1, crewName: 'Alfa', q1Ms: 118_432, q2Ms: 117_905 });
+
+    // Q2 solo nelle posizioni 1–4 e 8–11; un equipaggio una volta sola; solo equipaggi del campionato.
+    expect((await request('PUT', `/races/${raceId}`, race({ qualifying: [{ position: 5, crewId: 1, q1Ms: 118_000, q2Ms: 117_000 }] }))).body).toMatchObject({
+      error: { code: 'invalid-race', details: { qualifying: 'invalid' } },
+    });
+    expect((await request('PUT', `/races/${raceId}`, race({ qualifying: [{ position: 1, crewId: 1 }, { position: 2, crewId: 1 }] }))).body).toMatchObject({
+      error: { details: { qualifying: 'repeated-crew' } },
+    });
+    expect((await request('PUT', `/races/${raceId}`, race({ qualifying: [{ position: 1, crewId: 3 }] }))).status).toBe(422);
+
+    // Un equipaggio presente solo nelle qualifiche non si può eliminare.
+    expect((await request('PUT', `/races/${raceId}`, race({ results: [{ position: 1, crewId: 2, laps: 29 }], qualifying }))).status).toBe(200);
+    expect((await request('DELETE', '/crews', { ids: [1] })).status).toBe(409);
+    // Senza il campo qualifiche (app non ancora aggiornata) restano quelle salvate; con un elenco vuoto si tolgono.
+    expect(((await request('PUT', `/races/${raceId}`, race())).body.race as { qualifying: unknown[] }).qualifying).toHaveLength(2);
+    expect(((await request('PUT', `/races/${raceId}`, race({ qualifying: [] }))).body.race as { qualifying: unknown[] }).qualifying).toEqual([]);
+  });
+
   it('salva una gara con il suo ordine di arrivo e la restituisce', async () => {
     const created = await request('POST', '/races', race());
     expect(created.status).toBe(201);

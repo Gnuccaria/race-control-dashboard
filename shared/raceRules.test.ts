@@ -128,6 +128,7 @@ describe('regole gara', () => {
         ],
         // Senza cambi pilota indicati: nessuna penalità.
         driverSwaps: [],
+        qualifying: [],
       },
     });
     expect(validateRaceDraftWith({ ...COMPLETE_RACE, results: [] })).toMatchObject({ isValid: true });

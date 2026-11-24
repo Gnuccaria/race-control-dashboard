@@ -194,7 +194,7 @@ describe('Nuova gara', () => {
     await chooseTrack(user, { country: 'Francia', track: 'Alsace', isReversed: true });
     expect(screen.getByRole('button', { name: 'Tracciato' })).toHaveTextContent('Alsace - Villaggio al contrario');
 
-    await user.click(screen.getByRole('tab', { name: 'Dettagli' }));
+    await user.click(screen.getByRole('tab', { name: 'Gara' }));
     await user.click(screen.getByRole('combobox', { name: 'Equipaggio in posizione 1' }));
     expect(within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent)).toEqual([
       'Nessun equipaggio',
@@ -208,7 +208,7 @@ describe('Nuova gara', () => {
     await pickCrew(user, 2, 'Beta Corse');
     expect(screen.getByText('Già inserito in posizione 1.')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 2' })).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByRole('tab', { name: /Dettagli\s?\(contiene errori\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Gara\s?\(contiene errori\)/ })).toBeInTheDocument();
     expect(saveButton).toBeDisabled();
 
     await pickCrew(user, 2, 'Nessun equipaggio');
@@ -264,6 +264,7 @@ describe('Nuova gara', () => {
         { position: 2, crewId: 1, laps: 24, gapMs: 65_300 },
       ],
       driverSwaps: [],
+      qualifying: [],
     });
     expect(await screen.findByText('Gara salvata.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '6 Ore di Alsazia' })).toBeInTheDocument();
@@ -276,11 +277,11 @@ describe('Nuova gara', () => {
     renderApp(`${LIST_PATH}/nuova`);
 
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
-    await user.click(screen.getByRole('tab', { name: 'Dettagli' }));
+    await user.click(screen.getByRole('tab', { name: 'Gara' }));
     await pickCrew(user, 1, 'Senza Auto');
     expect(resultRow(1)).toHaveTextContent('Senza auto');
     expect(screen.getByRole('alert')).toHaveTextContent("1 equipaggio non ha un'auto: assegnala in Gestisci equipaggio, poi torna qui.");
-    expect(screen.getByRole('tab', { name: /Dettagli\s?\(contiene errori\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Gara\s?\(contiene errori\)/ })).toBeInTheDocument();
   });
 
   it("scelta la durata, propone l'orario di partenza del campionato e calcola la fine", async () => {
@@ -315,6 +316,51 @@ describe('Nuova gara', () => {
     expect(screen.getByRole('combobox', { name: 'Ora di fine: Ore' })).toHaveValue('22');
     expect(screen.getByLabelText('Data di fine')).toHaveValue('2026-11-08');
     vi.mocked(fetchChampionships).mockResolvedValue({ isSuccess: true, value: TEST_CHAMPIONSHIPS });
+  });
+
+  it('Qualifiche: equipaggi del campionato, tempo Q1 e Q2 (solo in 1–4 e 8–11) formattati M:SS.DDD, salvati con la gara', async () => {
+    vi.mocked(createRace).mockResolvedValue({ isSuccess: false, errorKind: 'duplicate-race-round' });
+    const user = userEvent.setup();
+    renderApp(`${LIST_PATH}/nuova`);
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Campionato' }), CHAMPIONSHIP);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Durata' }), '6 ore');
+    await user.type(screen.getByRole('textbox', { name: 'Round' }), '1');
+    await user.type(screen.getByLabelText('Data di inizio'), '2099-01-01');
+    await chooseTime(user, 'Ora di inizio', '21:00');
+    await chooseTime(user, 'Ora di fine', '23:00');
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Anagrafica', 'Qualifiche', 'Gara']);
+
+    await user.click(screen.getByRole('tab', { name: 'Qualifiche' }));
+    const table = screen.getByRole('table', { name: 'Qualifiche' });
+    expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Posizione', 'Equipaggio', 'Auto', 'Tempo Q1', 'Tempo Q2', 'Svuota riga']);
+    await user.click(screen.getByRole('combobox', { name: 'Equipaggio in posizione 1 nelle qualifiche' }));
+    await user.click(screen.getByRole('option', { name: /Beta Corse/ }));
+    await user.click(screen.getByRole('combobox', { name: 'Equipaggio in posizione 5 nelle qualifiche' }));
+    await user.click(screen.getByRole('option', { name: /Alfa Racing/ }));
+    // Q2 solo nelle posizioni 1–4 e 8–11.
+    expect(screen.getByRole('textbox', { name: 'Tempo Q2 in posizione 1' })).toBeEnabled();
+    expect(screen.queryByRole('textbox', { name: 'Tempo Q2 in posizione 5' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Tempo Q2 in posizione 8' })).toBeDisabled();
+
+    await user.type(screen.getByRole('textbox', { name: 'Tempo Q1 in posizione 1' }), '1:58,4');
+    await user.tab();
+    expect(screen.getByRole('textbox', { name: 'Tempo Q1 in posizione 1' })).toHaveValue('1:58.400');
+    await user.type(screen.getByRole('textbox', { name: 'Tempo Q2 in posizione 1' }), '1:57.905');
+    await user.type(screen.getByRole('textbox', { name: 'Tempo Q1 in posizione 5' }), '1:75');
+    expect(screen.getByRole('alert')).toHaveTextContent('Un tempo non è valido');
+    expect(screen.getByRole('tab', { name: /Qualifiche/ })).toHaveTextContent('Qualifiche (contiene errori)');
+    expect(screen.getByRole('button', { name: 'Salva gara' })).toBeDisabled();
+    await user.clear(screen.getByRole('textbox', { name: 'Tempo Q1 in posizione 5' }));
+    await user.click(screen.getByRole('button', { name: 'Salva gara' }));
+
+    expect(createRace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        qualifying: [
+          { position: 1, crewId: 2, q1Ms: 118_400, q2Ms: 117_905 },
+          { position: 5, crewId: 1, q1Ms: null, q2Ms: null },
+        ],
+      }),
+    );
   });
 
   it('mostra l’errore del server vicino al pulsante', async () => {
@@ -359,7 +405,7 @@ describe('Dettaglio gara', () => {
     vi.mocked(updateRace).mockImplementation((_raceId, race) =>
       Promise.resolve({
         isSuccess: true,
-        value: { ...savedRace, ...race, results: savedRace.results, driverSwaps: savedRace.driverSwaps, updatedAt: '2026-11-14T10:00:00Z' },
+        value: { ...savedRace, ...race, results: savedRace.results, driverSwaps: savedRace.driverSwaps, qualifying: [], updatedAt: '2026-11-14T10:00:00Z' },
       }),
     );
     const user = userEvent.setup();
@@ -367,7 +413,7 @@ describe('Dettaglio gara', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: `Round 1 – ${CHAMPIONSHIP}` })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Round' })).toHaveAttribute('readonly');
-    await user.click(screen.getByRole('tab', { name: 'Dettagli' }));
+    await user.click(screen.getByRole('tab', { name: 'Gara' }));
     expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 1' })).toHaveTextContent('#7Alfa Racing');
     expect(screen.getByRole('combobox', { name: 'Equipaggio in posizione 1' })).toBeDisabled();
     expect(screen.getByRole('textbox', { name: 'Giri completati in posizione 1' })).toHaveValue('30');
@@ -427,7 +473,7 @@ describe('Dettaglio gara', () => {
   it('Gestisci ordini di arrivo non ha più le schede Cambi pilota e Penalità', async () => {
     renderApp(`${LIST_PATH}/1`);
     expect(await screen.findByRole('tab', { name: 'Anagrafica' })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Anagrafica', 'Dettagli']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Anagrafica', 'Qualifiche', 'Gara']);
   });
 
   it('Cambi pilota (Gestisci cambi pilota dei Commissari): cinque cambi nel Cool1 FIE scelti dal menu, tempi formattati, salvati solo i cambi pilota', async () => {
