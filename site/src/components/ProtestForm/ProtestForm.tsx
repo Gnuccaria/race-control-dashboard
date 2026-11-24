@@ -115,7 +115,7 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
         <div className={styles.fieldRow}>
           <FormField
             label={texts.race}
-            hint={formState.status === 'ready' && races.length > 0 ? texts.raceHint : undefined}
+            hint={formState.status === 'ready' && races.length > 0 ? (isQualifying ? texts.qualifyingNotice : texts.raceHint) : undefined}
             errorMessage={formState.status === 'ready' && races.length === 0 ? texts.noRaces : undefined}
           >
             {(controlProps) => (
@@ -133,18 +133,14 @@ export function ProtestForm({ formState, onSent }: ProtestFormProps) {
               />
             )}
           </FormField>
-          {isQualifying ? (
-            <p className={styles.qualifyingNotice} role="status">
-              {texts.qualifyingNotice}
-            </p>
-          ) : (
+          {!isQualifying && (
             <FormField label={texts.stint} hint={texts.stintHint} errorMessage={check.isStintInvalid ? texts.stintInvalid(PROTEST_STINT_MAX) : undefined}>
               {({ isInvalid, ...inputAttributes }) => (
                 <Input {...inputAttributes} type="text" inputMode="numeric" maxLength={2} isInvalid={isInvalid} value={values.stint} onValueChange={(stint) => change('stint', digitsOnly(stint, 2))} />
               )}
             </FormField>
           )}
-          <FormField label={texts.lap} hint={texts.lapHint} errorMessage={check.isLapInvalid ? texts.lapInvalid(PROTEST_LAP_MAX) : undefined}>
+          <FormField label={isQualifying ? texts.qualifyingLap : texts.lap} hint={isQualifying ? texts.qualifyingLapHint : texts.lapHint} errorMessage={check.isLapInvalid ? texts.lapInvalid(PROTEST_LAP_MAX) : undefined}>
             {({ isInvalid, ...inputAttributes }) => (
               <Input {...inputAttributes} type="text" inputMode="numeric" maxLength={3} isInvalid={isInvalid} value={values.lap} onValueChange={(lap) => change('lap', digitsOnly(lap, 3))} />
             )}

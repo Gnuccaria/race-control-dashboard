@@ -758,6 +758,8 @@ export const en: Messages = {
         session: 'Session',
         sessions: { qualifying: 'Qualifying', race: 'Race' },
         qualifyingNotice: 'Protest about qualifying: this race\'s qualifying window is open, so no stint is needed.',
+        qualifyingLap: 'Lap',
+        qualifyingLapHint: 'The qualifying lap on which it happened.',
         stint: 'Stint',
         stintHint: 'The race stint of the incident.',
         stintInvalid: (max: number) => `Enter a whole number from 1 to ${max}.`,

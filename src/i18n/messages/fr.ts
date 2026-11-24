@@ -793,6 +793,8 @@ export const fr: Messages = {
         session: 'Session',
         sessions: { qualifying: 'Qualifications', race: 'Course' },
         qualifyingNotice: 'Réclamation sur les qualifications : la fenêtre des qualifications de cette course est ouverte, le relais n\'est donc pas nécessaire.',
+        qualifyingLap: 'Tour',
+        qualifyingLapHint: 'Le tour des qualifications où c\'est arrivé.',
         stint: 'Relais',
         stintHint: 'Le relais de course de l’incident.',
         stintInvalid: (max: number) => `Saisissez un nombre entier de 1 à ${max}.`,
