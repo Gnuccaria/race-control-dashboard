@@ -1,6 +1,6 @@
 import type { MembershipChecker } from './auth/authorizeRequest';
 import { createCarHandlers } from './cars/carHandlers';
-import type { SourceFetch } from './cars/carSources';
+import type { SourceFetch } from './sources/externalSource';
 import { createChampionshipHandlers } from './championships/championshipHandlers';
 import { createCrewHandlers } from './crews/crewHandlers';
 import type { Env } from './env';

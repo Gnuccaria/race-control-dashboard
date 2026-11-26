@@ -1,6 +1,7 @@
 import type { ProtestSession } from './protestTimingRules';
 import type { CrewChampionship } from './crewRules';
 import { type PenaltyCrewDecision, type PenaltyDocument, type PenaltyDraft, type PenaltyDraftIssues, validatePenaltyDraft } from './penaltyRules';
+import { fieldsOf } from './valueRules';
 
 /**
  * Regole delle proteste mandate dal sito e lette dai Commissari Sportivi nell'app, condivise da sito, server e app:
@@ -170,7 +171,7 @@ const isIntegerBetween = (value: unknown, min: number, max: number): value is nu
 
 /** Convalida dati di origine sconosciuta (es. il corpo JSON della richiesta) e li restituisce in forma canonica. */
 export function validateProtestDraft(input: unknown): ProtestDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   const issues: { -readonly [Key in keyof ProtestDraftIssues]: ProtestDraftIssues[Key] } = {};
 
   const { raceId, stint, lap } = candidate;
@@ -263,7 +264,7 @@ export const protestCrewIds = (protest: Pick<Protest, 'crew' | 'otherCrews'>): n
 
 /** Convalida l'esito; protestCrews = le vetture coinvolte della protesta (protestCrewIds), che la penalità deve avere. */
 export function validateProtestReview(input: unknown, protestCrews: readonly number[]): ProtestReviewValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   if (candidate.decision === 'rejected') {
     const reason = typeof candidate.reason === 'string' ? normalizeProtestDescription(candidate.reason).trim() : '';
     if (reason === '') return { isValid: false, issues: { reason: 'required' } };

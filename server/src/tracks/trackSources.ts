@@ -1,3 +1,4 @@
+import { ExternalSourceError, fetchSourceText, type SourceFetch } from '../sources/externalSource';
 import { isTrackMapFile, type TrackMapMatch, toCountryCode, TRACK_MAPS_CREDIT_URL } from '../../../shared/trackRules';
 
 /**
@@ -9,23 +10,13 @@ import { isTrackMapFile, type TrackMapMatch, toCountryCode, TRACK_MAPS_CREDIT_UR
  * Se i siti cambiano struttura la lettura si ferma con TrackSourceError, senza toccare il database.
  */
 
-export type SourceFetch = (url: string, init?: RequestInit) => Promise<Response>;
-
 export const WIKI_TRACK_LIST_API_URL =
   'https://gran-turismo.fandom.com/api.php?action=parse&page=Gran_Turismo_7/Track_List&prop=wikitext&format=json';
 
 export type TrackSourceName = 'wiki' | 'maps';
 
-/** unreachable = il sito non risponde; changed = risponde ma i dati non sono dove ce li aspettiamo. */
-export class TrackSourceError extends Error {
-  constructor(
-    readonly source: TrackSourceName,
-    readonly reason: 'unreachable' | 'changed',
-    message: string,
-  ) {
-    super(message);
-  }
-}
+/** Errore di una delle due fonti dei tracciati (vedi ExternalSourceError). */
+export class TrackSourceError extends ExternalSourceError<TrackSourceName> {}
 
 /** Una configurazione del wiki. sourceKey la ritrova negli aggiornamenti successivi ("monza|no chicane"). */
 export interface WikiTrackLayout {
@@ -44,16 +35,13 @@ export interface TrackMap {
   readonly reverseFile: string | null;
 }
 
-async function fetchText(fetchSource: SourceFetch, url: string, source: TrackSourceName): Promise<string> {
-  let response: Response;
-  try {
-    response = await fetchSource(url, { headers: { 'User-Agent': 'race-control-dashboard (track list)', Accept: 'application/json,text/html,*/*' } });
-  } catch (fetchError) {
-    throw new TrackSourceError(source, 'unreachable', `${url}: ${String(fetchError)}`);
-  }
-  if (!response.ok) throw new TrackSourceError(source, 'unreachable', `${url}: HTTP ${response.status}`);
-  return response.text();
-}
+const fetchText = (fetchSource: SourceFetch, url: string, source: TrackSourceName): Promise<string> =>
+  fetchSourceText(
+    fetchSource,
+    url,
+    { 'User-Agent': 'race-control-dashboard (track list)', Accept: 'application/json,text/html,*/*' },
+    (reason, message) => new TrackSourceError(source, reason, message),
+  );
 
 /* ---------- Wiki ---------- */
 

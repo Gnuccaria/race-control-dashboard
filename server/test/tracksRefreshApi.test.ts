@@ -6,7 +6,8 @@ import { trackMapUrl, type TrackRefreshPreview } from '../../shared/trackRules';
 import { createApp } from '../src/app';
 import type { Env } from '../src/env';
 import { TRACK_MAPS_CREDIT_URL } from '../../shared/trackRules';
-import { parseTrackMaps, parseWikiTrackList, type SourceFetch, WIKI_TRACK_LIST_API_URL } from '../src/tracks/trackSources';
+import type { SourceFetch } from '../src/sources/externalSource';
+import { parseTrackMaps, parseWikiTrackList, WIKI_TRACK_LIST_API_URL } from '../src/tracks/trackSources';
 import { createTestEnv, getPath, MEMBERSHIPS, sendJson, withSchedule } from './support/testApp';
 
 /* ---------- Siti finti con le pagine vere (copie di novembre 2026) ---------- */

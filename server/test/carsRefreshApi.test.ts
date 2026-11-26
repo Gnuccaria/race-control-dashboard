@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
-import { bopPageUrl, OFFICIAL_CARLIST_URL, type SourceFetch } from '../src/cars/carSources';
+import { bopPageUrl, OFFICIAL_CARLIST_URL } from '../src/cars/carSources';
+import type { SourceFetch } from '../src/sources/externalSource';
 import type { CarRefreshPreview } from '../../shared/carRules';
 import type { Env } from '../src/env';
 import { createTestEnv, crewDetails, getPath, MEMBERSHIPS, sendJson } from './support/testApp';

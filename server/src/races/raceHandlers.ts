@@ -24,6 +24,7 @@ import {
   replaceDriverSwaps,
   updateRace,
 } from './raceRepository';
+import { isRecord } from '../../../shared/valueRules';
 
 type RaceDraftReading =
   | { readonly race: RaceDraft; readonly results: readonly SavedRaceResult[]; readonly qualifying: readonly SavedQualifyingEntry[] }
@@ -67,7 +68,7 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
 
   // Qualifiche: stessa regola per la vettura di ogni riga. Senza il campo (app non ancora aggiornata) restano quelle salvate.
   const savedQualifying = excludedRaceId === undefined ? [] : await listRaceQualifying(database, excludedRaceId);
-  const hasQualifying = typeof requestBody === 'object' && requestBody !== null && 'qualifying' in requestBody;
+  const hasQualifying = isRecord(requestBody) && 'qualifying' in requestBody;
   if (!hasQualifying) return { race: { ...race, qualifying: savedQualifying }, results, qualifying: savedQualifying };
   const qualifyingCarIds = await findCrewCarIds(database, race.qualifying.map((entry) => entry.crewId), race.championship);
   const qualifyingCars = resolveResultCars(race.qualifying, savedQualifying, qualifyingCarIds);

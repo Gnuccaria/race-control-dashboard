@@ -3,6 +3,7 @@
  * violazione e motivazione. Se nessuna vettura ha una decisione, nel referto vale "Nessuna azione ulteriore".
  * Regole usate sia dall'app sia dal server.
  */
+import { fieldsOf, isPositiveInteger } from './valueRules';
 
 /** Secondi aggiunti al tempo di gara. */
 const TIME_DECISIONS = ['time-5', 'time-10', 'time-20', 'time-30', 'time-60', 'time-120', 'time-300'] as const;
@@ -130,7 +131,6 @@ export const normalizeViolation = (rawValue: string): string => rawValue.replace
 /** La motivazione tiene gli a capo; si tolgono solo spazi e righe vuote all'inizio e alla fine. */
 export const normalizeReason = (rawValue: string): string => rawValue.replace(/\r\n?/g, '\n').trim();
 
-const isPositiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
 
 function readCrews(rawValue: unknown): PenaltyCrewDecision[] | null {
   if (!Array.isArray(rawValue) || rawValue.length > PENALTY_CREWS_MAX) return null;
@@ -146,7 +146,7 @@ function readCrews(rawValue: unknown): PenaltyCrewDecision[] | null {
 }
 
 export function validatePenaltyDraft(input: unknown): PenaltyDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   const crews = readCrews(candidate.crews ?? []);
   const violation = typeof candidate.violation === 'string' ? normalizeViolation(candidate.violation) : '';
   const reason = typeof candidate.reason === 'string' ? normalizeReason(candidate.reason) : candidate.reason === undefined ? '' : null;

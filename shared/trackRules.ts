@@ -1,3 +1,4 @@
+import { isPositiveInteger, isRecord } from './valueRules';
 /**
  * Tracciati aggiornati dai siti (Gestisci tracciati → Aggiorna dati), condivisi tra app e server:
  * - elenco dal wiki di Gran Turismo (gran-turismo.fandom.com, Gran Turismo 7/Track List): tracciato, nazione,
@@ -70,7 +71,6 @@ export interface TrackRefreshPreview {
   readonly unmatchedMaps: readonly { readonly file: string; readonly label: string }[];
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 const isSourceKey = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 200;
 
 /** Abbinamenti delle mappe dalla richiesta; null se non validi (assenti = nessuno). */
@@ -91,7 +91,7 @@ export function readLegacyTrackMatches(rawValue: unknown): LegacyTrackMatch[] | 
   if (!Array.isArray(rawValue) || rawValue.length > 500) return null;
   const matches: LegacyTrackMatch[] = [];
   for (const entry of rawValue) {
-    if (!isRecord(entry) || typeof entry.trackId !== 'number' || !Number.isInteger(entry.trackId) || entry.trackId <= 0) return null;
+    if (!isRecord(entry) || !isPositiveInteger(entry.trackId)) return null;
     if (!(entry.sourceKey === null || isSourceKey(entry.sourceKey))) return null;
     matches.push({ trackId: entry.trackId, sourceKey: entry.sourceKey });
   }

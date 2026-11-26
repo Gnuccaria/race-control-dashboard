@@ -7,6 +7,7 @@ import {
   formatCarName,
   validateCarDraft,
 } from '../../../shared/carRules';
+import { readJsonAppSetting, saveJsonAppSetting } from '../database/appSettings';
 import type { SqlDatabase } from '../database/sqlDatabase';
 import { type CatalogSyncPlan, planCatalogSync } from '../import/catalogSync';
 import { compactName, matchBopCar, type OfficialCar } from './carSources';
@@ -279,25 +280,9 @@ export interface StagedCarSources {
 
 const STAGED_SOURCES_KEY = 'car_sources';
 
-export async function saveStagedSources(database: SqlDatabase, sources: StagedCarSources, discordUserId: string): Promise<void> {
-  await database
-    .prepare(
-      `INSERT INTO app_settings (key, value, updated_by_discord_id) VALUES (?, ?, ?)
-       ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_by_discord_id = excluded.updated_by_discord_id,
-         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-    )
-    .bind(STAGED_SOURCES_KEY, JSON.stringify(sources), discordUserId)
-    .run();
-}
+export const saveStagedSources = (database: SqlDatabase, sources: StagedCarSources, discordUserId: string): Promise<void> =>
+  saveJsonAppSetting(database, STAGED_SOURCES_KEY, sources, discordUserId);
 
 /** null se non c'è un "Aggiorna dati" precedente (o il dato salvato non si legge). */
-export async function readStagedSources(database: SqlDatabase): Promise<StagedCarSources | null> {
-  const row = await database.prepare('SELECT value FROM app_settings WHERE key = ?').bind(STAGED_SOURCES_KEY).first<{ value: string }>();
-  if (!row) return null;
-  try {
-    const sources = JSON.parse(row.value) as StagedCarSources;
-    return Array.isArray(sources.official) && Array.isArray(sources.bop) ? sources : null;
-  } catch {
-    return null;
-  }
-}
+export const readStagedSources = (database: SqlDatabase): Promise<StagedCarSources | null> =>
+  readJsonAppSetting<StagedCarSources>(database, STAGED_SOURCES_KEY, (sources) => Array.isArray(sources.official) && Array.isArray(sources.bop));

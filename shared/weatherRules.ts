@@ -4,6 +4,7 @@
  * Ogni slot ha un codice meteo: S01–S13 (sole), C01–C06 (nuvole), R01–R08 (pioggia). Tutti obbligatori.
  * Il numero di stint viene dalla durata della gara e dallo stint del campionato (shared/championshipRules.ts).
  */
+import { fieldsOf } from './valueRules';
 
 export const QUALIFYING_WEATHER_SLOTS = 2;
 export const STINT_WEATHER_SLOTS = 9;
@@ -46,7 +47,7 @@ const isRow = (value: unknown, length: number): value is string[] => Array.isArr
  * stintCount righe di 9 codici, nessuno slot vuoto. null se non valido.
  */
 export function readWeatherPattern(input: unknown, stintCount: number): WeatherPattern | null {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   if (!isRow(candidate.qualifying, QUALIFYING_WEATHER_SLOTS)) return null;
   if (!Array.isArray(candidate.stints) || candidate.stints.length !== stintCount || stintCount < 1) return null;
   if (!candidate.stints.every((row) => isRow(row, STINT_WEATHER_SLOTS))) return null;

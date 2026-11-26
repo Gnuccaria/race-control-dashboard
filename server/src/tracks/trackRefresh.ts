@@ -1,5 +1,6 @@
 import { formatTrackName, toTrackKey } from '../../../shared/raceRules';
 import type { LegacyTrackMatch, TrackMapMatch, TrackRefreshChange, TrackRefreshPreview } from '../../../shared/trackRules';
+import { readJsonAppSetting, saveJsonAppSetting } from '../database/appSettings';
 import type { SqlDatabase } from '../database/sqlDatabase';
 import type { StoredTrack } from './trackRepository';
 import { type attachTrackMaps, type MappedTrackLayout, matchByName, type TrackMap, type WikiTrackLayout } from './trackSources';
@@ -190,25 +191,9 @@ export interface StagedTrackSources {
 
 const STAGED_SOURCES_KEY = 'track_sources';
 
-export async function saveStagedTrackSources(database: SqlDatabase, sources: StagedTrackSources, discordUserId: string): Promise<void> {
-  await database
-    .prepare(
-      `INSERT INTO app_settings (key, value, updated_by_discord_id) VALUES (?, ?, ?)
-       ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_by_discord_id = excluded.updated_by_discord_id,
-         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-    )
-    .bind(STAGED_SOURCES_KEY, JSON.stringify(sources), discordUserId)
-    .run();
-}
+export const saveStagedTrackSources = (database: SqlDatabase, sources: StagedTrackSources, discordUserId: string): Promise<void> =>
+  saveJsonAppSetting(database, STAGED_SOURCES_KEY, sources, discordUserId);
 
 /** null se non c'è un "Aggiorna dati" precedente (o il dato salvato non si legge). */
-export async function readStagedTrackSources(database: SqlDatabase): Promise<StagedTrackSources | null> {
-  const row = await database.prepare('SELECT value FROM app_settings WHERE key = ?').bind(STAGED_SOURCES_KEY).first<{ value: string }>();
-  if (!row) return null;
-  try {
-    const sources = JSON.parse(row.value) as StagedTrackSources;
-    return Array.isArray(sources.layouts) && Array.isArray(sources.maps) ? sources : null;
-  } catch {
-    return null;
-  }
-}
+export const readStagedTrackSources = (database: SqlDatabase): Promise<StagedTrackSources | null> =>
+  readJsonAppSetting<StagedTrackSources>(database, STAGED_SOURCES_KEY, (sources) => Array.isArray(sources.layouts) && Array.isArray(sources.maps));

@@ -4,6 +4,7 @@
  * distacco, il miglior giro in Q1 e in Q2, facoltativi. Il tempo Q2 c'è solo nelle posizioni 1–4 e 8–11.
  */
 import { parseGapText, sanitizeGapInput } from './raceRules';
+import { fieldsOf, isPositiveInteger } from './valueRules';
 
 export const QUALIFYING_POSITIONS = 14;
 
@@ -55,7 +56,6 @@ export function formatLapTime(milliseconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}.${String(milliseconds % 1000).padStart(3, '0')}`;
 }
 
-const isPositiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
 const isLapTime = (value: unknown): value is number => isPositiveInteger(value) && value <= QUALIFYING_LAP_MAX_MS;
 
 /**
@@ -67,7 +67,7 @@ export function readQualifying(rawValue: unknown): QualifyingEntry[] | null {
   if (!Array.isArray(rawValue) || rawValue.length > QUALIFYING_POSITIONS) return null;
   const entries: QualifyingEntry[] = [];
   for (const rawEntry of rawValue as unknown[]) {
-    const { position, crewId, q1Ms, q2Ms } = (typeof rawEntry === 'object' && rawEntry !== null ? rawEntry : {}) as Record<string, unknown>;
+    const { position, crewId, q1Ms, q2Ms } = fieldsOf(rawEntry);
     if (!isPositiveInteger(position) || position > QUALIFYING_POSITIONS || entries.some((entry) => entry.position === position)) return null;
     if (!isPositiveInteger(crewId)) return null;
     const q1 = q1Ms === undefined || q1Ms === null ? null : isLapTime(q1Ms) ? q1Ms : undefined;

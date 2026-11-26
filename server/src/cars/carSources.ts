@@ -1,3 +1,4 @@
+import { ExternalSourceError, fetchSourceText, type SourceFetch } from '../sources/externalSource';
 import { type BopSourceCar, type CarDrivetrain, type CarGroup, CAR_GROUPS, isCarDrivetrain, isCarGroup } from '../../../shared/carRules';
 
 /**
@@ -10,8 +11,6 @@ import { type BopSourceCar, type CarDrivetrain, type CarGroup, CAR_GROUPS, isCar
  * Se i siti cambiano struttura la lettura si ferma con CarSourceError, senza toccare il database.
  */
 
-export type SourceFetch = (url: string, init?: RequestInit) => Promise<Response>;
-
 const OFFICIAL_ORIGIN = 'https://www.gran-turismo.com';
 export const OFFICIAL_CARLIST_URL = `${OFFICIAL_ORIGIN}/it/gt7/carlist`;
 export const bopPageUrl = (group: CarGroup) => {
@@ -21,16 +20,8 @@ export const bopPageUrl = (group: CarGroup) => {
 
 export type CarSourceName = 'official' | 'bop';
 
-/** unreachable = il sito non risponde; changed = risponde ma i dati non sono dove ce li aspettiamo. */
-export class CarSourceError extends Error {
-  constructor(
-    readonly source: CarSourceName,
-    readonly reason: 'unreachable' | 'changed',
-    message: string,
-  ) {
-    super(message);
-  }
-}
+/** Errore di una delle due fonti delle vetture (vedi ExternalSourceError). */
+export class CarSourceError extends ExternalSourceError<CarSourceName> {}
 
 /** Un'auto del catalogo ufficiale (solo i gruppi in CAR_GROUPS). */
 export interface OfficialCar {
@@ -44,16 +35,13 @@ export interface OfficialCar {
   readonly drivetrain: CarDrivetrain | null;
 }
 
-async function fetchText(fetchSource: SourceFetch, url: string, source: CarSourceName): Promise<string> {
-  let response: Response;
-  try {
-    response = await fetchSource(url, { headers: { 'User-Agent': 'Mozilla/5.0 (race-control-dashboard)', Accept: 'text/html,application/javascript,*/*' } });
-  } catch (fetchError) {
-    throw new CarSourceError(source, 'unreachable', `${url}: ${String(fetchError)}`);
-  }
-  if (!response.ok) throw new CarSourceError(source, 'unreachable', `${url}: HTTP ${response.status}`);
-  return response.text();
-}
+const fetchText = (fetchSource: SourceFetch, url: string, source: CarSourceName): Promise<string> =>
+  fetchSourceText(
+    fetchSource,
+    url,
+    { 'User-Agent': 'Mozilla/5.0 (race-control-dashboard)', Accept: 'text/html,application/javascript,*/*' },
+    (reason, message) => new CarSourceError(source, reason, message),
+  );
 
 /* ---------- Catalogo ufficiale ---------- */
 

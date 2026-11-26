@@ -1,4 +1,5 @@
 import { RACE_TIMESTAMP_MAX_MS } from './driverSwapRules';
+import { fieldsOf } from './valueRules';
 
 /**
  * Ticket di disconnessione: li manda dal sito chi fa parte del server Discord della lega e li gestisce la
@@ -18,7 +19,7 @@ export interface TicketAvailability {
 
 /** Corpo della richiesta che apre o chiude l'invio; null se non valido. */
 export function readTicketAvailability(input: unknown): TicketAvailability | null {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   return typeof candidate.isOpen === 'boolean' ? { isOpen: candidate.isOpen } : null;
 }
 

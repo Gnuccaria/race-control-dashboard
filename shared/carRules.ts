@@ -3,6 +3,7 @@
  * I dati arrivano dall'aggiornamento manuale dell'app (server/src/cars/carSources.ts): dati di serie dal catalogo
  * ufficiale di Gran Turismo 7 (gran-turismo.com) e BoP Midspeed da gt-engine.com. Limitatore e zavorra si calcolano.
  */
+import { fieldsOf, normalizeSpaces } from './valueRules';
 
 /** Gruppi delle vetture in catalogo. */
 export const CAR_GROUPS = ['Gr.1', 'Gr.2', 'Gr.3', 'Gr.4'] as const;
@@ -85,7 +86,7 @@ export type CarDraftValidation =
   | { readonly isValid: true; readonly car: CarDraft }
   | { readonly isValid: false; readonly issues: CarDraftIssues };
 
-const normalizeName = (value: unknown): string => (typeof value === 'string' ? value.normalize('NFC').trim().replace(/\s+/g, ' ') : '');
+const normalizeName = (value: unknown): string => (typeof value === 'string' ? normalizeSpaces(value) : '');
 
 function checkName(name: string, maxLength: number): 'invalid-characters' | 'too-long' | undefined {
   if ([...name].length > maxLength) return 'too-long';
@@ -97,7 +98,7 @@ function checkName(name: string, maxLength: number): 'invalid-characters' | 'too
  * Limitatore e zavorra non si leggono dall'input: si calcolano da potenza e peso (di serie e BoP).
  */
 export function validateCarDraft(input: unknown): CarDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   const manufacturer = normalizeName(candidate.manufacturer);
   const model = normalizeName(candidate.model);
   const issues: { -readonly [Field in keyof CarDraftIssues]: CarDraftIssues[Field] } = {};
@@ -187,7 +188,7 @@ export function readCarSourceMatches(rawValue: unknown): CarSourceMatch[] | null
   if (!Array.isArray(rawValue) || rawValue.length > 500) return null;
   const matches: CarSourceMatch[] = [];
   for (const rawMatch of rawValue as unknown[]) {
-    const { officialId, bopKey } = (typeof rawMatch === 'object' && rawMatch !== null ? rawMatch : {}) as Record<string, unknown>;
+    const { officialId, bopKey } = fieldsOf(rawMatch);
     if (typeof officialId !== 'string' || !/^car\d{1,6}$/.test(officialId)) return null;
     if (bopKey !== null && (typeof bopKey !== 'string' || bopKey.length === 0 || bopKey.length > 200)) return null;
     if (matches.some((match) => match.officialId === officialId)) return null;

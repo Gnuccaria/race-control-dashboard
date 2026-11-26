@@ -10,6 +10,7 @@
 import { isRaceTime } from './raceSchedule';
 import { type ProtestTimes, type ProtestTimesIssue, readProtestTimes } from './protestTimingRules';
 import { readSessionSettings, type SessionSettings } from './sessionSettingsRules';
+import { fieldsOf, normalizeSpaces } from './valueRules';
 
 export const CHAMPIONSHIP_NAME_MAX_LENGTH = 48;
 export const CHAMPIONSHIP_DURATIONS_MAX = 3;
@@ -96,7 +97,7 @@ export const driverSwapCountOf = (championships: readonly Pick<Championship, 'na
 };
 
 /** Forma canonica del nome: spazi iniziali e finali tolti, spazi multipli ridotti a uno. */
-export const normalizeChampionshipName = (rawName: string): string => rawName.normalize('NFC').trim().replace(/\s+/g, ' ');
+export const normalizeChampionshipName = (rawName: string): string => normalizeSpaces(rawName);
 
 /** Chiave per i duplicati: "Cool1 FIE" e "cool1  fie" sono lo stesso campionato. */
 export const toChampionshipKey = (name: string): string => normalizeChampionshipName(name).toLowerCase();
@@ -151,7 +152,7 @@ function readDurations(rawValue: unknown): ChampionshipDuration[] | NonNullable<
   if (rawValue.length > CHAMPIONSHIP_DURATIONS_MAX) return 'too-many';
   const durations: ChampionshipDuration[] = [];
   for (const rawDuration of rawValue as unknown[]) {
-    const { hours, stintMinutes, startTime } = (typeof rawDuration === 'object' && rawDuration !== null ? rawDuration : {}) as Record<string, unknown>;
+    const { hours, stintMinutes, startTime } = fieldsOf(rawDuration);
     const issue = findDurationIssue(hours, stintMinutes);
     if (issue) return issue;
     if (!isRaceTime(startTime)) return 'start-time';
@@ -171,7 +172,7 @@ function readCarIds(rawValue: unknown): number[] | NonNullable<ChampionshipDraft
 
 /** Convalida dati di origine sconosciuta (che le auto esistano lo controlla il server). */
 export function validateChampionshipDraft(input: unknown): ChampionshipDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   const name = typeof candidate.name === 'string' ? normalizeChampionshipName(candidate.name) : '';
   const nameIssue = findChampionshipNameIssue(name);
   const durations = readDurations(candidate.durations);

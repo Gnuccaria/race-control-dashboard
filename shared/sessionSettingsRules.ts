@@ -6,6 +6,7 @@
  * I valori sono codici (es. "grid", "weak"), numeri degli slider o, per le gomme, elenchi di mescole.
  * null in uno slider = l'estrema sinistra: "Nessun limite" (PP, potenza, peso, anni) o "Predefinita" (carburante iniziale).
  */
+import { fieldsOf } from './valueRules';
 
 export const TYRE_COMPOUNDS = ['hard', 'medium', 'soft'] as const;
 export type TyreCompound = (typeof TYRE_COMPOUNDS)[number];
@@ -255,7 +256,7 @@ export type SessionSettingsReading =
 
 /** I valori di una sessione per quelle voci, oppure la prima voce senza un valore ammesso. */
 function readSession(rawSession: unknown, keys: readonly SessionSettingKey[]): { readonly values: Record<string, SessionSettingValue> } | { readonly invalidKey: string } {
-  const rawValues = typeof rawSession === 'object' && rawSession !== null ? (rawSession as Record<string, unknown>) : {};
+  const rawValues = fieldsOf(rawSession);
   const values: Record<string, SessionSettingValue> = {};
   for (const key of keys) {
     const value = readValue(sessionSettingDefinition(key), rawValues[key]);
@@ -267,7 +268,7 @@ function readSession(rawSession: unknown, keys: readonly SessionSettingKey[]): {
 
 /** Convalida impostazioni di origine sconosciuta: tutte le voci presenti e con un valore ammesso. */
 export function readSessionSettings(input: unknown): SessionSettingsReading {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
   const race = readSession(candidate.race, SESSION_SETTING_DEFINITIONS.map((definition) => definition.key));
   if ('invalidKey' in race) return { isValid: false, session: 'race', key: race.invalidKey };
   const raceIssue = findCrossIssue(race.values);

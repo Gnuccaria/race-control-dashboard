@@ -11,6 +11,7 @@
  * Una vettura senza uno dei due tempi (assente o ritirata) non fa da riferimento e non viene controllata.
  * Margine e coefficiente sono fissi (non modificabili dall'app). Il server ricalcola le penalità prima di salvarle.
  */
+import { isPositiveInteger } from './valueRules';
 
 /** Margine concesso a ogni cambio: 2 secondi. */
 export const DRIVER_SWAP_BUFFER_MS = 2000;
@@ -124,7 +125,6 @@ export interface SavedDriverSwap extends DriverSwapEntry {
   readonly penaltyMs: number | null;
 }
 
-const isPositiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
 const readTimestamp = (value: unknown): number | null | undefined =>
   value === null || value === undefined
     ? null

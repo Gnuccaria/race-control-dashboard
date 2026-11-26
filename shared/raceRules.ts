@@ -8,6 +8,7 @@ import { isRaceTime, raceInstants } from './raceSchedule';
 import type { RaceWeather } from './weatherRules';
 import { type DriverSwapEntry, readDriverSwaps, type SavedDriverSwap } from './driverSwapRules';
 import { type PublicQualifyingResult, type QualifyingEntry, readQualifying, type SavedQualifyingEntry } from './qualifyingRules';
+import { fieldsOf, isPositiveInteger, normalizeSpaces } from './valueRules';
 
 /** Righe dell'ordine di arrivo. */
 export const RACE_RESULT_POSITIONS = 14;
@@ -82,7 +83,7 @@ const RACE_NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} .,:;'’&()/+#!?°–-]*$/u;
 export function normalizeRaceName(rawName: unknown): string | null | undefined {
   if (rawName === undefined || rawName === null) return null;
   if (typeof rawName !== 'string') return undefined;
-  const name = rawName.normalize('NFC').trim().replace(/\s+/g, ' ');
+  const name = normalizeSpaces(rawName);
   if (name === '') return null;
   return [...name].length <= RACE_NAME_MAX_LENGTH && RACE_NAME_PATTERN.test(name) ? name : undefined;
 }
@@ -288,9 +289,6 @@ export function findRepeatedCrewPositions(results: readonly Pick<RaceResultEntry
   return repeatedPositions;
 }
 
-const isPositiveInteger = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value > 0;
-
 export interface RaceDraftIssues {
   readonly name?: 'invalid';
   readonly championship?: 'required';
@@ -340,7 +338,7 @@ function readResults(rawResults: unknown): RaceResultEntry[] | null {
 
 /** Convalida dati di origine sconosciuta e li restituisce in forma canonica. */
 export function validateRaceDraft(input: unknown, championships: readonly Pick<Championship, 'name' | 'durations'>[]): RaceDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
 
   // Il campionato deve esistere; si salva con il nome com'è scritto nel campionato.
   const championship = typeof candidate.championship === 'string' ? (findChampionship(championships, candidate.championship)?.name ?? null) : null;
@@ -422,7 +420,7 @@ export function validateRaceDraft(input: unknown, championships: readonly Pick<C
 /** Nome di pista in forma canonica (spazi normalizzati) o null se non valido. */
 export function normalizeTrackName(rawName: unknown): string | null {
   if (typeof rawName !== 'string') return null;
-  const name = rawName.normalize('NFC').trim().replace(/\s+/g, ' ');
+  const name = normalizeSpaces(rawName);
   return name.length > 0 && [...name].length <= TRACK_NAME_MAX_LENGTH && TRACK_NAME_PATTERN.test(name) ? name : null;
 }
 

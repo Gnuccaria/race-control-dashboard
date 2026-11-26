@@ -4,6 +4,7 @@
  */
 
 import { CHAMPIONSHIP_NAME_MAX_LENGTH, normalizeChampionshipName, sortChampionshipNames } from './championshipRules';
+import { fieldsOf, isPositiveInteger, normalizeSpaces } from './valueRules';
 
 /** Nome di un campionato creato in "Gestione campionati" (shared/championshipRules.ts). */
 export type CrewChampionship = string;
@@ -35,7 +36,6 @@ const CREW_NUMBER_MAX_DIGITS = String(CREW_NUMBER_MAX).length;
 const CREW_NAME_PATTERN = /^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u;
 const CREW_NUMBER_PATTERN = /^\d{1,3}$/;
 const NON_DIGIT_PATTERN = /\D/g;
-const WHITESPACE_RUN_PATTERN = /\s+/g;
 
 export interface CrewDraft {
   readonly name: string;
@@ -67,7 +67,7 @@ export interface SavedCrew extends CrewDraft {
  * caratteri composti normalizzati (NFC). È la forma che viene convalidata e salvata.
  */
 export function normalizeCrewText(rawText: string): string {
-  return rawText.normalize('NFC').trim().replace(WHITESPACE_RUN_PATTERN, ' ');
+  return normalizeSpaces(rawText);
 }
 
 export type CrewNameIssue = 'required' | 'invalid-characters' | 'too-long';
@@ -181,7 +181,7 @@ export function validateCrewDraft(
   input: unknown,
   { areDetailsRequired = true }: CrewDraftValidationOptions = {},
 ): CrewDraftValidation {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
 
   const name = typeof candidate.name === 'string' ? normalizeCrewText(candidate.name) : '';
   const nameIssue = findCrewNameIssue(name);
@@ -218,7 +218,6 @@ export function validateCrewDraft(
   return { isValid: true, crew: { name, number: crewNumber, championships, color, discordChannelId, discordRoleId } };
 }
 
-const isPositiveInteger = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value > 0;
 
 /** Campionati dal corpo della richiesta, in ordine alfabetico; l'auto è obbligatoria se isCarRequired. */
 function readCrewChampionships(
@@ -228,7 +227,7 @@ function readCrewChampionships(
   if (!Array.isArray(rawValue)) return { issue: 'invalid' };
   const entries: CrewChampionshipEntry[] = [];
   for (const rawEntry of rawValue as unknown[]) {
-    const { championship, carId } = (typeof rawEntry === 'object' && rawEntry !== null ? rawEntry : {}) as Record<string, unknown>;
+    const { championship, carId } = fieldsOf(rawEntry);
     if (!isCrewChampionship(championship)) return { issue: 'invalid' };
     if (entries.some((entry) => entry.championship.toLowerCase() === championship.toLowerCase())) return { issue: 'repeated' };
     if (carId === undefined || carId === null || carId === '') {

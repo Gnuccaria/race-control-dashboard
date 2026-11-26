@@ -1,8 +1,10 @@
 import { readCarSourceMatches } from '../../../shared/carRules';
+import { fieldsOf } from '../../../shared/valueRules';
 import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
+import { defaultSourceFetch, loadRefreshSources, readRefreshFlags, type SourceFetch } from '../sources/externalSource';
 import {
   applyCarRefresh,
   combineMatches,
@@ -16,9 +18,7 @@ import {
   type StagedCarSources,
 } from './carRefresh';
 import { listCars } from './carRepository';
-import { CarSourceError, fetchBopCars, fetchOfficialCars, type SourceFetch } from './carSources';
-
-const defaultSourceFetch: SourceFetch = (url, init) => fetch(url, init);
+import { fetchBopCars, fetchOfficialCars } from './carSources';
 
 /**
  * Vetture: l'app le legge per menu e tabella; l'Organizzazione le aggiorna dai siti (catalogo ufficiale di GT7 e BoP
@@ -45,30 +45,28 @@ export function createCarHandlers(checkMembership: MembershipChecker = checkMemb
       const authorization = await authorizeRequest(request, env, checkMembership);
       if (authorization instanceof Response) return authorization;
       const body = await readJsonBody(request);
-      const candidate = (typeof body === 'object' && body !== null ? body : {}) as { matches?: unknown; apply?: unknown; refetch?: unknown };
+      const candidate = fieldsOf(body);
       const requestedMatches = readCarSourceMatches(candidate.matches);
-      const isBoolean = (value: unknown) => value === undefined || typeof value === 'boolean';
-      if (body === undefined || !requestedMatches || !isBoolean(candidate.apply) || !isBoolean(candidate.refetch)) {
-        return errorResponse(400, 'invalid-request');
-      }
+      const flags = readRefreshFlags(candidate);
+      if (body === undefined || !requestedMatches || !flags) return errorResponse(400, 'invalid-request');
 
-      let sources = candidate.refetch === false ? await readStagedSources(env.CREWS_DB) : null;
-      if (!sources) {
-        try {
+      const sources = await loadRefreshSources<StagedCarSources>({
+        refetch: flags.refetch,
+        readStaged: () => readStagedSources(env.CREWS_DB),
+        fetchFresh: async () => {
           const [official, bop] = await Promise.all([fetchOfficialCars(fetchSource), fetchBopCars(fetchSource)]);
-          sources = { official, bop: bop.cars, bopVersion: bop.version } satisfies StagedCarSources;
-        } catch (sourceError) {
-          if (!(sourceError instanceof CarSourceError)) throw sourceError;
-          console.error('Aggiornamento vetture', sourceError.source, sourceError.reason, sourceError.message);
-          return errorResponse(502, sourceError.reason === 'unreachable' ? 'car-source-unreachable' : 'car-source-changed', { source: sourceError.source });
-        }
-        await saveStagedSources(env.CREWS_DB, sources, authorization.discordUserId);
-      }
+          return { official, bop: bop.cars, bopVersion: bop.version };
+        },
+        saveStaged: (fresh) => saveStagedSources(env.CREWS_DB, fresh, authorization.discordUserId),
+        logLabel: 'Aggiornamento vetture',
+        errorCodes: { unreachable: 'car-source-unreachable', changed: 'car-source-changed' },
+      });
+      if (sources instanceof Response) return sources;
       const matches = combineMatches(await listSavedMatches(env.CREWS_DB), requestedMatches);
       const merged = mergeCarSources(sources.official, sources.bop, matches);
       const plan = planCarRefresh(merged.cars, await listStoredCars(env.CREWS_DB));
       const preview = describeCarRefresh(plan, merged, sources.bopVersion);
-      if (candidate.apply !== true) return jsonResponse(200, { preview });
+      if (!flags.apply) return jsonResponse(200, { preview });
 
       try {
         await applyCarRefresh(env.CREWS_DB, plan, requestedMatches);

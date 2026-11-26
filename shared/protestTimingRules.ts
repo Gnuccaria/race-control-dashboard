@@ -10,6 +10,7 @@
  * I valori si scelgono da menu con valori fissi.
  */
 import { raceInstants, type RaceSchedule } from './raceSchedule';
+import { fieldsOf } from './valueRules';
 
 /** Anticipo delle qualifiche sull'inizio della gara, in ore: 1, 2, 3, 6, 12 ore, 1, 2, 3, 5, 7 giorni. */
 export const QUALIFYING_ADVANCE_HOURS = [1, 2, 3, 6, 12, 24, 48, 72, 120, 168] as const;
@@ -45,8 +46,8 @@ export const doQualifyingProtestsOverlapRace = (qualifying: QualifyingTimes): bo
 
 /** Convalida i tempi di un campionato di origine sconosciuta: tutti obbligatori, dai menu, senza sovrapposizioni. */
 export function readProtestTimes(input: unknown): { readonly isValid: true; readonly times: ProtestTimes } | { readonly isValid: false; readonly issue: ProtestTimesIssue } {
-  const candidate = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {};
-  const qualifying = typeof candidate.qualifying === 'object' && candidate.qualifying !== null ? (candidate.qualifying as Record<string, unknown>) : {};
+  const candidate = fieldsOf(input);
+  const qualifying = fieldsOf(candidate.qualifying);
   if (!isOneOf(QUALIFYING_ADVANCE_HOURS, qualifying.advanceHours)) return { isValid: false, issue: 'qualifyingAdvanceHours' };
   if (!isOneOf(QUALIFYING_DURATION_MINUTES, qualifying.minutes)) return { isValid: false, issue: 'qualifyingMinutes' };
   if (!isOneOf(QUALIFYING_PROTEST_HOURS, qualifying.protestHours)) return { isValid: false, issue: 'qualifyingProtestHours' };
