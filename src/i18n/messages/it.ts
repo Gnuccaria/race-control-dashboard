@@ -99,6 +99,8 @@ export const it = {
     greetings: ITALIAN_GREETINGS,
   },
   common: {
+    /** Pulsante dopo un errore di caricamento. */
+    retry: 'Riprova',
     /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
     selectionDelete: { deleteLabel: 'Elimina', deletingLabel: 'Eliminazione in corso…', confirmLabel: 'Elimina', cancelLabel: 'Annulla' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
@@ -581,7 +583,6 @@ export const it = {
       emptyTitle: 'Nessuna vettura salvata',
       emptyDescription: 'Premi «Aggiorna dati» per scaricarle dai siti.',
       noMatches: 'Nessuna vettura corrisponde ai filtri.',
-      retry: 'Riprova',
     },
     refresh: {
       title: 'Aggiornamento dai siti',
@@ -633,7 +634,6 @@ export const it = {
       emptyTitle: 'Nessun tracciato salvato',
       emptyDescription: 'Premi «Aggiorna dati» per scaricarli dai siti.',
       noMatches: 'Nessun tracciato corrisponde ai filtri.',
-      retry: 'Riprova',
       mapCredit: 'Le mappe non sono nostre: sono di gt-engine.com.',
     },
     refresh: {
@@ -1201,7 +1201,6 @@ export const it = {
       carCount: (count: number) => (count === 1 ? '1 vettura' : `${count} vetture`),
       openDetails: (name: string) => `Apri i dettagli di ${name}`,
       loading: 'Caricamento dei campionati…',
-      retry: 'Riprova',
       emptyTitle: 'Nessun campionato salvato',
       emptyDescription: 'Creane uno da «Crea campionato».',
       selectionHint: 'Clic destro su un campionato per selezionarlo o deselezionarlo.',
@@ -1275,7 +1274,6 @@ export const it = {
           ? `${totalCount} ${totalCount === 1 ? 'equipaggio' : 'equipaggi'}`
           : `${shownCount} di ${totalCount} equipaggi`,
       loading: 'Caricamento degli equipaggi…',
-      retry: 'Riprova',
       emptyTitle: 'Nessun equipaggio salvato',
       emptyDescription: 'Aggiungine uno da "Crea equipaggio" o importali da un file CSV.',
       noMatches: 'Nessun equipaggio corrisponde ai filtri.',

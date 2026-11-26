@@ -4,10 +4,9 @@ import type { BackLinkTarget } from '@/components/navigation/BackLink/BackLink';
 import { useI18n } from '@/i18n/useI18n';
 import styles from './CrewDetailPage.module.css';
 import { CrewEditor } from './components/CrewEditor/CrewEditor';
-import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { fetchCrew } from './services/crewApi';
-import { serverErrorText } from '@/services/serverErrorText';
 
 const CREW_ID_PATTERN = /^\d{1,9}$/;
 
@@ -31,14 +30,7 @@ export function CrewDetailPage() {
         description={loadedCrew ? messages.crews.detail.subtitle(loadedCrew.number) : ''}
         backLink={backToList}
       />
-      {queryState.status === 'loading' && <LoadingStatus>{messages.crews.detail.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && (
-        <LoadError
-          message={serverErrorText(messages, queryState.errorKind)}
-          retryLabel={messages.crews.list.retry}
-          onRetry={reload}
-        />
-      )}
+      <ServerQueryStatus queryState={queryState} loadingText={messages.crews.detail.loading} onRetry={reload} />
       {loadedCrew && <CrewEditor savedCrew={loadedCrew} onSaved={replaceValue} />}
     </div>
   );

@@ -92,6 +92,8 @@ export const de: Messages = {
     greetings: GERMAN_GREETINGS,
   },
   common: {
+    /** Pulsante dopo un errore di caricamento. */
+    retry: 'Erneut versuchen',
     /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
     selectionDelete: { deleteLabel: 'Löschen', deletingLabel: 'Wird gelöscht…', confirmLabel: 'Löschen', cancelLabel: 'Abbrechen' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
@@ -574,7 +576,6 @@ export const de: Messages = {
       emptyTitle: 'Keine gespeicherten Autos',
       emptyDescription: 'Drücke „Daten aktualisieren“, um sie von den Websites zu laden.',
       noMatches: 'Kein Auto entspricht den Filtern.',
-      retry: 'Erneut versuchen',
     },
     refresh: {
       title: 'Aktualisierung von den Websites',
@@ -626,7 +627,6 @@ export const de: Messages = {
       emptyTitle: 'Keine Strecken gespeichert',
       emptyDescription: 'Drücke „Daten aktualisieren“, um sie von den Websites zu laden.',
       noMatches: 'Keine Strecke passt zu den Filtern.',
-      retry: 'Erneut versuchen',
       mapCredit: 'Die Karten sind nicht von uns: Sie gehören gt-engine.com.',
     },
     refresh: {
@@ -1183,7 +1183,6 @@ export const de: Messages = {
       carCount: (count: number) => (count === 1 ? '1 Auto' : `${count} Autos`),
       openDetails: (name: string) => `Details von ${name} öffnen`,
       loading: 'Meisterschaften werden geladen…',
-      retry: 'Erneut versuchen',
       emptyTitle: 'Keine gespeicherten Meisterschaften',
       emptyDescription: 'Lege eine unter „Meisterschaft erstellen“ an.',
       selectionHint: 'Rechtsklick auf eine Meisterschaft, um sie aus- oder abzuwählen.',
@@ -1257,7 +1256,6 @@ export const de: Messages = {
           ? `${totalCount} ${totalCount === 1 ? 'Crew' : 'Crews'}`
           : `${shownCount} von ${totalCount} Crews`,
       loading: 'Crews werden geladen…',
-      retry: 'Erneut versuchen',
       emptyTitle: 'Keine gespeicherten Crews',
       emptyDescription: 'Füge eine über „Crew erstellen“ hinzu oder importiere sie aus einer CSV-Datei.',
       noMatches: 'Keine Crew entspricht den Filtern.',

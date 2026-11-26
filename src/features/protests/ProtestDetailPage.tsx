@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { DefinitionList } from '@/components/ui/DefinitionList/DefinitionList';
 import { Panel } from '@/components/ui/Panel/Panel';
@@ -15,7 +15,6 @@ import { ProtestReviewPanel } from './ProtestReviewPanel';
 import { protestStore } from './protestStore';
 import styles from './Protests.module.css';
 import { fetchProtest } from './services/protestApi';
-import { serverErrorText } from '@/services/serverErrorText';
 
 const PROTEST_ID_PATTERN = /^\d{1,9}$/;
 
@@ -37,10 +36,7 @@ export function ProtestDetailPage() {
         description={protest ? texts.detail.subtitle(formatTimestamp(protest.createdAt, locale), protest.submittedByName, protest.submittedByUsername) : ''}
         backLink={{ to: '..', relative: 'path', label: texts.detail.backToList }}
       />
-      {queryState.status === 'loading' && <LoadingStatus>{texts.detail.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && (
-        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
-      )}
+      <ServerQueryStatus queryState={queryState} loadingText={texts.detail.loading} onRetry={reload} />
       {protest && (
         <>
           <Panel title={texts.detail.dataTitle}>

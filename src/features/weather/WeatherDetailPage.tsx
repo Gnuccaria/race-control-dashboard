@@ -39,7 +39,6 @@ export function WeatherDetailPage() {
       {failed && (
         <LoadError
           message={serverErrorText(messages, failed.errorKind)}
-          retryLabel={messages.crews.list.retry}
           onRetry={() => {
             raceQuery.reload();
             weatherQuery.reload();

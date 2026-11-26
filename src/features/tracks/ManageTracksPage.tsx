@@ -1,9 +1,8 @@
-import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { Panel } from '@/components/ui/Panel/Panel';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
-import { serverErrorText } from '@/services/serverErrorText';
 import { TrackRefreshPanel } from './components/TrackRefreshPanel';
 import { TrackTable } from './components/TrackTable';
 import styles from './ManageTracksPage.module.css';
@@ -19,8 +18,7 @@ export function ManageTracksPage() {
       <ToolPageHeader name={messages.tools.manageTracks.name} description={messages.tools.manageTracks.description} />
       <TrackRefreshPanel onSaved={reload} />
       <Panel title={messages.manageTracks.manage.title}>
-        {queryState.status === 'loading' && <LoadingStatus>{messages.manageTracks.loading}</LoadingStatus>}
-        {queryState.status === 'failed' && <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.manageTracks.manage.retry} onRetry={reload} />}
+        <ServerQueryStatus queryState={queryState} loadingText={messages.manageTracks.loading} onRetry={reload} />
         {queryState.status === 'loaded' && <TrackTable tracks={queryState.value} />}
       </Panel>
     </div>

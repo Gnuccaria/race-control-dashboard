@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import tableStyles from '@/components/data-table/DataTable.module.css';
 import { StatusBadge } from '@/components/ui/StatusBadge/StatusBadge';
 import { ChevronRightIcon } from '@/components/data-table/DataTableIcons';
-import { EmptyState, LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { EmptyState, ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
@@ -13,7 +13,6 @@ import { protestRaceLabel } from './protestRaceLabel';
 import { protestStatusTone } from './protestStatus';
 import styles from './Protests.module.css';
 import { fetchProtests } from './services/protestApi';
-import { serverErrorText } from '@/services/serverErrorText';
 
 
 function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
@@ -84,10 +83,7 @@ export function ManageProtestsPage() {
   return (
     <div className={styles.protestsPage}>
       <ToolPageHeader name={messages.tools.manageProtests.name} description={messages.tools.manageProtests.description} />
-      {queryState.status === 'loading' && <LoadingStatus>{texts.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && (
-        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
-      )}
+      <ServerQueryStatus queryState={queryState} loadingText={texts.loading} onRetry={reload} />
       {queryState.status === 'loaded' &&
         (queryState.value.length === 0 ? <EmptyState title={texts.emptyTitle} description={texts.emptyDescription} /> : <ProtestTable protests={queryState.value} />)}
     </div>

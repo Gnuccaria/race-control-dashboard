@@ -91,6 +91,8 @@ export const en: Messages = {
     greetings: ENGLISH_GREETINGS,
   },
   common: {
+    /** Pulsante dopo un errore di caricamento. */
+    retry: 'Try again',
     /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
     selectionDelete: { deleteLabel: 'Delete', deletingLabel: 'Deleting…', confirmLabel: 'Delete', cancelLabel: 'Cancel' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
@@ -573,7 +575,6 @@ export const en: Messages = {
       emptyTitle: 'No saved cars',
       emptyDescription: 'Press “Update data” to download them from the websites.',
       noMatches: 'No cars match the filters.',
-      retry: 'Retry',
     },
     refresh: {
       title: 'Update from the websites',
@@ -625,7 +626,6 @@ export const en: Messages = {
       emptyTitle: 'No tracks saved',
       emptyDescription: 'Press “Update data” to download them from the websites.',
       noMatches: 'No track matches the filters.',
-      retry: 'Try again',
       mapCredit: 'The maps are not ours: they belong to gt-engine.com.',
     },
     refresh: {
@@ -1145,7 +1145,6 @@ export const en: Messages = {
       carCount: (count: number) => (count === 1 ? '1 car' : `${count} cars`),
       openDetails: (name: string) => `Open the details of ${name}`,
       loading: 'Loading championships…',
-      retry: 'Retry',
       emptyTitle: 'No saved championships',
       emptyDescription: 'Create one from “Create championship”.',
       selectionHint: 'Right-click a championship to select or deselect it.',
@@ -1219,7 +1218,6 @@ export const en: Messages = {
           ? `${totalCount} ${totalCount === 1 ? 'crew' : 'crews'}`
           : `${shownCount} of ${totalCount} crews`,
       loading: 'Loading crews…',
-      retry: 'Try again',
       emptyTitle: 'No saved crews',
       emptyDescription: 'Add one from "Create crew" or import them from a CSV file.',
       noMatches: 'No crews match the filters.',

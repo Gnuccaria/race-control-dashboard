@@ -1,13 +1,12 @@
 import type { RaceSummary } from '@shared/raceRules';
 import { useState } from 'react';
-import { EmptyState, LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { EmptyState, ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { RaceBrowser } from '@/features/race-results/components/RaceBrowser/RaceBrowser';
 import { DEFAULT_RACE_SORT, EMPTY_RACE_FILTERS, type RaceFilters, toggleRaceSort } from '@/features/race-results/model/raceList';
 import { fetchRaces } from '@/features/race-results/services/raceApi';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
-import { serverErrorText } from '@/services/serverErrorText';
 import styles from './Weather.module.css';
 
 function WeatherRaceList({ races }: { readonly races: readonly RaceSummary[] }) {
@@ -35,8 +34,7 @@ export function ManageWeatherPage() {
   return (
     <div className={styles.page}>
       <ToolPageHeader name={messages.tools.weatherPattern.name} description={messages.tools.weatherPattern.description} />
-      {queryState.status === 'loading' && <LoadingStatus>{messages.races.list.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />}
+      <ServerQueryStatus queryState={queryState} loadingText={messages.races.list.loading} onRetry={reload} />
       {queryState.status === 'loaded' && <WeatherRaceList races={queryState.value} />}
     </div>
   );

@@ -52,7 +52,7 @@ export function UploadedProtestVideo({ protestId, size }: { readonly protestId: 
       <div className={styles.videoStatus}>
         <InlineAlert>{serverErrorText(messages, videoState.errorKind)}</InlineAlert>
         <Button variant="secondary" onClick={() => setAttempt((previous) => previous + 1)}>
-          {messages.crews.list.retry}
+          {messages.common.retry}
         </Button>
       </div>
     );

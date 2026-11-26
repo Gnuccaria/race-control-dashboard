@@ -1,6 +1,6 @@
 import type { RaceSummary } from '@shared/raceRules';
 import { useState } from 'react';
-import { EmptyState, LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { EmptyState, ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { useServerQuery } from '@/hooks/useServerQuery';
 import { useI18n } from '@/i18n/useI18n';
@@ -8,7 +8,6 @@ import styles from './ManageRacesPage.module.css';
 import { RaceBrowser } from './components/RaceBrowser/RaceBrowser';
 import { DEFAULT_RACE_SORT, EMPTY_RACE_FILTERS, type RaceFilters, toggleRaceSort } from './model/raceList';
 import { fetchRaces } from './services/raceApi';
-import { serverErrorText } from '@/services/serverErrorText';
 
 /** Stessa tabella di "Gestisci ordini di arrivo", senza selezione né eliminazione: si apre una gara per i suoi cambi pilota. */
 function DriverSwapRaceList({ races }: { readonly races: readonly RaceSummary[] }) {
@@ -37,10 +36,7 @@ export function ManageDriverSwapsPage() {
   return (
     <div className={styles.manageRacesPage}>
       <ToolPageHeader name={messages.tools.manageDriverSwaps.name} description={messages.tools.manageDriverSwaps.description} />
-      {queryState.status === 'loading' && <LoadingStatus>{messages.races.list.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && (
-        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
-      )}
+      <ServerQueryStatus queryState={queryState} loadingText={messages.races.list.loading} onRetry={reload} />
       {queryState.status === 'loaded' && <DriverSwapRaceList races={queryState.value} />}
     </div>
   );

@@ -93,6 +93,8 @@ export const fr: Messages = {
     greetings: FRENCH_GREETINGS,
   },
   common: {
+    /** Pulsante dopo un errore di caricamento. */
+    retry: 'Réessayer',
     /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
     selectionDelete: { deleteLabel: 'Supprimer', deletingLabel: 'Suppression en cours…', confirmLabel: 'Supprimer', cancelLabel: 'Annuler' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
@@ -575,7 +577,6 @@ export const fr: Messages = {
       emptyTitle: 'Aucune voiture enregistrée',
       emptyDescription: 'Appuyez sur « Mettre à jour les données » pour les télécharger depuis les sites.',
       noMatches: 'Aucune voiture ne correspond aux filtres.',
-      retry: 'Réessayer',
     },
     refresh: {
       title: 'Mise à jour depuis les sites',
@@ -627,7 +628,6 @@ export const fr: Messages = {
       emptyTitle: 'Aucun circuit enregistré',
       emptyDescription: 'Appuyez sur « Mettre à jour les données » pour les télécharger depuis les sites.',
       noMatches: 'Aucun circuit ne correspond aux filtres.',
-      retry: 'Réessayer',
       mapCredit: 'Les cartes ne sont pas les nôtres : elles appartiennent à gt-engine.com.',
     },
     refresh: {
@@ -1184,7 +1184,6 @@ export const fr: Messages = {
       carCount: (count: number) => (count === 1 ? '1 voiture' : `${count} voitures`),
       openDetails: (name: string) => `Ouvrir les détails de ${name}`,
       loading: 'Chargement des championnats…',
-      retry: 'Réessayer',
       emptyTitle: 'Aucun championnat enregistré',
       emptyDescription: 'Créez-en un depuis « Créer un championnat ».',
       selectionHint: 'Clic droit sur un championnat pour le sélectionner ou le désélectionner.',
@@ -1258,7 +1257,6 @@ export const fr: Messages = {
           ? `${totalCount} ${totalCount === 1 ? 'équipage' : 'équipages'}`
           : `${shownCount} sur ${totalCount} équipages`,
       loading: 'Chargement des équipages…',
-      retry: 'Réessayer',
       emptyTitle: 'Aucun équipage enregistré',
       emptyDescription: 'Ajoutez-en un depuis « Créer un équipage » ou importez-les depuis un fichier CSV.',
       noMatches: 'Aucun équipage ne correspond aux filtres.',

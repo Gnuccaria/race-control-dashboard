@@ -1,5 +1,5 @@
 import { useLocation, useParams } from 'react-router';
-import { LoadError, LoadingStatus } from '@/components/data-table/ListStatus';
+import { ServerQueryStatus } from '@/components/data-table/ListStatus';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader/ToolPageHeader';
 import { fetchCrews } from '@/features/crews/services/crewApi';
 import { useServerQuery } from '@/hooks/useServerQuery';
@@ -10,7 +10,6 @@ import { RaceEditor } from './components/RaceEditor/RaceEditor';
 import { DRIVER_SWAP_TABS, RESULTS_TABS } from './components/RaceForm/raceFormTabs';
 import type { NewRaceLocationState } from './hooks/useCreateRace';
 import { fetchRace } from './services/raceApi';
-import { serverErrorText } from '@/services/serverErrorText';
 
 const RACE_ID_PATTERN = /^\d{1,9}$/;
 
@@ -56,10 +55,7 @@ function RaceDetail({ mode }: { readonly mode: 'results' | 'driverSwaps' }) {
         }
         backLink={{ to: '..', relative: 'path', label: raceTexts.detail.backToList }}
       />
-      {queryState.status === 'loading' && <LoadingStatus>{raceTexts.detail.loading}</LoadingStatus>}
-      {queryState.status === 'failed' && (
-        <LoadError message={serverErrorText(messages, queryState.errorKind)} retryLabel={messages.crews.list.retry} onRetry={reload} />
-      )}
+      <ServerQueryStatus queryState={queryState} loadingText={raceTexts.detail.loading} onRetry={reload} />
       {loadedRace && (
         <RaceEditor
           savedRace={loadedRace}
