@@ -8,6 +8,7 @@ import { useTrackLabels } from '@/features/tracks/useTrackLabels';
 import { useI18n } from '@/i18n/useI18n';
 import { formatIsoDate, formatTimestamp } from '@/lib/dateFormatting';
 import type { RaceSort, RaceSortColumn } from '../../model/raceList';
+import { MissingValue } from '@/components/data-table/MissingValue';
 
 const COLUMN_CLASS_NAMES: Partial<Record<RaceSortColumn, string>> = {
   round: tableStyles.numberCell,
@@ -64,7 +65,7 @@ export function RaceTable({
           {races.map((race) => {
             const isSelected = selection?.selectedRaceIds.has(race.id) ?? false;
             const raceLabel = race.name ?? messages.races.raceLabel(race.round, race.championship);
-            const missingValue = <span className={tableStyles.missingValue}>{listTexts.noTrack}</span>;
+            const missingValue = <MissingValue>{listTexts.noTrack}</MissingValue>;
             const cells: Record<RaceSortColumn, ReactNode> = {
               championship: race.championship,
               round: race.round,

@@ -13,6 +13,7 @@ import { protestRaceLabel } from './protestRaceLabel';
 import { protestStatusTone } from './protestStatus';
 import styles from './Protests.module.css';
 import { fetchProtests } from './services/protestApi';
+import { MissingValue } from '@/components/data-table/MissingValue';
 
 
 function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
@@ -39,11 +40,11 @@ function ProtestTable({ protests }: { readonly protests: readonly Protest[] }) {
           {protests.map((protest) => (
             <tr key={protest.id} className={tableStyles.dataRow}>
               <td className={tableStyles.numberCell}>{protest.id}</td>
-              <td>{protestRaceLabel(protest, messages) ?? <span className={tableStyles.missingValue}>–</span>}</td>
+              <td>{protestRaceLabel(protest, messages) ?? <MissingValue />}</td>
               <td>{crewLabel(protest.crew)}</td>
               <td>
                 {protest.otherCrews.length === 0 ? (
-                  <span className={tableStyles.missingValue}>{texts.noOtherCrews}</span>
+                  <MissingValue>{texts.noOtherCrews}</MissingValue>
                 ) : (
                   <span className={styles.crewChips}>
                     {protest.otherCrews.map((crew) => (

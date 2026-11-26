@@ -1,7 +1,7 @@
 import { type Car, CAR_GROUPS, type CarGroup, formatCarName } from '@shared/carRules';
 import { useState } from 'react';
-import tableStyles from '@/components/data-table/DataTable.module.css';
-import { EmptyState } from '@/components/data-table/ListStatus';
+import { CatalogTable } from '@/components/data-table/CatalogTable';
+import { MissingValue } from '@/components/data-table/MissingValue';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Input } from '@/components/ui/Input/Input';
 import { Select } from '@/components/ui/Select/Select';
@@ -30,7 +30,7 @@ export function CarTable({ cars }: { readonly cars: readonly Car[] }) {
 
   const cellValue = (car: Car, column: (typeof COLUMNS)[number]) => {
     const value = car[column];
-    if (value === null) return <span className={tableStyles.missingValue}>–</span>;
+    if (value === null) return <MissingValue />;
     if (column === 'limiter') return `${formatDecimal(value as number)}%`;
     if (column === 'ballastKg') return `${formatSignedDecimal(value as number)} kg`;
     return typeof value === 'number' ? formatDecimal(value) : value;
@@ -53,37 +53,13 @@ export function CarTable({ cars }: { readonly cars: readonly Car[] }) {
           )}
         </FormField>
       </div>
-      <div className={tableStyles.tableCaption}>
-        <p aria-live="polite">{texts.count(shownCars.length, cars.length)}</p>
-      </div>
-      {shownCars.length === 0 ? (
-        <EmptyState title={cars.length === 0 ? texts.emptyTitle : texts.noMatches} description={cars.length === 0 ? texts.emptyDescription : undefined} />
-      ) : (
-        <div className={tableStyles.tableScroller}>
-          <table className={tableStyles.dataTable} aria-label={texts.tableLabel}>
-            <thead>
-              <tr>
-                {COLUMNS.map((column) => (
-                  <th key={column} scope="col" className={tableStyles.plainColumnHeader}>
-                    {texts.columns[column]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {shownCars.map((car) => (
-                <tr key={car.id} className={tableStyles.dataRow}>
-                  {COLUMNS.map((column) => (
-                    <td key={column} className={NUMBER_COLUMNS.has(column) ? tableStyles.numberCell : undefined}>
-                      {cellValue(car, column)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <CatalogTable
+        rows={shownCars}
+        totalCount={cars.length}
+        rowKey={(car) => car.id}
+        columns={COLUMNS.map((column) => ({ key: column, header: texts.columns[column], isNumber: NUMBER_COLUMNS.has(column), render: (car: Car) => cellValue(car, column) }))}
+        texts={texts}
+      />
     </div>
   );
 }

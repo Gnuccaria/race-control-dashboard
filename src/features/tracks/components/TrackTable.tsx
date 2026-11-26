@@ -1,8 +1,8 @@
 import type { Track } from '@shared/raceRules';
 import { TRACK_MAPS_CREDIT_URL, trackMapUrl } from '@shared/trackRules';
 import { useState } from 'react';
-import tableStyles from '@/components/data-table/DataTable.module.css';
-import { EmptyState } from '@/components/data-table/ListStatus';
+import { type CatalogColumn, CatalogTable } from '@/components/data-table/CatalogTable';
+import { MissingValue } from '@/components/data-table/MissingValue';
 import { FormField } from '@/components/form/FormField/FormField';
 import { Select } from '@/components/ui/Select/Select';
 import { useI18n } from '@/i18n/useI18n';
@@ -37,6 +37,28 @@ export function TrackTable({ tracks }: { readonly tracks: readonly Track[] }) {
       (first, second) =>
         order(first) - order(second) || first.name.localeCompare(second.name, locale) || (first.configuration ?? '').localeCompare(second.configuration ?? '', locale),
     );
+
+  const columns: readonly CatalogColumn<Track>[] = [
+    { key: 'country', header: texts.columns.country, render: (track) => countryLabel(countryOf(track)) },
+    { key: 'name', header: texts.columns.name, render: (track) => track.name },
+    { key: 'configuration', header: texts.columns.configuration, render: (track) => configurationLabel(track.configuration) },
+    { key: 'length', header: texts.columns.length, isNumber: true, render: (track) => (track.lengthMeters === null ? <MissingValue /> : lengthLabel(track.lengthMeters)) },
+    { key: 'reversible', header: texts.columns.reversible, render: (track) => (track.hasReverseLayout === null ? <MissingValue /> : track.hasReverseLayout ? texts.yes : texts.no) },
+    {
+      key: 'map',
+      header: texts.columns.map,
+      render: (track) => {
+        const mapUrl = track.mapFile ? trackMapUrl(track.mapFile) : null;
+        return mapUrl ? (
+          <a href={mapUrl} target="_blank" rel="noreferrer" aria-label={texts.mapOf(`${track.name} – ${configurationLabel(track.configuration)}`)}>
+            {texts.openMap}
+          </a>
+        ) : (
+          <MissingValue>{texts.noMap}</MissingValue>
+        );
+      },
+    },
+  ];
 
   return (
     <div className={styles.trackTable}>
@@ -81,50 +103,7 @@ export function TrackTable({ tracks }: { readonly tracks: readonly Track[] }) {
           )}
         </FormField>
       </div>
-      <div className={tableStyles.tableCaption}>
-        <p aria-live="polite">{texts.count(shownTracks.length, tracks.length)}</p>
-      </div>
-      {shownTracks.length === 0 ? (
-        <EmptyState title={tracks.length === 0 ? texts.emptyTitle : texts.noMatches} description={tracks.length === 0 ? texts.emptyDescription : undefined} />
-      ) : (
-        <div className={tableStyles.tableScroller}>
-          <table className={tableStyles.dataTable} aria-label={texts.tableLabel}>
-            <thead>
-              <tr>
-                {(['country', 'name', 'configuration', 'length', 'reversible', 'map'] as const).map((column) => (
-                  <th key={column} scope="col" className={tableStyles.plainColumnHeader}>
-                    {texts.columns[column]}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {shownTracks.map((track) => {
-                const mapUrl = track.mapFile ? trackMapUrl(track.mapFile) : null;
-                const name = `${track.name} – ${configurationLabel(track.configuration)}`;
-                return (
-                  <tr key={track.id} className={tableStyles.dataRow}>
-                    <td>{countryLabel(countryOf(track))}</td>
-                    <td>{track.name}</td>
-                    <td>{configurationLabel(track.configuration)}</td>
-                    <td className={tableStyles.numberCell}>{track.lengthMeters === null ? <span className={tableStyles.missingValue}>–</span> : lengthLabel(track.lengthMeters)}</td>
-                    <td>{track.hasReverseLayout === null ? <span className={tableStyles.missingValue}>–</span> : track.hasReverseLayout ? texts.yes : texts.no}</td>
-                    <td>
-                      {mapUrl ? (
-                        <a href={mapUrl} target="_blank" rel="noreferrer" aria-label={texts.mapOf(name)}>
-                          {texts.openMap}
-                        </a>
-                      ) : (
-                        <span className={tableStyles.missingValue}>{texts.noMap}</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <CatalogTable rows={shownTracks} totalCount={tracks.length} rowKey={(track) => track.id} columns={columns} texts={texts} />
       <p className={styles.credit}>
         {texts.mapCredit}{' '}
         <a href={TRACK_MAPS_CREDIT_URL} target="_blank" rel="noreferrer">

@@ -6,6 +6,7 @@ import tableStyles from '@/components/data-table/DataTable.module.css';
 import { ChevronRightIcon, MissingDataIcon } from '@/components/data-table/DataTableIcons';
 import { SortableColumnHeader } from '@/components/data-table/SortableColumnHeader';
 import styles from './CrewTable.module.css';
+import { MissingValue } from '@/components/data-table/MissingValue';
 
 interface CrewTableProps {
   readonly crews: readonly SavedCrew[];
@@ -83,15 +84,15 @@ export function CrewTable({ crews, sort, onSort, selectedCrewIds, onToggleSelect
                 {/* Un campionato per riga, con l'auto alla stessa altezza nella colonna accanto. */}
                 <td>
                   {crew.championships.length === 0 ? (
-                    <span className={tableStyles.missingValue}>–</span>
+                    <MissingValue />
                   ) : (
                     <span className={styles.stackedValues}>
                       {crew.championships.map(({ championship, carId }) => (
                         <span key={championship}>
                           {carId === null ? (
-                            <span className={tableStyles.missingValue}>{crewTexts.missingCar}</span>
+                            <MissingValue>{crewTexts.missingCar}</MissingValue>
                           ) : (
-                            (carNameById.get(carId) ?? <span className={tableStyles.missingValue}>…</span>)
+                            (carNameById.get(carId) ?? <MissingValue>…</MissingValue>)
                           )}
                         </span>
                       ))}
@@ -100,7 +101,7 @@ export function CrewTable({ crews, sort, onSort, selectedCrewIds, onToggleSelect
                 </td>
                 <td>
                   {crew.championships.length === 0 ? (
-                    <span className={tableStyles.missingValue}>{crewTexts.noChampionship}</span>
+                    <MissingValue>{crewTexts.noChampionship}</MissingValue>
                   ) : (
                     <span className={styles.stackedValues}>
                       {crew.championships.map(({ championship }) => (
