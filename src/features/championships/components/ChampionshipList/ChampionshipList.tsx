@@ -2,16 +2,14 @@ import type { Championship } from '@shared/championshipRules';
 import { Link } from 'react-router';
 import tableStyles from '@/components/data-table/DataTable.module.css';
 import { ChevronRightIcon } from '@/components/data-table/DataTableIcons';
+import { BulkDeleteFeedback } from '@/components/data-table/BulkDeleteFeedback';
 import { EmptyState } from '@/components/data-table/ListStatus';
-import { SelectionDeleteBar, type SelectionDeleteTexts } from '@/components/data-table/SelectionDeleteBar';
-import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
+import { SelectionDeleteBar } from '@/components/data-table/SelectionDeleteBar';
 import { useCarCatalog } from '@/features/cars/useCarCatalog';
-import { useBulkDelete } from '@/hooks/useBulkDelete';
-import { useRowSelection } from '@/hooks/useRowSelection';
+import { useSelectionDelete } from '@/hooks/useSelectionDelete';
 import { useI18n } from '@/i18n/useI18n';
 import { deleteChampionships } from '../../services/championshipApi';
 import styles from './ChampionshipList.module.css';
-import { serverErrorText } from '@/services/serverErrorText';
 
 interface ChampionshipListProps {
   readonly championships: readonly Championship[];
@@ -29,27 +27,12 @@ export function ChampionshipList({ championships, onChampionshipsDeleted }: Cham
   const texts = messages.championships;
   const listTexts = texts.list;
   const carCatalog = useCarCatalog();
-  const { selectedIds, toggleSelection, clearSelection } = useRowSelection();
-  const { deleteState, isDeleting, deleteSelected } = useBulkDelete(deleteChampionships, () => {
-    clearSelection();
-    onChampionshipsDeleted();
-  });
-  const deleteTexts: SelectionDeleteTexts = {
-    selectedCount: listTexts.selectedCount,
-    deleteLabel: listTexts.deleteSelected,
-    deletingLabel: listTexts.deleting,
-    confirmTitle: listTexts.deleteTitle,
-    confirmDescription: listTexts.deleteDescription,
-    otherRows: listTexts.otherChampionships,
-    confirmLabel: listTexts.deleteConfirm,
-    cancelLabel: listTexts.deleteCancel,
-  };
-  const selectedChampionships = championships.filter((championship) => selectedIds.has(championship.id));
+  const { selectedIds, toggleSelection, deleteState, isDeleting, deleteSelected, selectedAmong } = useSelectionDelete(deleteChampionships, onChampionshipsDeleted);
+  const selectedChampionships = selectedAmong(championships);
 
   return (
     <div className={styles.championshipList}>
-      {deleteState.status === 'deleted' && <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>}
-      {deleteState.status === 'failed' && <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>}
+      <BulkDeleteFeedback deleteState={deleteState} deletedText={listTexts.deleted} />
       {championships.length === 0 ? (
         <EmptyState title={listTexts.emptyTitle} description={listTexts.emptyDescription} />
       ) : (
@@ -117,7 +100,7 @@ export function ChampionshipList({ championships, onChampionshipsDeleted }: Cham
       {selectedChampionships.length > 0 && (
         <SelectionDeleteBar
           selectedRows={selectedChampionships.map((championship) => ({ id: championship.id, label: championship.name }))}
-          texts={deleteTexts}
+          texts={{ selectedCount: listTexts.selectedCount, confirmTitle: listTexts.deleteTitle, confirmDescription: listTexts.deleteDescription, otherRows: listTexts.otherChampionships }}
           isDeleting={isDeleting}
           onDelete={deleteSelected}
         />

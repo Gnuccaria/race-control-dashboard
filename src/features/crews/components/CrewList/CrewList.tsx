@@ -1,14 +1,13 @@
 import type { SavedCrew } from '@shared/crewRules';
 import { useState } from 'react';
 import tableStyles from '@/components/data-table/DataTable.module.css';
+import { BulkDeleteFeedback } from '@/components/data-table/BulkDeleteFeedback';
 import { EmptyState } from '@/components/data-table/ListStatus';
-import { SelectionDeleteBar, type SelectionDeleteTexts } from '@/components/data-table/SelectionDeleteBar';
-import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
+import { SelectionDeleteBar } from '@/components/data-table/SelectionDeleteBar';
 import { Button } from '@/components/ui/Button/Button';
 import { useCarCatalog } from '@/features/cars/useCarCatalog';
 import { useChampionships } from '@/features/championships/useChampionships';
-import { useBulkDelete } from '@/hooks/useBulkDelete';
-import { useRowSelection } from '@/hooks/useRowSelection';
+import { useSelectionDelete } from '@/hooks/useSelectionDelete';
 import { useI18n } from '@/i18n/useI18n';
 import { deleteCrews } from '../../services/crewApi';
 import {
@@ -23,7 +22,6 @@ import {
 import { CrewFilterBar } from '../CrewFilterBar/CrewFilterBar';
 import { CrewTable } from '../CrewTable/CrewTable';
 import styles from './CrewList.module.css';
-import { serverErrorText } from '@/services/serverErrorText';
 
 interface CrewListProps {
   readonly crews: readonly SavedCrew[];
@@ -43,28 +41,8 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
   // Auto dal server: nomi per tabella e ordinamento, voci del filtro (ricaricate a ogni uso del menu).
   const carCatalog = useCarCatalog();
   const championshipCatalog = useChampionships();
-  const { selectedIds, toggleSelection, clearSelection } = useRowSelection();
-  const { deleteState, isDeleting, deleteSelected } = useBulkDelete(deleteCrews, () => {
-    clearSelection();
-    onCrewsDeleted();
-  });
-  const deleteTexts: SelectionDeleteTexts = {
-    selectedCount: listTexts.selectedCount,
-    deleteLabel: listTexts.deleteSelected,
-    deletingLabel: listTexts.deleting,
-    confirmTitle: listTexts.deleteTitle,
-    confirmDescription: listTexts.deleteDescription,
-    otherRows: listTexts.otherCrews,
-    confirmLabel: listTexts.deleteConfirm,
-    cancelLabel: listTexts.deleteCancel,
-  };
-
-  const deleteFeedback =
-    deleteState.status === 'deleted' ? (
-      <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>
-    ) : deleteState.status === 'failed' ? (
-      <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>
-    ) : null;
+  const { selectedIds, toggleSelection, deleteState, isDeleting, deleteSelected, selectedAmong } = useSelectionDelete(deleteCrews, onCrewsDeleted);
+  const deleteFeedback = <BulkDeleteFeedback deleteState={deleteState} deletedText={listTexts.deleted} />;
 
   if (crews.length === 0) {
     return (
@@ -76,7 +54,7 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
   }
 
   const shownCrews = sortCrews(filterCrews(crews, filters), sort, locale, carCatalog.carNameById);
-  const selectedShownCrews = shownCrews.filter((crew) => selectedIds.has(crew.id));
+  const selectedShownCrews = selectedAmong(shownCrews);
 
   return (
     <div className={styles.crewList}>
@@ -116,7 +94,7 @@ export function CrewList({ crews, onCrewsDeleted }: CrewListProps) {
       {selectedShownCrews.length > 0 && (
         <SelectionDeleteBar
           selectedRows={selectedShownCrews.map((crew) => ({ id: crew.id, label: crew.name }))}
-          texts={deleteTexts}
+          texts={{ selectedCount: listTexts.selectedCount, confirmTitle: listTexts.deleteTitle, confirmDescription: listTexts.deleteDescription, otherRows: listTexts.otherCrews }}
           isDeleting={isDeleting}
           onDelete={deleteSelected}
         />

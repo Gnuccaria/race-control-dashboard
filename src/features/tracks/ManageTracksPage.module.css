@@ -5,9 +5,7 @@
   margin-inline: auto;
 }
 
-.trackTable,
-.refresh,
-.matches {
+.trackTable {
   display: grid;
   gap: var(--space-4);
 }
@@ -22,65 +20,6 @@
   .filters {
     grid-template-columns: 1fr;
   }
-}
-
-.previewTitle {
-  margin: 0;
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-semibold);
-}
-
-.summary {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding-inline-start: var(--space-5);
-}
-
-.details summary {
-  cursor: pointer;
-  color: var(--color-text-muted);
-}
-
-.details ul,
-.details p {
-  margin: var(--space-2) 0 0;
-  font-size: var(--font-size-small);
-}
-
-.hint {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
-}
-
-.matchList {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Auto del catalogo ufficiale e menu dell'auto di gt-engine sulla stessa riga; su schermi stretti il menu va sotto. */
-.matchRow {
-  display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(14rem, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-}
-
-@media (width < 40rem) {
-  .matchRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-3);
 }
 
 .credit {

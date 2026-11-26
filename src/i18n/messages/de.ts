@@ -92,6 +92,8 @@ export const de: Messages = {
     greetings: GERMAN_GREETINGS,
   },
   common: {
+    /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
+    selectionDelete: { deleteLabel: 'Löschen', deletingLabel: 'Wird gelöscht…', confirmLabel: 'Löschen', cancelLabel: 'Abbrechen' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
     errorDetail: (detail: string) => `(Details: ${detail})`,
     timeField: { hours: 'Stunden', minutes: 'Minuten', dayPeriod: 'AM/PM' },
@@ -1187,14 +1189,10 @@ export const de: Messages = {
       selectionHint: 'Rechtsklick auf eine Meisterschaft, um sie aus- oder abzuwählen.',
       selectedLabel: 'Ausgewählt',
       selectedCount: (count: number) => (count === 1 ? '1 Meisterschaft ausgewählt' : `${count} Meisterschaften ausgewählt`),
-      deleteSelected: 'Löschen',
-      deleting: 'Wird gelöscht…',
       deleteTitle: (count: number) => (count === 1 ? '1 Meisterschaft löschen?' : `${count} Meisterschaften löschen?`),
       deleteDescription: (list: string) =>
         `${list} werden gelöscht. Verknüpfte Crews verlieren die Meisterschaft (wer keine andere hat, bleibt ohne). Eine Meisterschaft mit gespeicherten Rennen kann nicht gelöscht werden. Das kann nicht rückgängig gemacht werden.`,
       otherChampionships: (count: number) => (count === 1 ? 'eine weitere Meisterschaft' : `${count} weitere Meisterschaften`),
-      deleteConfirm: 'Löschen',
-      deleteCancel: 'Abbrechen',
       deleted: (count: number) => (count === 1 ? '1 Meisterschaft gelöscht.' : `${count} Meisterschaften gelöscht.`),
     },
     detail: {
@@ -1269,13 +1267,9 @@ export const de: Messages = {
       selectedLabel: 'Ausgewählt',
       selectedCount: (selectedCount: number) =>
         selectedCount === 1 ? '1 Crew ausgewählt' : `${selectedCount} Crews ausgewählt`,
-      deleteSelected: 'Löschen',
-      deleting: 'Wird gelöscht…',
       deleteTitle: (selectedCount: number) => (selectedCount === 1 ? '1 Crew löschen?' : `${selectedCount} Crews löschen?`),
       deleteDescription: (crewList: string) => `Gelöscht werden: ${crewList}. Das kann nicht rückgängig gemacht werden.`,
       otherCrews: (otherCount: number) => (otherCount === 1 ? 'eine weitere Crew' : `${otherCount} weitere Crews`),
-      deleteConfirm: 'Löschen',
-      deleteCancel: 'Abbrechen',
       deleted: (deletedCount: number) => (deletedCount === 1 ? '1 Crew gelöscht.' : `${deletedCount} Crews gelöscht.`),
     },
     detail: {

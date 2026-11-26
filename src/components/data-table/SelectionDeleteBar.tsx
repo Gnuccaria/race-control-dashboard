@@ -13,15 +13,12 @@ export interface SelectedRow {
   readonly label: string;
 }
 
+/** Testi propri di ogni elenco; «Elimina», «Annulla» e simili sono comuni (messages.common.selectionDelete). */
 export interface SelectionDeleteTexts {
   readonly selectedCount: (selectedCount: number) => string;
-  readonly deleteLabel: string;
-  readonly deletingLabel: string;
   readonly confirmTitle: (selectedCount: number) => string;
   readonly confirmDescription: (rowList: string) => string;
   readonly otherRows: (otherCount: number) => string;
-  readonly confirmLabel: string;
-  readonly cancelLabel: string;
 }
 
 interface SelectionDeleteBarProps {
@@ -33,7 +30,8 @@ interface SelectionDeleteBarProps {
 
 /** Sotto la tabella quando c'è almeno una selezione: conteggio e "Elimina", con conferma. */
 export function SelectionDeleteBar({ selectedRows, texts, isDeleting, onDelete }: SelectionDeleteBarProps) {
-  const { locale } = useI18n();
+  const { locale, messages } = useI18n();
+  const commonTexts = messages.common.selectionDelete;
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // "A, B e C" nella forma corretta per ogni lingua.
@@ -53,14 +51,14 @@ export function SelectionDeleteBar({ selectedRows, texts, isDeleting, onDelete }
           setIsConfirmOpen(true);
         }}
       >
-        {isDeleting ? texts.deletingLabel : texts.deleteLabel}
+        {isDeleting ? commonTexts.deletingLabel : commonTexts.deleteLabel}
       </Button>
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title={texts.confirmTitle(selectedRows.length)}
         description={texts.confirmDescription(rowList)}
-        confirmLabel={texts.confirmLabel}
-        cancelLabel={texts.cancelLabel}
+        confirmLabel={commonTexts.confirmLabel}
+        cancelLabel={commonTexts.cancelLabel}
         onConfirm={() => {
           setIsConfirmOpen(false);
           onDelete(selectedRows.map((row) => row.id));

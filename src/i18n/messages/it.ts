@@ -99,6 +99,8 @@ export const it = {
     greetings: ITALIAN_GREETINGS,
   },
   common: {
+    /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
+    selectionDelete: { deleteLabel: 'Elimina', deletingLabel: 'Eliminazione in corso…', confirmLabel: 'Elimina', cancelLabel: 'Annulla' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
     errorDetail: (detail: string) => `(dettaglio: ${detail})`,
     timeField: { hours: 'Ore', minutes: 'Minuti', dayPeriod: 'AM/PM' },
@@ -1205,14 +1207,10 @@ export const it = {
       selectionHint: 'Clic destro su un campionato per selezionarlo o deselezionarlo.',
       selectedLabel: 'Selezionato',
       selectedCount: (count: number) => (count === 1 ? '1 campionato selezionato' : `${count} campionati selezionati`),
-      deleteSelected: 'Elimina',
-      deleting: 'Eliminazione in corso…',
       deleteTitle: (count: number) => (count === 1 ? 'Eliminare 1 campionato?' : `Eliminare ${count} campionati?`),
       deleteDescription: (list: string) =>
         `Verranno eliminati ${list}. Gli equipaggi collegati perdono il campionato (chi non ne ha altri resta senza). Non si può eliminare un campionato con gare salvate. L'operazione non si può annullare.`,
       otherChampionships: (count: number) => (count === 1 ? 'un altro campionato' : `altri ${count} campionati`),
-      deleteConfirm: 'Elimina',
-      deleteCancel: 'Annulla',
       deleted: (count: number) => (count === 1 ? '1 campionato eliminato.' : `${count} campionati eliminati.`),
     },
     detail: {
@@ -1287,14 +1285,10 @@ export const it = {
       selectedLabel: 'Selezionato',
       selectedCount: (selectedCount: number) =>
         selectedCount === 1 ? '1 equipaggio selezionato' : `${selectedCount} equipaggi selezionati`,
-      deleteSelected: 'Elimina',
-      deleting: 'Eliminazione in corso…',
       deleteTitle: (selectedCount: number) =>
         selectedCount === 1 ? 'Eliminare 1 equipaggio?' : `Eliminare ${selectedCount} equipaggi?`,
       deleteDescription: (crewList: string) => `Verranno eliminati ${crewList}. L'operazione non si può annullare.`,
       otherCrews: (otherCount: number) => (otherCount === 1 ? 'un altro equipaggio' : `altri ${otherCount} equipaggi`),
-      deleteConfirm: 'Elimina',
-      deleteCancel: 'Annulla',
       deleted: (deletedCount: number) =>
         deletedCount === 1 ? '1 equipaggio eliminato.' : `${deletedCount} equipaggi eliminati.`,
     },

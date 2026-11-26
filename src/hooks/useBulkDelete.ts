@@ -1,7 +1,7 @@
 import { startTransition, useActionState } from 'react';
 import type { ServerApiResult, ServerErrorKind } from '@/services/serverApi';
 
-type BulkDeleteState =
+export type BulkDeleteState =
   | { readonly status: 'idle' }
   | { readonly status: 'deleted'; readonly deletedCount: number }
   | { readonly status: 'failed'; readonly errorKind: ServerErrorKind };

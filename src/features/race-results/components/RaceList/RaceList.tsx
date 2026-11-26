@@ -1,16 +1,14 @@
 import type { RaceSummary } from '@shared/raceRules';
 import { useState } from 'react';
+import { BulkDeleteFeedback } from '@/components/data-table/BulkDeleteFeedback';
 import { EmptyState } from '@/components/data-table/ListStatus';
-import { SelectionDeleteBar, type SelectionDeleteTexts } from '@/components/data-table/SelectionDeleteBar';
-import { InlineAlert } from '@/components/feedback/InlineAlert/InlineAlert';
-import { useBulkDelete } from '@/hooks/useBulkDelete';
-import { useRowSelection } from '@/hooks/useRowSelection';
+import { SelectionDeleteBar } from '@/components/data-table/SelectionDeleteBar';
+import { useSelectionDelete } from '@/hooks/useSelectionDelete';
 import { useI18n } from '@/i18n/useI18n';
 import { DEFAULT_RACE_SORT, EMPTY_RACE_FILTERS, filterRaces, type RaceFilters, sortRaces, toggleRaceSort } from '../../model/raceList';
 import { deleteRaces } from '../../services/raceApi';
 import { RaceBrowser } from '../RaceBrowser/RaceBrowser';
 import styles from './RaceList.module.css';
-import { serverErrorText } from '@/services/serverErrorText';
 
 interface RaceListProps {
   readonly races: readonly RaceSummary[];
@@ -22,32 +20,10 @@ interface RaceListProps {
 export function RaceList({ races, onRacesDeleted }: RaceListProps) {
   const { locale, messages } = useI18n();
   const listTexts = messages.races.list;
-  const sharedListTexts = messages.crews.list;
   const [filters, setFilters] = useState<RaceFilters>(EMPTY_RACE_FILTERS);
   const [sort, setSort] = useState(DEFAULT_RACE_SORT);
-  const { selectedIds, toggleSelection, clearSelection } = useRowSelection();
-  const { deleteState, isDeleting, deleteSelected } = useBulkDelete(deleteRaces, () => {
-    clearSelection();
-    onRacesDeleted();
-  });
-
-  const deleteTexts: SelectionDeleteTexts = {
-    selectedCount: listTexts.selectedCount,
-    deleteLabel: sharedListTexts.deleteSelected,
-    deletingLabel: sharedListTexts.deleting,
-    confirmTitle: listTexts.deleteTitle,
-    confirmDescription: listTexts.deleteDescription,
-    otherRows: listTexts.otherRaces,
-    confirmLabel: sharedListTexts.deleteConfirm,
-    cancelLabel: sharedListTexts.deleteCancel,
-  };
-
-  const deleteFeedback =
-    deleteState.status === 'deleted' ? (
-      <InlineAlert tone="success">{listTexts.deleted(deleteState.deletedCount)}</InlineAlert>
-    ) : deleteState.status === 'failed' ? (
-      <InlineAlert>{serverErrorText(messages, deleteState.errorKind)}</InlineAlert>
-    ) : null;
+  const { selectedIds, toggleSelection, deleteState, isDeleting, deleteSelected, selectedAmong } = useSelectionDelete(deleteRaces, onRacesDeleted);
+  const deleteFeedback = <BulkDeleteFeedback deleteState={deleteState} deletedText={listTexts.deleted} />;
 
   if (races.length === 0) {
     return (
@@ -59,7 +35,7 @@ export function RaceList({ races, onRacesDeleted }: RaceListProps) {
   }
 
   const shownRaces = sortRaces(filterRaces(races, filters), sort, locale);
-  const selectedShownRaces = shownRaces.filter((race) => selectedIds.has(race.id));
+  const selectedShownRaces = selectedAmong(shownRaces);
 
   return (
     <div className={styles.raceList}>
@@ -78,7 +54,7 @@ export function RaceList({ races, onRacesDeleted }: RaceListProps) {
       {selectedShownRaces.length > 0 && (
         <SelectionDeleteBar
           selectedRows={selectedShownRaces.map((race) => ({ id: race.id, label: messages.races.raceLabel(race.round, race.championship) }))}
-          texts={deleteTexts}
+          texts={{ selectedCount: listTexts.selectedCount, confirmTitle: listTexts.deleteTitle, confirmDescription: listTexts.deleteDescription, otherRows: listTexts.otherRaces }}
           isDeleting={isDeleting}
           onDelete={deleteSelected}
         />

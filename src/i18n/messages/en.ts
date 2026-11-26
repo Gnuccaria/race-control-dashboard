@@ -91,6 +91,8 @@ export const en: Messages = {
     greetings: ENGLISH_GREETINGS,
   },
   common: {
+    /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
+    selectionDelete: { deleteLabel: 'Delete', deletingLabel: 'Deleting…', confirmLabel: 'Delete', cancelLabel: 'Cancel' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
     errorDetail: (detail: string) => `(details: ${detail})`,
     timeField: { hours: 'Hours', minutes: 'Minutes', dayPeriod: 'AM/PM' },
@@ -1149,14 +1151,10 @@ export const en: Messages = {
       selectionHint: 'Right-click a championship to select or deselect it.',
       selectedLabel: 'Selected',
       selectedCount: (count: number) => (count === 1 ? '1 championship selected' : `${count} championships selected`),
-      deleteSelected: 'Delete',
-      deleting: 'Deleting…',
       deleteTitle: (count: number) => (count === 1 ? 'Delete 1 championship?' : `Delete ${count} championships?`),
       deleteDescription: (list: string) =>
         `${list} will be deleted. Linked crews lose the championship (those with no other stay without one). A championship with saved races cannot be deleted. This cannot be undone.`,
       otherChampionships: (count: number) => (count === 1 ? 'one other championship' : `${count} other championships`),
-      deleteConfirm: 'Delete',
-      deleteCancel: 'Cancel',
       deleted: (count: number) => (count === 1 ? '1 championship deleted.' : `${count} championships deleted.`),
     },
     detail: {
@@ -1230,13 +1228,9 @@ export const en: Messages = {
       selectionHint: 'Right-click a crew to select or deselect it.',
       selectedLabel: 'Selected',
       selectedCount: (selectedCount: number) => (selectedCount === 1 ? '1 crew selected' : `${selectedCount} crews selected`),
-      deleteSelected: 'Delete',
-      deleting: 'Deleting…',
       deleteTitle: (selectedCount: number) => (selectedCount === 1 ? 'Delete 1 crew?' : `Delete ${selectedCount} crews?`),
       deleteDescription: (crewList: string) => `This will delete ${crewList}. This can't be undone.`,
       otherCrews: (otherCount: number) => (otherCount === 1 ? 'one other crew' : `${otherCount} other crews`),
-      deleteConfirm: 'Delete',
-      deleteCancel: 'Cancel',
       deleted: (deletedCount: number) => (deletedCount === 1 ? '1 crew deleted.' : `${deletedCount} crews deleted.`),
     },
     detail: {

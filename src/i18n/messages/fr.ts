@@ -93,6 +93,8 @@ export const fr: Messages = {
     greetings: FRENCH_GREETINGS,
   },
   common: {
+    /** Barra sotto gli elenchi con righe selezionate: «Elimina» con conferma. */
+    selectionDelete: { deleteLabel: 'Supprimer', deletingLabel: 'Suppression en cours…', confirmLabel: 'Supprimer', cancelLabel: 'Annuler' },
     /** Dettaglio tecnico aggiunto a un errore imprevisto del server. */
     errorDetail: (detail: string) => `(détail : ${detail})`,
     timeField: { hours: 'Heures', minutes: 'Minutes', dayPeriod: 'AM/PM' },
@@ -1188,14 +1190,10 @@ export const fr: Messages = {
       selectionHint: 'Clic droit sur un championnat pour le sélectionner ou le désélectionner.',
       selectedLabel: 'Sélectionné',
       selectedCount: (count: number) => (count === 1 ? '1 championnat sélectionné' : `${count} championnats sélectionnés`),
-      deleteSelected: 'Supprimer',
-      deleting: 'Suppression en cours…',
       deleteTitle: (count: number) => (count === 1 ? 'Supprimer 1 championnat ?' : `Supprimer ${count} championnats ?`),
       deleteDescription: (list: string) =>
         `${list} seront supprimés. Les équipages liés perdent le championnat (ceux qui n’en ont pas d’autre restent sans). Un championnat avec des courses enregistrées ne peut pas être supprimé. Cette opération est irréversible.`,
       otherChampionships: (count: number) => (count === 1 ? 'un autre championnat' : `${count} autres championnats`),
-      deleteConfirm: 'Supprimer',
-      deleteCancel: 'Annuler',
       deleted: (count: number) => (count === 1 ? '1 championnat supprimé.' : `${count} championnats supprimés.`),
     },
     detail: {
@@ -1270,14 +1268,10 @@ export const fr: Messages = {
       selectedLabel: 'Sélectionné',
       selectedCount: (selectedCount: number) =>
         selectedCount === 1 ? '1 équipage sélectionné' : `${selectedCount} équipages sélectionnés`,
-      deleteSelected: 'Supprimer',
-      deleting: 'Suppression…',
       deleteTitle: (selectedCount: number) =>
         selectedCount === 1 ? 'Supprimer 1 équipage ?' : `Supprimer ${selectedCount} équipages ?`,
       deleteDescription: (crewList: string) => `Seront supprimés : ${crewList}. Cette action est irréversible.`,
       otherCrews: (otherCount: number) => (otherCount === 1 ? 'un autre équipage' : `${otherCount} autres équipages`),
-      deleteConfirm: 'Supprimer',
-      deleteCancel: 'Annuler',
       deleted: (deletedCount: number) =>
         deletedCount === 1 ? '1 équipage supprimé.' : `${deletedCount} équipages supprimés.`,
     },
