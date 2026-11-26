@@ -1,6 +1,6 @@
 import { readCarSourceMatches } from '../../../shared/carRules';
 import { fieldsOf } from '../../../shared/valueRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
@@ -27,11 +27,9 @@ import { fetchBopCars, fetchOfficialCars } from './carSources';
 export function createCarHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord, fetchSource: SourceFetch = defaultSourceFetch) {
   return {
     /** GET /cars */
-    async listCars(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    listCars: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { cars: await listCars(env.CREWS_DB) });
-    },
+    }),
 
     /**
      * POST /cars/refresh con { matches?: [{ officialId, bopKey }], apply?: boolean, refetch?: boolean } — unisce le due
@@ -41,9 +39,7 @@ export function createCarHandlers(checkMembership: MembershipChecker = checkMemb
      * ricalcolo dell'anteprima e salvataggio le riusano, così usano gli stessi dati visti nell'anteprima e restano
      * leggeri (i Worker hanno un limite di tempo di calcolo per richiesta).
      */
-    async refreshCars(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    refreshCars: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env): Promise<Response> => {
       const body = await readJsonBody(request);
       const candidate = fieldsOf(body);
       const requestedMatches = readCarSourceMatches(candidate.matches);
@@ -75,6 +71,6 @@ export function createCarHandlers(checkMembership: MembershipChecker = checkMemb
         throw applyError;
       }
       return jsonResponse(200, { preview, cars: await listCars(env.CREWS_DB) });
-    },
+    }),
   };
 }

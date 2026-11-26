@@ -10,7 +10,7 @@ import {
   validateProtestReview,
   youtubeVideoIdFrom,
 } from '../../../shared/protestRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { Env, VideoBucket } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
@@ -188,28 +188,20 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
       return jsonResponse(200, { protest: await findProtestVisibleTo(env.CREWS_DB, protestId, viewerOf(member)) });
     },
 
-    async listProtests(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
-      if (authorization instanceof Response) return authorization;
+    listProtests: withAccess(checkMembership, 'stewards', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { protests: await listProtests(env.CREWS_DB) });
-    },
+    }),
 
-    async getProtest(request: Request, env: Env, protestId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
-      if (authorization instanceof Response) return authorization;
+    getProtest: withAccess(checkMembership, 'stewards', async (_authorization, _request: Request, env: Env, protestId: number): Promise<Response> => {
       const protest = await findProtest(env.CREWS_DB, protestId);
       return protest ? jsonResponse(200, { protest }) : errorResponse(404, 'not-found');
-    },
+    }),
 
-    async getVideo(request: Request, env: Env, protestId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
-      if (authorization instanceof Response) return authorization;
+    getVideo: withAccess(checkMembership, 'stewards', async (_authorization, _request: Request, env: Env, protestId: number): Promise<Response> => {
       return videoResponse(env.PROTEST_VIDEOS, await findProtestVideo(env.CREWS_DB, protestId));
-    },
+    }),
 
-    async reviewProtest(request: Request, env: Env, protestId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
-      if (authorization instanceof Response) return authorization;
+    reviewProtest: withAccess(checkMembership, 'stewards', async (authorization, request: Request, env: Env, protestId: number): Promise<Response> => {
       const protest = await findProtest(env.CREWS_DB, protestId);
       if (!protest) return errorResponse(404, 'not-found');
       if (protest.status !== 'open') return errorResponse(409, 'protest-already-reviewed');
@@ -239,6 +231,6 @@ export function createProtestHandlers(checkMembership: MembershipChecker = check
         throw penaltyError;
       }
       return jsonResponse(200, { protest: await findProtest(env.CREWS_DB, protestId) });
-    },
+    }),
   };
 }

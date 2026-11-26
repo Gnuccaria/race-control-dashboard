@@ -1,5 +1,5 @@
 import { readWeatherPattern } from '../../../shared/weatherRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
@@ -13,18 +13,14 @@ const MAX_WEATHER_BODY_BYTES = 8_192;
 export function createWeatherHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord) {
   return {
     /** GET /races/:id/weather — { weather: { stintCount, pattern } } */
-    async getWeather(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    getWeather: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env, raceId: number): Promise<Response> => {
       const race = await findRaceSummaryById(env.CREWS_DB, raceId);
       if (!race) return errorResponse(404, 'not-found');
       return jsonResponse(200, { weather: await findRaceWeather(env.CREWS_DB, race) });
-    },
+    }),
 
     /** PUT /races/:id/weather con { pattern } — qualifica (2 slot) e ogni stint della gara (9 slot), tutti compilati. */
-    async saveWeather(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
-      if (authorization instanceof Response) return authorization;
+    saveWeather: withAccess(checkMembership, 'raceControl', async (authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       const race = await findRaceSummaryById(env.CREWS_DB, raceId);
       if (!race) return errorResponse(404, 'not-found');
       const body = (await readJsonBody(request, MAX_WEATHER_BODY_BYTES)) as { pattern?: unknown } | undefined;
@@ -34,6 +30,6 @@ export function createWeatherHandlers(checkMembership: MembershipChecker = check
       if (!pattern) return errorResponse(422, 'invalid-weather', { stintCount: weather.stintCount });
       await saveRaceWeather(env.CREWS_DB, raceId, pattern, authorization.discordUserId);
       return jsonResponse(200, { weather: { stintCount: weather.stintCount, pattern } });
-    },
+    }),
   };
 }

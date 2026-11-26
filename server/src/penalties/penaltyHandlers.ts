@@ -1,5 +1,5 @@
 import { type PenaltyDraft, type SavedPenalty, validatePenaltyDraft } from '../../../shared/penaltyRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
@@ -59,65 +59,49 @@ async function englishTextAfterUpdate(env: Env, saved: SavedPenalty, penalty: Pe
 export function createPenaltyHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord) {
   return {
     /** GET /races/:raceId/penalties */
-    async listPenalties(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    listPenalties: withAccess(checkMembership, 'organization', async (_authorization, _request: Request, env: Env, raceId: number): Promise<Response> => {
       if (!(await findRaceSummaryById(env.CREWS_DB, raceId))) return errorResponse(404, 'not-found');
       return jsonResponse(200, { penalties: await listPenalties(env.CREWS_DB, raceId) });
-    },
+    }),
 
     /** POST /races/:raceId/penalties */
-    async createPenalty(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    createPenalty: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       const race = await findRaceSummaryById(env.CREWS_DB, raceId);
       if (!race) return errorResponse(404, 'not-found');
       const reading = await readPenaltyDraft(request, env.CREWS_DB, race.championship);
       if ('errorResponse' in reading) return reading.errorResponse;
       const english = await translateAutomatically(env, reading.penalty);
       return jsonResponse(201, { penalty: await insertPenalty(env.CREWS_DB, raceId, reading.penalty, english, authorization.discordUserId) });
-    },
+    }),
 
     /** DELETE /races/:raceId/penalties con { "ids": [...] } */
-    async deletePenalties(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    deletePenalties: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       const penaltyIds = readIdList(await readJsonBody(request));
       if (!penaltyIds) return errorResponse(400, 'invalid-request');
       return jsonResponse(200, { deletedCount: await deletePenalties(env.CREWS_DB, raceId, penaltyIds) });
-    },
+    }),
 
     /**
      * GET /races/:raceId/reprimands[?before=penaltyId] — per ogni vettura, quante reprimende ha già prima di questa
      * penalità (o prima di una nuova): il form mostra così quale reprimenda sarebbe (1ª, 2ª o 3ª del ciclo).
      */
-    async countReprimands(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    countReprimands: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       if (!(await findRaceSummaryById(env.CREWS_DB, raceId))) return errorResponse(404, 'not-found');
 
       const beforeText = new URL(request.url).searchParams.get('before');
       if (beforeText !== null && !/^\d{1,9}$/.test(beforeText)) return errorResponse(400, 'invalid-request');
       const counts = await countReprimandsBefore(env.CREWS_DB, raceId, beforeText === null ? null : Number(beforeText));
       return jsonResponse(200, { counts: [...counts].map(([crewId, count]) => ({ crewId, count })) });
-    },
+    }),
 
     /** GET /races/:raceId/penalties/:penaltyId */
-    async getPenalty(request: Request, env: Env, raceId: number, penaltyId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    getPenalty: withAccess(checkMembership, 'organization', async (_authorization, _request: Request, env: Env, raceId: number, penaltyId: number): Promise<Response> => {
       const penalty = await findPenalty(env.CREWS_DB, raceId, penaltyId);
       return penalty ? jsonResponse(200, { penalty }) : errorResponse(404, 'not-found');
-    },
+    }),
 
     /** PUT /races/:raceId/penalties/:penaltyId */
-    async updatePenalty(request: Request, env: Env, raceId: number, penaltyId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    updatePenalty: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, raceId: number, penaltyId: number): Promise<Response> => {
       const race = await findRaceSummaryById(env.CREWS_DB, raceId);
       const saved = race ? await findPenalty(env.CREWS_DB, raceId, penaltyId) : null;
       if (!race || !saved) return errorResponse(404, 'not-found');
@@ -127,6 +111,6 @@ export function createPenaltyHandlers(checkMembership: MembershipChecker = check
       const english = await englishTextAfterUpdate(env, saved, reading.penalty);
       const savedPenalty = await updatePenalty(env.CREWS_DB, raceId, penaltyId, reading.penalty, english);
       return savedPenalty ? jsonResponse(200, { penalty: savedPenalty }) : errorResponse(404, 'not-found');
-    },
+    }),
   };
 }

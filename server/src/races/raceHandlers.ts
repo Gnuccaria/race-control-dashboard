@@ -2,7 +2,7 @@ import { driverSwapCountOf } from '../../../shared/championshipRules';
 import { readDriverSwaps } from '../../../shared/driverSwapRules';
 import { type RaceDraft, resolveResultCars, type SavedRaceResult, validateRaceDraft } from '../../../shared/raceRules';
 import type { SavedQualifyingEntry } from '../../../shared/qualifyingRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
@@ -83,26 +83,18 @@ async function readRaceDraft(request: Request, database: SqlDatabase, excludedRa
 export function createRaceHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord) {
   return {
     /** GET /races — tutte le gare, dalle più recenti. */
-    async listRaces(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    listRaces: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { races: await listRaces(env.CREWS_DB) });
-    },
+    }),
 
     /** GET /races/:id — gara con ordine di arrivo. */
-    async getRace(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
-
+    getRace: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env, raceId: number): Promise<Response> => {
       const race = await findRaceById(env.CREWS_DB, raceId);
       return race ? jsonResponse(200, { race }) : errorResponse(404, 'not-found');
-    },
+    }),
 
     /** POST /races */
-    async createRace(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    createRace: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env): Promise<Response> => {
       const reading = await readRaceDraft(request, env.CREWS_DB);
       if ('errorResponse' in reading) return reading.errorResponse;
 
@@ -113,13 +105,10 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
         if (!isUniqueConstraintError(insertError)) throw insertError;
         return errorResponse(409, 'duplicate-race-round');
       }
-    },
+    }),
 
     /** PUT /races/:id — sostituisce dati e ordine di arrivo (Organizzazione); i cambi pilota restano quelli salvati. */
-    async updateRace(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    updateRace: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       if (!(await findRaceById(env.CREWS_DB, raceId))) return errorResponse(404, 'not-found');
       const reading = await readRaceDraft(request, env.CREWS_DB, raceId);
       if ('errorResponse' in reading) return reading.errorResponse;
@@ -131,16 +120,13 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
         if (!isUniqueConstraintError(updateError)) throw updateError;
         return errorResponse(409, 'duplicate-race-round');
       }
-    },
+    }),
 
     /**
      * PUT /races/:id/driver-swaps con { driverSwaps } — solo i cambi pilota di una gara già creata (Commissari
      * Sportivi): stesse regole della gara intera (numero di cambi dagli stint della durata, equipaggi del campionato).
      */
-    async updateDriverSwaps(request: Request, env: Env, raceId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'stewards');
-      if (authorization instanceof Response) return authorization;
-
+    updateDriverSwaps: withAccess(checkMembership, 'stewards', async (_authorization, request: Request, env: Env, raceId: number): Promise<Response> => {
       const race = await findRaceById(env.CREWS_DB, raceId);
       if (!race) return errorResponse(404, 'not-found');
       const body = (await readJsonBody(request, MAX_RACE_BODY_BYTES)) as { driverSwaps?: unknown } | undefined;
@@ -151,17 +137,14 @@ export function createRaceHandlers(checkMembership: MembershipChecker = checkMem
       }
       const savedRace = await replaceDriverSwaps(env.CREWS_DB, raceId, driverSwaps);
       return savedRace ? jsonResponse(200, { race: savedRace }) : errorResponse(404, 'not-found');
-    },
+    }),
 
     /** DELETE /races con { "ids": [...] } — elimina le gare selezionate con le loro classifiche. */
-    async deleteRaces(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    deleteRaces: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env): Promise<Response> => {
       const raceIds = readIdList(await readJsonBody(request));
       if (!raceIds) return errorResponse(400, 'invalid-request');
       return jsonResponse(200, { deletedCount: await deleteRaces(env.CREWS_DB, raceIds) });
-    },
+    }),
   };
 }
 

@@ -1,5 +1,5 @@
 import { type ChampionshipDraft, validateChampionshipDraft } from '../../../shared/championshipRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import { findExistingCarIds } from '../cars/carRepository';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
 import type { Env } from '../env';
@@ -40,24 +40,18 @@ async function readChampionshipDraft(request: Request, database: SqlDatabase): P
 export function createChampionshipHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord) {
   return {
     /** GET /championships — in ordine alfabetico. */
-    async listChampionships(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    listChampionships: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { championships: await listChampionships(env.CREWS_DB) });
-    },
+    }),
 
     /** GET /championships/:id */
-    async getChampionship(request: Request, env: Env, championshipId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    getChampionship: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env, championshipId: number): Promise<Response> => {
       const championship = await findChampionshipById(env.CREWS_DB, championshipId);
       return championship ? jsonResponse(200, { championship }) : errorResponse(404, 'not-found');
-    },
+    }),
 
     /** POST /championships — il nome deve essere unico. */
-    async createChampionship(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    createChampionship: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env): Promise<Response> => {
       const reading = await readChampionshipDraft(request, env.CREWS_DB);
       if ('errorResponse' in reading) return reading.errorResponse;
       if (await isChampionshipNameTaken(env.CREWS_DB, reading.championship.name)) return errorResponse(409, 'duplicate-championship-name');
@@ -67,16 +61,14 @@ export function createChampionshipHandlers(checkMembership: MembershipChecker = 
         if (!isUniqueConstraintError(insertError)) throw insertError;
         return errorResponse(409, 'duplicate-championship-name');
       }
-    },
+    }),
 
     /**
      * PUT /championships/:id — il nome resta unico e passa a gare ed equipaggi collegati. Una durata usata da qualche
      * gara non si può togliere né cambiare di stint (cambierebbero i cambi pilota già salvati); una vettura usata
      * da almeno un equipaggio del campionato non si può togliere.
      */
-    async updateChampionship(request: Request, env: Env, championshipId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    updateChampionship: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, championshipId: number): Promise<Response> => {
       const reading = await readChampionshipDraft(request, env.CREWS_DB);
       if ('errorResponse' in reading) return reading.errorResponse;
       const previous = await findChampionshipById(env.CREWS_DB, championshipId);
@@ -101,15 +93,13 @@ export function createChampionshipHandlers(checkMembership: MembershipChecker = 
         if (!isUniqueConstraintError(updateError)) throw updateError;
         return errorResponse(409, 'duplicate-championship-name');
       }
-    },
+    }),
 
     /**
      * DELETE /championships con { "ids": [...] } — tutti o nessuno: non si elimina un campionato con gare salvate.
      * Gli equipaggi collegati perdono il campionato (chi non ne ha altri resta senza).
      */
-    async deleteChampionships(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    deleteChampionships: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env): Promise<Response> => {
       const championshipIds = readIdList(await readJsonBody(request));
       if (!championshipIds) return errorResponse(400, 'invalid-request');
       const championships = (await Promise.all(championshipIds.map((championshipId) => findChampionshipById(env.CREWS_DB, championshipId)))).filter(
@@ -120,6 +110,6 @@ export function createChampionshipHandlers(checkMembership: MembershipChecker = 
       }
       await deleteChampionships(env.CREWS_DB, championships);
       return jsonResponse(200, { deletedCount: championships.length });
-    },
+    }),
   };
 }

@@ -5,7 +5,7 @@ import {
   type TicketCrewProblem,
   validateDisconnectionTicketDraft,
 } from '../../../shared/disconnectionTicketRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { readJsonBody } from '../http/readJsonBody';
@@ -48,19 +48,15 @@ export function createTicketHandlers(checkMembership: MembershipChecker = checkM
       return jsonResponse(200, await readTicketAvailability(env.CREWS_DB));
     },
 
-    async getAvailability(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
-      if (authorization instanceof Response) return authorization;
+    getAvailability: withAccess(checkMembership, 'raceControl', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, await readTicketAvailability(env.CREWS_DB));
-    },
+    }),
 
-    async saveAvailability(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
-      if (authorization instanceof Response) return authorization;
+    saveAvailability: withAccess(checkMembership, 'raceControl', async (authorization, request: Request, env: Env): Promise<Response> => {
       const availability = readTicketAvailabilityBody(await readJsonBody(request).catch(() => null));
       if (!availability) return errorResponse(422, 'invalid-request');
       return jsonResponse(200, await saveTicketAvailability(env.CREWS_DB, availability, authorization.discordUserId));
-    },
+    }),
 
     async getMyCrew(request: Request, env: Env): Promise<Response> {
       const member = await authorizeSiteMember(discordFetch, env, request);
@@ -103,15 +99,11 @@ export function createTicketHandlers(checkMembership: MembershipChecker = checkM
       return ticket ? jsonResponse(200, { ticket }) : errorResponse(404, 'not-found');
     },
 
-    async listOpenTickets(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
-      if (authorization instanceof Response) return authorization;
+    listOpenTickets: withAccess(checkMembership, 'raceControl', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { tickets: await listOpenTickets(env.CREWS_DB) });
-    },
+    }),
 
-    async submitResult(request: Request, env: Env, ticketId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'raceControl');
-      if (authorization instanceof Response) return authorization;
+    submitResult: withAccess(checkMembership, 'raceControl', async (authorization, request: Request, env: Env, ticketId: number): Promise<Response> => {
       const body = (await readJsonBody(request)) as { details?: unknown } | undefined;
       const details = readTicketResultDetails(body?.details);
       if (!details) return errorResponse(422, 'invalid-ticket', { details: 'invalid' });
@@ -123,6 +115,6 @@ export function createTicketHandlers(checkMembership: MembershipChecker = checkM
       const target = await findTicketNoticeTarget(env.CREWS_DB, ticketId);
       const discordMessage = target ? await postTicketResultToDiscord(discordFetch, env, target, details, new URL(request.url).origin) : 'failed';
       return jsonResponse(200, { discordMessage });
-    },
+    }),
   };
 }

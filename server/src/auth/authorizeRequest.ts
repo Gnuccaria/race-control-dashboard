@@ -53,3 +53,20 @@ export async function authorizeRequest(
   if (!hasAccess(membership.access, requiredAccess)) return errorResponse(403, 'missing-role');
   return { discordUserId: membership.discordUserId };
 }
+
+/**
+ * Gestore di un endpoint dell'app protetto da ruolo: controlla prima utente e ruolo (authorizeRequest) e solo allora
+ * chiama handle con l'utente verificato; altrimenti risponde con l'errore. Gli altri argomenti (id dall'indirizzo)
+ * passano invariati.
+ */
+export function withAccess<Args extends unknown[]>(
+  checkMembership: MembershipChecker,
+  requiredAccess: RequiredAccess,
+  handle: (authorization: AuthorizedUser, request: Request, env: Env, ...args: Args) => Promise<Response>,
+): (request: Request, env: Env, ...args: Args) => Promise<Response> {
+  return async (request, env, ...args) => {
+    const authorization = await authorizeRequest(request, env, checkMembership, requiredAccess);
+    if (authorization instanceof Response) return authorization;
+    return handle(authorization, request, env, ...args);
+  };
+}

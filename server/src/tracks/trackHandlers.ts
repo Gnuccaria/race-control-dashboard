@@ -1,6 +1,6 @@
 import { readLegacyTrackMatches, readTrackMapMatches } from '../../../shared/trackRules';
 import { fieldsOf } from '../../../shared/valueRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import type { Env } from '../env';
 import { errorResponse, jsonResponse } from '../http/jsonResponse';
 import { MAX_CHAMPIONSHIP_BODY_BYTES, readJsonBody } from '../http/readJsonBody';
@@ -25,11 +25,9 @@ import { attachTrackMaps, fetchTrackMaps, fetchWikiTracks } from './trackSources
 export function createTrackHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord, fetchSource: SourceFetch = defaultSourceFetch) {
   return {
     /** GET /tracks — tutte le configurazioni in ordine alfabetico. */
-    async listTracks(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    listTracks: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { tracks: await listTracks(env.CREWS_DB) });
-    },
+    }),
 
     /**
      * POST /tracks/refresh con { mapMatches?: [{ sourceKey, mapFile }], legacyMatches?: [{ trackId, sourceKey }],
@@ -37,9 +35,7 @@ export function createTrackHandlers(checkMembership: MembershipChecker = checkMe
      * l'anteprima; con apply: true salva anche (le gare restano collegate) e ricorda le mappe scelte a mano.
      * Le fonti si scaricano solo con refetch (di default sì) e restano salvate: ricalcolo e salvataggio le riusano.
      */
-    async refreshTracks(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
+    refreshTracks: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env): Promise<Response> => {
       const body = await readJsonBody(request, MAX_CHAMPIONSHIP_BODY_BYTES);
       const candidate = fieldsOf(body);
       const mapMatches = readTrackMapMatches(candidate.mapMatches);
@@ -66,6 +62,6 @@ export function createTrackHandlers(checkMembership: MembershipChecker = checkMe
 
       await applyTrackRefresh(env.CREWS_DB, plan, mapMatches);
       return jsonResponse(200, { preview, tracks: await listTracks(env.CREWS_DB) });
-    },
+    }),
   };
 }

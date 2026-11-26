@@ -1,6 +1,6 @@
 import { findChampionship } from '../../../shared/championshipRules';
 import { type CrewDraft, sortCrewChampionships, validateCrewDraft } from '../../../shared/crewRules';
-import { authorizeRequest, checkMembershipWithDiscord, type MembershipChecker } from '../auth/authorizeRequest';
+import { checkMembershipWithDiscord, type MembershipChecker, withAccess } from '../auth/authorizeRequest';
 import { isCarAvailableIn } from '../cars/carRepository';
 import { listChampionships } from '../championships/championshipRepository';
 import { isUniqueConstraintError, type SqlDatabase } from '../database/sqlDatabase';
@@ -56,26 +56,18 @@ async function readCrewDraft(request: Request, database: SqlDatabase): Promise<C
 export function createCrewHandlers(checkMembership: MembershipChecker = checkMembershipWithDiscord) {
   return {
     /** GET /crews — tutti gli equipaggi, per numero crescente. */
-    async listCrews(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
+    listCrews: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env): Promise<Response> => {
       return jsonResponse(200, { crews: await listCrews(env.CREWS_DB) });
-    },
+    }),
 
     /** GET /crews/:id */
-    async getCrew(request: Request, env: Env, crewId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership, 'any');
-      if (authorization instanceof Response) return authorization;
-
+    getCrew: withAccess(checkMembership, 'any', async (_authorization, _request: Request, env: Env, crewId: number): Promise<Response> => {
       const crew = await findCrewById(env.CREWS_DB, crewId);
       return crew ? jsonResponse(200, { crew }) : errorResponse(404, 'not-found');
-    },
+    }),
 
     /** POST /crews — salva il nuovo equipaggio insieme a chi l'ha creato. */
-    async createCrew(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    createCrew: withAccess(checkMembership, 'organization', async (authorization, request: Request, env: Env): Promise<Response> => {
       const reading = await readCrewDraft(request, env.CREWS_DB);
       if ('errorResponse' in reading) return reading.errorResponse;
 
@@ -90,13 +82,10 @@ export function createCrewHandlers(checkMembership: MembershipChecker = checkMem
         if (!isUniqueConstraintError(insertError)) throw insertError;
         return conflictResponse((await findCrewConflict(env.CREWS_DB, reading.crew)) ?? 'number');
       }
-    },
+    }),
 
     /** PUT /crews/:id — numero e nome devono restare unici, escluso l'equipaggio stesso. */
-    async updateCrew(request: Request, env: Env, crewId: number): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    updateCrew: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env, crewId: number): Promise<Response> => {
       const reading = await readCrewDraft(request, env.CREWS_DB);
       if ('errorResponse' in reading) return reading.errorResponse;
 
@@ -112,13 +101,10 @@ export function createCrewHandlers(checkMembership: MembershipChecker = checkMem
         if (!isUniqueConstraintError(updateError)) throw updateError;
         return conflictResponse((await findCrewConflict(env.CREWS_DB, reading.crew, crewId)) ?? 'number');
       }
-    },
+    }),
 
     /** DELETE /crews con { "ids": [...] } — elimina gli equipaggi selezionati, tutti insieme. */
-    async deleteCrews(request: Request, env: Env): Promise<Response> {
-      const authorization = await authorizeRequest(request, env, checkMembership);
-      if (authorization instanceof Response) return authorization;
-
+    deleteCrews: withAccess(checkMembership, 'organization', async (_authorization, request: Request, env: Env): Promise<Response> => {
       const crewIds = readIdList(await readJsonBody(request));
       if (!crewIds) return errorResponse(400, 'invalid-request');
 
@@ -126,7 +112,7 @@ export function createCrewHandlers(checkMembership: MembershipChecker = checkMem
       if ((await countCrewsInRaceResults(env.CREWS_DB, crewIds)) > 0) return errorResponse(409, 'crew-in-race-results');
 
       return jsonResponse(200, { deletedCount: await deleteCrews(env.CREWS_DB, crewIds) });
-    },
+    }),
   };
 }
 
