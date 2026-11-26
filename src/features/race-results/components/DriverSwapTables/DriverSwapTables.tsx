@@ -10,8 +10,8 @@ import { useI18n } from '@/i18n/useI18n';
 import { joinClassNames } from '@/lib/joinClassNames';
 import type { RaceDraftState } from '../../hooks/useRaceDraft';
 import { EMPTY_DRIVER_SWAP_ROW, getDriverSwapRow, invalidCellKey } from '../../model/driverSwapDraft';
+import { crewsQueryNotice } from '../../model/crewsQueryNotice';
 import styles from './DriverSwapTables.module.css';
-import { serverErrorText } from '@/services/serverErrorText';
 
 const TIME_PLACEHOLDER = 'HH:MM:SS.DDD';
 
@@ -34,8 +34,8 @@ export function DriverSwapTables({ draft, crewsQuery, isReadOnly }: DriverSwapTa
   const [selectedSwapIndex, setSelectedSwapIndex] = useState(0);
   const { values, championshipCrews, swapCount, driverSwapSheet } = draft;
 
-  if (crewsQuery.status === 'loading') return <p className={styles.notice}>{formTexts.loadingCrews}</p>;
-  if (crewsQuery.status === 'failed') return <p className={styles.notice}>{serverErrorText(messages, crewsQuery.errorKind)}</p>;
+  const crewsNotice = crewsQueryNotice(crewsQuery, messages);
+  if (crewsNotice !== null) return <p className={styles.notice}>{crewsNotice}</p>;
   if (values.championship === '') return <p className={styles.notice}>{texts.noChampionship}</p>;
   if (championshipCrews.length === 0) return <p className={styles.notice}>{formTexts.noCrewsInChampionship}</p>;
 
