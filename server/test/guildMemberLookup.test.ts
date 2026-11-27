@@ -5,7 +5,7 @@ import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
 import { asOurApplication, createTestEnv } from './support/testApp';
 
 const USER = { id: '80351110224678912', username: 'niko_rc', global_name: 'Niko', avatar: null };
-const SETTINGS = { applicationId: 'app-1', guildId: 'guild-1', botToken: 'bot-token' };
+const SETTINGS = { applicationId: 'site-app-1', guildId: 'guild-1', botToken: 'bot-token' };
 
 /**
  * Discord simulato come nei log di produzione: /users/@me/guilds/{server}/member risponde 429 (limite per utente),
@@ -37,7 +37,7 @@ function discordWithUserLimitReached(options: { botStatus?: number; userStatus?:
     }
     return new Response('{}', { status: 404 });
   }) as typeof fetch;
-  return { calls, discordFetch: asOurApplication(discordFetch) };
+  return { calls, discordFetch: asOurApplication(discordFetch, 'site-app-1') };
 }
 
 describe('profilo e ruoli senza il limite stretto per utente', () => {
@@ -62,7 +62,7 @@ describe('profilo e ruoli senza il limite stretto per utente', () => {
     expect(await lookupGuildMember(discordWithUserLimitReached({ botStatus: 403 }).discordFetch, SETTINGS, 'access-1')).toEqual({ status: 'unavailable' });
     // Senza bot configurato si usa direttamente il metodo di prima.
     const withoutBot = discordWithUserLimitReached();
-    expect(await lookupGuildMember(withoutBot.discordFetch, { applicationId: 'app-1', guildId: 'guild-1' }, 'access-1')).toEqual({ status: 'unavailable' });
+    expect(await lookupGuildMember(withoutBot.discordFetch, { applicationId: 'site-app-1', guildId: 'guild-1' }, 'access-1')).toEqual({ status: 'unavailable' });
     expect(withoutBot.calls).toEqual(['/users/@me/guilds/guild-1/member']);
   });
 

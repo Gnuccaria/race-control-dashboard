@@ -54,7 +54,7 @@ describe('ticket di disconnessione', () => {
     if (user) return new Response(JSON.stringify({ nick: null, roles: user.roles, user: { ...user, avatar: null } }), { status: 200 });
     if (authorization === 'Bearer site-outsider') return new Response('{}', { status: 404 });
     return new Response('{}', { status: 401 });
-  }) as typeof fetch);
+  }) as typeof fetch, 'site-app-1');
 
   const siteRequest = async (method: 'GET' | 'POST', path: string, token: string, body?: unknown) => {
     const response = await handleRequest(

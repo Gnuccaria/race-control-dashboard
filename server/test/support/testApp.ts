@@ -12,6 +12,7 @@ export function createTestEnv(): Env {
   return {
     CREWS_DB: createInMemorySqlDatabase(),
     DISCORD_APPLICATION_ID: 'app-1',
+    DISCORD_SITE_APPLICATION_ID: 'site-app-1',
     DISCORD_GUILD_ID: 'guild-1',
     DISCORD_ORGANIZATION_ROLE_ID: 'role-organization',
     DISCORD_REQUIRED_ROLE_ID: 'role-race-control',

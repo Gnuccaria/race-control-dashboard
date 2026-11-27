@@ -19,7 +19,7 @@ Si entra nell'app con il proprio account **Discord**: la password la vede solo D
 
 Le sezioni di un altro ruolo non compaiono, e anche aprendo il loro indirizzo si vede "Pagina non trovata".
 Con **Ricorda l'accesso** l'app ti riconosce al prossimo avvio e ricontrolla ogni volta il ruolo: chi lo perde non entra più. **Esci**, nella tendina in alto a destra, chiude la sessione.
-Il server accetta solo gli accessi fatti dall'app o dal sito della lega: un accesso Discord concesso a un'altra applicazione non vale, anche se l'account ha il ruolo.
+App e sito usano due applicazioni Discord separate: l'accesso fatto sul sito vale solo per il sito, quello dell'app solo per l'app. Il server accetta solo questi accessi: un accesso Discord concesso a un'altra applicazione non vale, anche se l'account ha il ruolo.
 
 ## L'app
 
@@ -116,7 +116,7 @@ Si apre nel browser, nella lingua del browser (italiano, inglese, francese o ted
   - **Gara** (la scheda iniziale): la classifica con vettura, giri, distacco e penalità (decisioni a tempo più cambi pilota, come nel referto). Per una gara non ancora disputata è vuota.
   - **Meteo**: il pattern meteo salvato in Crea pattern meteo, con la qualifica e una riga per stint; ogni slot mostra l'icona del meteo e il codice.
   - **Documentazione**: briefing pre-gara e referto di qualifica (non ancora disponibili) e **referto di gara**. Accanto a ogni documento ci sono "Visualizza" e il pulsante con l'icona per scaricare il PDF. "Visualizza" divide lo spazio: l'elenco si stringe a sinistra e a destra compare il PDF; aprendo un altro documento, il suo PDF prende il posto di quello aperto. Il referto è in italiano con il sito in italiano e in inglese con le altre lingue; la classifica ha nella colonna Leader la durata della gara per il primo e il distacco per gli altri, e le penalità comprendono in fondo quelle dei **cambi pilota** (una riga per vettura, con i secondi arrotondati per eccesso).
-- **Accesso con Discord**: basta far parte del server Discord della lega. L'equipaggio si riconosce dal ruolo Discord.
+- **Accesso con Discord**: basta far parte del server Discord della lega. L'equipaggio si riconosce dal ruolo Discord. Discord chiede di autorizzare **Race Control – Sito**, l'applicazione del sito, diversa da quella dell'app.
 - **Invia ticket di disconnessione** (quando la Direzione Gara ha aperto l'invio): posizione, distacco e giro della disconnessione. Il risultato arriva sulla pagina del ticket, che si aggiorna da sola. Al massimo 3 ticket in attesa a persona.
 - **Invia protesta**: la gara, tra quelle dei campionati del proprio equipaggio con una finestra delle proteste aperta (qualifiche o gara: lo decide l'orario di invio, e il menu lo indica accanto alla gara); lo stint (solo per le proteste di gara), giro, curva, gli altri equipaggi coinvolti, una descrizione e, se si vuole, un video (MP4, WebM o MOV, fino a 100 MB) o un link YouTube. Il video si può aggiungere anche dopo, entro 24 ore dall'invio. I video caricati si cancellano dopo 30 giorni. Al massimo 10 proteste in 24 ore a persona.
 - La **campanella del sito** avvisa quando un ticket ha il risultato o una protesta è stata decisa.
@@ -159,6 +159,10 @@ npm run desktop:dev
 ```bash
 npm run desktop:build
 ```
+
+Discord: servono due applicazioni nel Developer Portal (https://discord.com/developers/applications), entrambe con **Public Client** attivo (nessun client secret):
+- quella dell'**app desktop**, con il reindirizzamento `http://127.0.0.1:47823/discord/callback` (ID in `src/config/discordConfig.ts` e `DISCORD_APPLICATION_ID` di `server/wrangler.jsonc`);
+- quella del **sito**, con i reindirizzamenti `https://<indirizzo del sito>/accesso/discord` e, per lo sviluppo, `http://localhost:5174/accesso/discord` (ID in `shared/siteAuth.ts` e `DISCORD_SITE_APPLICATION_ID` di `server/wrangler.jsonc`).
 
 Server e sito, dalla cartella `server`. Prima le migrazioni del database, poi la pubblicazione:
 

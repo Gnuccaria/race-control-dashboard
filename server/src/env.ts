@@ -4,8 +4,10 @@ import type { TranslationModel } from './translation/penaltyTranslation';
 /** Binding e variabili configurati in wrangler.jsonc. */
 export interface Env {
   readonly CREWS_DB: SqlDatabase;
-  /** ID dell'applicazione Discord (pubblico): serve all'accesso con Discord del sito. */
+  /** ID dell'applicazione Discord dell'app desktop (pubblico): gli endpoint dell'app accettano solo i suoi token. */
   readonly DISCORD_APPLICATION_ID: string;
+  /** ID dell'applicazione Discord del sito (pubblico): accesso dei piloti; gli endpoint /public/ accettano solo i suoi token. */
+  readonly DISCORD_SITE_APPLICATION_ID: string;
   readonly DISCORD_GUILD_ID: string;
   /** Ruolo Organizzazione: Gestisci campionato (equipaggi, gare, penalità). */
   readonly DISCORD_ORGANIZATION_ROLE_ID: string;

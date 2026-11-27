@@ -10,7 +10,7 @@ const USER = { id: '80351110224678912', username: 'niko_rc' };
 
 /**
  * Discord simulato: il token "token-ours" è della nostra applicazione, "token-foreign" di un'altra applicazione,
- * "token-few-scopes" della nostra ma senza guilds.members.read. Per tutti la lettura del membro andrebbe a buon fine
+ * "token-few-scopes" della nostra ma senza guilds.members.read, "token-site" dell'applicazione del sito. Per tutti la lettura del membro andrebbe a buon fine
  * con il ruolo Organizzazione: se il controllo mancasse, entrerebbero tutti.
  */
 function discord(oauthStatus = 200) {
@@ -21,7 +21,7 @@ function discord(oauthStatus = 200) {
     calls.push(url);
     if (url === '/oauth2/@me') {
       if (oauthStatus !== 200) return new Response('{}', { status: oauthStatus });
-      const application = token === 'token-foreign' ? 'app-altra' : 'app-1';
+      const application = token === 'token-foreign' ? 'app-altra' : token === 'token-site' ? 'site-app-1' : 'app-1';
       const scopes = token === 'token-few-scopes' ? ['identify'] : ['identify', 'guilds.members.read'];
       return new Response(JSON.stringify({ application: { id: application }, scopes, user: USER }), { status: 200 });
     }
@@ -62,11 +62,15 @@ describe('solo i token della nostra applicazione Discord', () => {
     expect(await checkDiscordMembership('token-down', SETTINGS, discord(503).discordFetch)).toEqual({ status: 'discord-unavailable' });
   });
 
-  it("sito: con un token di un'altra applicazione le richieste dei piloti rispondono 401", async () => {
+  it('app e sito hanno applicazioni separate: il token del sito non vale per l’app, quello dell’app non vale per il sito', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // Un pilota (o chi gli ha rubato il token dal browser) non entra negli strumenti degli ufficiali, anche con il ruolo.
+    expect(await checkDiscordMembership('token-site', SETTINGS, discord().discordFetch)).toEqual({ status: 'invalid-token' });
+
     const handleRequest = createApp(undefined, discord().discordFetch);
     const profile = (token: string) => handleRequest(new Request('https://race-control-api.test/public/discord/me', { headers: { Authorization: `Bearer ${token}` } }), createTestEnv());
+    expect((await profile('token-site')).status).toBe(200);
+    expect((await profile('token-ours')).status).toBe(401);
     expect((await profile('token-foreign')).status).toBe(401);
-    expect((await profile('token-ours')).status).toBe(200);
   });
 });

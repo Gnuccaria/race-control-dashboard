@@ -52,9 +52,10 @@
 		"binding": "AI"
 	},
 	"vars": {
-		// Stessi valori di src/config/discordConfig.ts nell'app: il server ricontrolla il ruolo (app) o la sola
+		// Stessi valori di src/config/discordConfig.ts (app) e di shared/siteAuth.ts (DISCORD_SITE_APPLICATION_ID, sito): il server ricontrolla il ruolo (app) o la sola
 		// appartenenza al server (accesso al sito).
 		"DISCORD_APPLICATION_ID": "1570595596836937748",
+		"DISCORD_SITE_APPLICATION_ID": "1575983133726089216",
 		"DISCORD_GUILD_ID": "1569698028938600458",
 		// Ruolo Organizzazione: Gestisci campionato nell'app (equipaggi, gare, penalità).
 		"DISCORD_ORGANIZATION_ROLE_ID": "1569700040602292346",

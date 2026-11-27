@@ -3,6 +3,13 @@
  * a differenza dell'app). Tipi condivisi tra il sito e il server, che fa da tramite verso Discord.
  */
 
+/**
+ * Applicazione Discord del sito, separata da quella dell'app desktop: i token dei piloti valgono solo sul sito, e un
+ * token rubato dal browser non dà accesso agli strumenti degli ufficiali. Deve coincidere con DISCORD_SITE_APPLICATION_ID
+ * del server (wrangler.jsonc). È un identificativo pubblico, non un segreto.
+ */
+export const SITE_DISCORD_APPLICATION_ID = '1575983133726089216';
+
 /** Percorso del sito a cui Discord rimanda dopo l'autorizzazione (va registrato nel Developer Portal). */
 export const SITE_DISCORD_CALLBACK_PATH = '/accesso/discord';
 

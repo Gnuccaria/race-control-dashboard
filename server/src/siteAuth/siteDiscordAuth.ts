@@ -8,7 +8,8 @@ import { lookupGuildMember } from '../discord/guildMemberLookup';
 /**
  * Accesso con Discord per il sito pubblico. Il server fa da tramite verso Discord (il browser non può chiamare
  * l'endpoint dei token per via del CORS) ma non conserva nulla: i token tornano al sito, che li tiene nel browser.
- * Flusso PKCE per client pubblici: nessun client secret.
+ * Flusso PKCE per client pubblici: nessun client secret. Usa l'applicazione Discord del sito (DISCORD_SITE_APPLICATION_ID),
+ * separata da quella dell'app desktop: i token dei piloti non valgono sugli endpoint degli ufficiali, e viceversa.
  * Requisito: far parte del server Discord della lega (DISCORD_GUILD_ID); il ruolo non serve.
  *
  *   POST /public/discord/session   { code, codeVerifier, redirectUri } → SiteSession
@@ -55,7 +56,7 @@ async function postToDiscord(discordFetch: DiscordFetch, env: Env, path: string,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ client_id: env.DISCORD_APPLICATION_ID, ...formFields }).toString(),
+        body: new URLSearchParams({ client_id: env.DISCORD_SITE_APPLICATION_ID, ...formFields }).toString(),
       },
       { maxWaitMs: 5000 },
     );
@@ -83,7 +84,7 @@ export interface SiteMember {
 }
 
 async function fetchSiteMemberFromDiscord(discordFetch: DiscordFetch, env: Env, accessToken: string): Promise<SiteMember> {
-  const lookup = await lookupGuildMember(discordFetch, { applicationId: env.DISCORD_APPLICATION_ID, guildId: env.DISCORD_GUILD_ID, botToken: env.DISCORD_BOT_TOKEN }, accessToken);
+  const lookup = await lookupGuildMember(discordFetch, { applicationId: env.DISCORD_SITE_APPLICATION_ID, guildId: env.DISCORD_GUILD_ID, botToken: env.DISCORD_BOT_TOKEN }, accessToken);
   if (lookup.status === 'invalid-token') throw new SiteAuthError(401, 'invalid-grant');
   if (lookup.status === 'not-member') throw new SiteAuthError(403, 'not-guild-member');
   if (lookup.status === 'unavailable') throw new SiteAuthError(503, 'discord-unavailable');

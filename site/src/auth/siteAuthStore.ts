@@ -1,6 +1,5 @@
-import { SITE_DISCORD_CALLBACK_PATH, SITE_DISCORD_SCOPES, type SiteSession, type SiteUserProfile } from '@shared/siteAuth';
+import { SITE_DISCORD_APPLICATION_ID, SITE_DISCORD_CALLBACK_PATH, SITE_DISCORD_SCOPES, type SiteSession, type SiteUserProfile } from '@shared/siteAuth';
 import { useSyncExternalStore } from 'react';
-import { DISCORD_CONFIG } from '@/config/discordConfig';
 import { createPkcePair, createRandomToken } from '@/features/auth/model/pkce';
 import { endSiteSession, fetchSiteProfile, refreshSiteSession, type SiteSignInErrorCode, startSiteSession } from './siteAuthApi';
 
@@ -123,7 +122,7 @@ export async function signInWithDiscord(returnTo = `${window.location.pathname}$
   const pendingSignIn: PendingSignIn = { state: createRandomToken(), codeVerifier, returnTo };
   writeStorage(sessionStorage, PENDING_STORAGE_KEY, pendingSignIn);
   const authorizeParameters = new URLSearchParams({
-    client_id: DISCORD_CONFIG.applicationId,
+    client_id: SITE_DISCORD_APPLICATION_ID,
     response_type: 'code',
     redirect_uri: redirectUri(),
     scope: SITE_DISCORD_SCOPES.join(' '),

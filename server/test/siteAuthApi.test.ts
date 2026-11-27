@@ -34,7 +34,7 @@ function fakeDiscord() {
     }
     return new Response('{}', { status: 500 });
   }) as typeof fetch;
-  return { calls, discordFetch: asOurApplication(discordFetch) };
+  return { calls, discordFetch: asOurApplication(discordFetch, 'site-app-1') };
 }
 
 const SITE = 'https://race-control-api.test';
@@ -69,7 +69,7 @@ describe('accesso al sito con Discord', () => {
 
     const tokenRequest = new URLSearchParams(discord.calls[0]?.body);
     expect(Object.fromEntries(tokenRequest)).toEqual({
-      client_id: 'app-1',
+      client_id: 'site-app-1',
       grant_type: 'authorization_code',
       code: 'code-member',
       redirect_uri: `${SITE}/accesso/discord`,
