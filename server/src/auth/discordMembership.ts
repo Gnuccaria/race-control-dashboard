@@ -23,6 +23,8 @@ export type MembershipCheck =
   | { readonly status: 'discord-unavailable' };
 
 interface MembershipSettings {
+  /** La nostra applicazione Discord: si accettano solo i suoi token. */
+  readonly applicationId: string;
   readonly guildId: string;
   /** Ruolo Organizzazione. */
   readonly organizationRoleId: string;
@@ -43,7 +45,7 @@ const verifiedMemberships = new Map<string, { readonly discordUserId: string; re
 
 export async function checkDiscordMembership(
   accessToken: string,
-  { guildId, organizationRoleId, raceControlRoleId, stewardsRoleId, botToken }: MembershipSettings,
+  { applicationId, guildId, organizationRoleId, raceControlRoleId, stewardsRoleId, botToken }: MembershipSettings,
   fetchFromDiscord: typeof fetch = fetch,
 ): Promise<MembershipCheck> {
   const tokenHash = await hashToken(accessToken);
@@ -52,7 +54,7 @@ export async function checkDiscordMembership(
     return { status: 'member-with-role', discordUserId: cachedMembership.discordUserId, access: cachedMembership.access };
   }
 
-  const lookup = await lookupGuildMember(fetchFromDiscord, { guildId, botToken }, accessToken);
+  const lookup = await lookupGuildMember(fetchFromDiscord, { applicationId, guildId, botToken }, accessToken);
   if (lookup.status === 'invalid-token') return { status: 'invalid-token' };
   if (lookup.status === 'not-member') return { status: 'missing-role' };
   if (lookup.status === 'unavailable') return { status: 'discord-unavailable' };

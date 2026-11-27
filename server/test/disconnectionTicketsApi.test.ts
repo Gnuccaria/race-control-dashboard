@@ -4,7 +4,7 @@ import { createApp } from '../src/app';
 import type { Env } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { createTestEnv, crewDetails, getPath, MEMBERSHIPS, sendJson } from './support/testApp';
+import { asOurApplication, createTestEnv, crewDetails, getPath, MEMBERSHIPS, sendJson } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
 const VEZ_ROLE = '1571641908688588963';
@@ -37,7 +37,7 @@ describe('ticket di disconnessione', () => {
   let channelMessages: { channelId: string; authorization: string | null; body: { content: string; allowed_mentions: unknown } }[];
   let channelStatus: number;
 
-  const discordFetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+  const discordFetch = asOurApplication((async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const url = String(input);
     const authorization = new Headers(init?.headers).get('Authorization');
     const channelMatch = /\/channels\/(\d+)\/messages$/.exec(url);
@@ -54,7 +54,7 @@ describe('ticket di disconnessione', () => {
     if (user) return new Response(JSON.stringify({ nick: null, roles: user.roles, user: { ...user, avatar: null } }), { status: 200 });
     if (authorization === 'Bearer site-outsider') return new Response('{}', { status: 404 });
     return new Response('{}', { status: 401 });
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   const siteRequest = async (method: 'GET' | 'POST', path: string, token: string, body?: unknown) => {
     const response = await handleRequest(

@@ -19,6 +19,7 @@ Si entra nell'app con il proprio account **Discord**: la password la vede solo D
 
 Le sezioni di un altro ruolo non compaiono, e anche aprendo il loro indirizzo si vede "Pagina non trovata".
 Con **Ricorda l'accesso** l'app ti riconosce al prossimo avvio e ricontrolla ogni volta il ruolo: chi lo perde non entra più. **Esci**, nella tendina in alto a destra, chiude la sessione.
+Il server accetta solo gli accessi fatti dall'app o dal sito della lega: un accesso Discord concesso a un'altra applicazione non vale, anche se l'account ha il ruolo.
 
 ## L'app
 

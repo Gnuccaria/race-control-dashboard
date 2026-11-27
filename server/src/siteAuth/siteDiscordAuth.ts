@@ -83,7 +83,7 @@ export interface SiteMember {
 }
 
 async function fetchSiteMemberFromDiscord(discordFetch: DiscordFetch, env: Env, accessToken: string): Promise<SiteMember> {
-  const lookup = await lookupGuildMember(discordFetch, { guildId: env.DISCORD_GUILD_ID, botToken: env.DISCORD_BOT_TOKEN }, accessToken);
+  const lookup = await lookupGuildMember(discordFetch, { applicationId: env.DISCORD_APPLICATION_ID, guildId: env.DISCORD_GUILD_ID, botToken: env.DISCORD_BOT_TOKEN }, accessToken);
   if (lookup.status === 'invalid-token') throw new SiteAuthError(401, 'invalid-grant');
   if (lookup.status === 'not-member') throw new SiteAuthError(403, 'not-guild-member');
   if (lookup.status === 'unavailable') throw new SiteAuthError(503, 'discord-unavailable');

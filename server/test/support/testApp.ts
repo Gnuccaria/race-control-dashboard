@@ -63,3 +63,14 @@ export const crewDetails = (carId = 1, championship: string = REQUIRED_DETAILS.c
 /** Rende un'auto disponibile anche in un altro campionato (le auto della migrazione sono solo del Cool1 FIE). */
 export const allowCarIn = (env: Env, carId: number, championship: string) =>
   env.CREWS_DB.prepare('INSERT OR IGNORE INTO car_championships (car_id, championship) VALUES (?, ?)').bind(carId, championship).run();
+
+/**
+ * Discord simulato: GET /oauth2/@me risponde che il token è della nostra applicazione (DISCORD_APPLICATION_ID dei test)
+ * con gli scope di app e sito; ogni altra richiesta passa al Discord simulato del test (che decide se il token vale).
+ */
+export function asOurApplication(discordFetch: typeof fetch, applicationId = 'app-1'): typeof fetch {
+  return ((input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+    String(input).endsWith('/oauth2/@me')
+      ? Promise.resolve(new Response(JSON.stringify({ application: { id: applicationId }, scopes: ['identify', 'guilds.members.read'] }), { status: 200 }))
+      : discordFetch(input, init)) as typeof fetch;
+}

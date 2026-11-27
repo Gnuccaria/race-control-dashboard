@@ -6,6 +6,7 @@ export type MembershipChecker = (accessToken: string, env: Env) => Promise<Membe
 
 export const checkMembershipWithDiscord: MembershipChecker = (accessToken, env) =>
   checkDiscordMembership(accessToken, {
+    applicationId: env.DISCORD_APPLICATION_ID,
     guildId: env.DISCORD_GUILD_ID,
     organizationRoleId: env.DISCORD_ORGANIZATION_ROLE_ID,
     raceControlRoleId: env.DISCORD_REQUIRED_ROLE_ID,

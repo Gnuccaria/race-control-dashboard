@@ -4,7 +4,7 @@ import { createApp } from '../src/app';
 import type { Env, VideoBucket } from '../src/env';
 import { clearGuildRoleNamesForTests } from '../src/siteAuth/discordGuildRoles';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
-import { allowCarIn, createTestEnv, getPath, MEMBERSHIPS, readError, sendJson, withSchedule, crewDetails } from './support/testApp';
+import { asOurApplication, allowCarIn, createTestEnv, getPath, MEMBERSHIPS, readError, sendJson, withSchedule, crewDetails } from './support/testApp';
 
 const SITE = 'https://race-control-api.test';
 const HOUR = 60 * 60 * 1000;
@@ -54,14 +54,14 @@ describe('proteste', () => {
   let videos: ReturnType<typeof memoryBucket>;
   let handleRequest: ReturnType<typeof createApp>;
 
-  const discordFetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+  const discordFetch = asOurApplication((async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const url = String(input);
     const authorization = new Headers(init?.headers).get('Authorization');
     if (url.endsWith('/guilds/guild-1/roles')) return new Response(JSON.stringify(GUILD_ROLES), { status: 200 });
     const user = authorization ? SITE_USERS[authorization] : undefined;
     if (user) return new Response(JSON.stringify({ nick: null, roles: user.roles, user: { ...user, avatar: null } }), { status: 200 });
     return new Response('{}', { status: 401 });
-  }) as typeof fetch;
+  }) as typeof fetch);
 
   const siteRequest = async (method: 'GET' | 'POST', path: string, token: string, body?: unknown) => {
     const response = await handleRequest(

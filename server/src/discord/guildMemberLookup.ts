@@ -1,7 +1,9 @@
 import { describeDiscordFailure, fetchWithDiscordRetry, MEMBER_READ_RETRY } from './discordRateLimit';
+import { checkTokenApplication } from './tokenApplication';
 
 /**
- * Chi è l'utente di un token Discord e quali ruoli ha nel server della lega, letti senza consumare il limite
+ * Chi è l'utente di un token Discord e quali ruoli ha nel server della lega. Prima di tutto il token deve essere della
+ * nostra applicazione (tokenApplication.ts): un token di un'altra applicazione vale come non valido. Poi, senza consumare il limite
  * stretto di /users/@me/guilds/{server}/member (limite per utente, condiviso da app e sito: superato, Discord
  * risponde 429 per diversi secondi e l'accesso fallisce):
  *   1. /users/@me con il token dell'utente: verifica il token e dà l'ID (limiti larghi);
@@ -29,6 +31,8 @@ export type GuildMemberLookup =
   | { readonly status: 'unavailable' };
 
 export interface GuildMemberLookupSettings {
+  /** La nostra applicazione Discord (DISCORD_APPLICATION_ID): si accettano solo i suoi token. */
+  readonly applicationId: string;
   readonly guildId: string;
   /** Token del bot (DISCORD_BOT_TOKEN); senza, si legge il membro con il token dell'utente. */
   readonly botToken?: string;
@@ -105,7 +109,10 @@ async function lookupRolesWithBot(
   return entry;
 }
 
-export async function lookupGuildMember(discordFetch: typeof fetch, { guildId, botToken }: GuildMemberLookupSettings, accessToken: string): Promise<GuildMemberLookup> {
+export async function lookupGuildMember(discordFetch: typeof fetch, { applicationId, guildId, botToken }: GuildMemberLookupSettings, accessToken: string): Promise<GuildMemberLookup> {
+  const application = await checkTokenApplication(discordFetch, applicationId, accessToken);
+  if (application === 'invalid-token' || application === 'foreign') return { status: 'invalid-token' };
+  if (application === 'unavailable') return { status: 'unavailable' };
   if (!botToken) return lookupWithUserToken(discordFetch, guildId, accessToken);
 
   const userResponse = await read(discordFetch, '/users/@me', `Bearer ${accessToken}`);

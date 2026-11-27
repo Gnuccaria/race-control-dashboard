@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { clearSiteMembersForTests } from '../src/siteAuth/siteDiscordAuth';
 import type { Env } from '../src/env';
-import { createTestEnv } from './support/testApp';
+import { asOurApplication, createTestEnv } from './support/testApp';
 
 /**
  * Discord simulato: codici e token di rinnovo noti danno token; il token di accesso decide l'esito della verifica
@@ -34,7 +34,7 @@ function fakeDiscord() {
     }
     return new Response('{}', { status: 500 });
   }) as typeof fetch;
-  return { calls, discordFetch };
+  return { calls, discordFetch: asOurApplication(discordFetch) };
 }
 
 const SITE = 'https://race-control-api.test';

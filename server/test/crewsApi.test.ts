@@ -12,6 +12,7 @@ import {
   readError,
   REQUIRED_DETAILS,
   sendJson,
+  asOurApplication,
 } from './support/testApp';
 
 const REQUIRED_ROLE_ID = 'role-race-control';
@@ -162,9 +163,8 @@ describe('POST /crews', () => {
 });
 
 describe('verifica del ruolo su Discord', () => {
-  const settings = { guildId: 'guild-1', organizationRoleId: 'role-organization', raceControlRoleId: REQUIRED_ROLE_ID, stewardsRoleId: 'role-stewards' };
-  const discordAnswering = (status: number, body: unknown = {}) => () =>
-    Promise.resolve(new Response(JSON.stringify(body), { status }));
+  const settings = { applicationId: 'app-1', guildId: 'guild-1', organizationRoleId: 'role-organization', raceControlRoleId: REQUIRED_ROLE_ID, stewardsRoleId: 'role-stewards' };
+  const discordAnswering = (status: number, body: unknown = {}) => asOurApplication(() => Promise.resolve(new Response(JSON.stringify(body), { status })));
 
   beforeEach(() => {
     clearVerifiedMembershipsForTests();
@@ -193,10 +193,10 @@ describe('verifica del ruolo su Discord', () => {
 
   it('per qualche minuto non richiede di nuovo a Discord una verifica già riuscita', async () => {
     let discordRequests = 0;
-    const countingFetch = () => {
+    const countingFetch = asOurApplication(() => {
       discordRequests += 1;
       return Promise.resolve(new Response(JSON.stringify({ user: { id: '1', username: 'ale' }, roles: [REQUIRED_ROLE_ID] }), { status: 200 }));
-    };
+    });
 
     await checkDiscordMembership('token-e', settings, countingFetch);
     await checkDiscordMembership('token-e', settings, countingFetch);
